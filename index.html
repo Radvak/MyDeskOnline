@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n="app.title">MyDesk Online - By Nap</title>
+  <link rel="icon" type="image/png" href="MyDeskOnlineLogo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -57,9 +61,137 @@
     </section>
 
     <section id="settings" class="tab-panel">
-      <h2 data-i18n="settings.title">Paramètres</h2>
-      <p data-i18n="settings.description">Choisissez les onglets que vous souhaitez afficher.</p>
-      <div class="settings-grid" id="tab-visibility-settings"></div>
+      <div class="settings-page">
+
+        <!-- ── Apparence ─────────────────────────────────────────── -->
+        <div class="settings-section">
+          <h2 class="settings-section__title" data-i18n="settings.appearance.title">🎨 Apparence</h2>
+
+          <!-- Thèmes prédéfinis -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.themes">Thèmes</h3>
+            <div class="theme-presets" id="theme-presets"></div>
+          </div>
+
+          <!-- Mode sombre / clair -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.colorMode">Mode</h3>
+            <div class="color-mode-toggle" id="color-mode-toggle">
+              <button class="color-mode-btn" data-mode="light" data-i18n="settings.appearance.light">☀️ Clair</button>
+              <button class="color-mode-btn" data-mode="dark" data-i18n="settings.appearance.dark">🌙 Sombre</button>
+              <button class="color-mode-btn" data-mode="auto" data-i18n="settings.appearance.auto">🖥️ Système</button>
+            </div>
+          </div>
+
+          <!-- Couleurs personnalisées -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.colors">Couleurs personnalisées</h3>
+            <div class="color-pickers-grid">
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.primaryColor">Couleur principale</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-primary" class="color-pick" data-var="--primary">
+                  <button class="reset-color-btn" data-var="--primary" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.accentColor">Couleur accent</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-accent" class="color-pick" data-var="--accent">
+                  <button class="reset-color-btn" data-var="--accent" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.bgColor">Arrière-plan</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-background" class="color-pick" data-var="--background">
+                  <button class="reset-color-btn" data-var="--background" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.surfaceColor">Surface (cartes)</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-surface" class="color-pick" data-var="--surface">
+                  <button class="reset-color-btn" data-var="--surface" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.textColor">Texte</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-text" class="color-pick" data-var="--text">
+                  <button class="reset-color-btn" data-var="--text" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+              <div class="color-picker-row">
+                <label data-i18n="settings.appearance.headerColor">En-tête</label>
+                <div class="color-picker-with-reset">
+                  <input type="color" id="color-header" class="color-pick" data-var="--header-bg">
+                  <button class="reset-color-btn" data-var="--header-bg" title="Réinitialiser">↩</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typographie -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.font">Police de caractères</h3>
+            <div class="font-selector" id="font-selector">
+              <button class="font-btn" data-font="Inter" style="font-family:'Inter'">Inter</button>
+              <button class="font-btn" data-font="Outfit" style="font-family:'Outfit'">Outfit</button>
+              <button class="font-btn" data-font="DM Sans" style="font-family:'DM Sans'">DM Sans</button>
+              <button class="font-btn" data-font="Sora" style="font-family:'Sora'">Sora</button>
+              <button class="font-btn" data-font="Nunito" style="font-family:'Nunito'">Nunito</button>
+              <button class="font-btn" data-font="IBM Plex Sans" style="font-family:'IBM Plex Sans'">IBM Plex Sans</button>
+              <button class="font-btn" data-font="system-ui" style="font-family:system-ui">Système</button>
+            </div>
+          </div>
+
+          <!-- Taille de police -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.fontSize">Taille du texte</h3>
+            <div class="font-size-control">
+              <span class="font-size-label small-label">A</span>
+              <input type="range" id="font-size-slider" min="13" max="19" step="1" value="16">
+              <span class="font-size-label large-label">A</span>
+              <span class="font-size-value" id="font-size-value">16px</span>
+            </div>
+          </div>
+
+          <!-- Rayon des bordures -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.borderRadius">Coins arrondis</h3>
+            <div class="font-size-control">
+              <span style="font-size:1.1rem">▢</span>
+              <input type="range" id="radius-slider" min="0" max="20" step="2" value="8">
+              <span style="font-size:1.1rem">⬜</span>
+              <span class="font-size-value" id="radius-value">8px</span>
+            </div>
+          </div>
+
+          <!-- Densité de l'interface -->
+          <div class="settings-block">
+            <h3 class="settings-block__label" data-i18n="settings.appearance.density">Densité de l'interface</h3>
+            <div class="color-mode-toggle">
+              <button class="color-mode-btn" data-density="compact" data-i18n="settings.appearance.compact">Compact</button>
+              <button class="color-mode-btn" data-density="normal" data-i18n="settings.appearance.normal">Normal</button>
+              <button class="color-mode-btn" data-density="spacious" data-i18n="settings.appearance.spacious">Aéré</button>
+            </div>
+          </div>
+
+          <!-- Reset -->
+          <div class="settings-block">
+            <button id="reset-appearance" class="btn-secondary" data-i18n="settings.appearance.reset">↺ Réinitialiser l'apparence</button>
+          </div>
+        </div>
+
+        <!-- ── Onglets visibles ────────────────────────────────────── -->
+        <div class="settings-section">
+          <h2 class="settings-section__title" data-i18n="settings.tabs.title">📑 Onglets visibles</h2>
+          <p class="settings-section__desc" data-i18n="settings.description">Choisissez les onglets que vous souhaitez afficher.</p>
+          <div class="settings-grid" id="tab-visibility-settings"></div>
+        </div>
+
+      </div>
     </section>
 
     <section id="calendar" class="tab-panel">
