@@ -1663,6 +1663,10 @@ function initTabs() {
     tabLinks.forEach((l) => l.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
     link.classList.add('active');
+    // Téléphone : la barre d'onglets défile, on y recentre l'onglet ouvert.
+    if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches && link.scrollIntoView) {
+      link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
     const targetId = link.dataset.target;
     document.getElementById(targetId).classList.add('active');
 
@@ -1694,7 +1698,10 @@ function initTabs() {
     });
   });
 
+  // ?tab=sport : raccourcis de l'app installée (appui long sur l'icône).
+  const ongletDemande = new URLSearchParams(window.location.search).get('tab');
   const initiallyActive =
+    tabLinks.find((link) => ongletDemande && link.dataset.target === ongletDemande && !link.classList.contains('is-hidden')) ||
     tabLinks.find((link) => link.classList.contains('active') && !link.classList.contains('is-hidden')) ||
     tabLinks.find((link) => !link.classList.contains('is-hidden'));
   if (initiallyActive) {
@@ -2058,6 +2065,21 @@ function renderCalendar() {
 
   updateWeekLabel();
   renderCalendarEvents();
+  scrollCalendarToToday(grid);
+}
+
+// Téléphone : la semaine défile horizontalement. À chaque changement de
+// semaine, on montre aujourd'hui (ou le lundi) plutôt que de garder la
+// position de la semaine précédente.
+let calendarScrolledWeek = null;
+function scrollCalendarToToday(grid) {
+  if (!window.matchMedia || !window.matchMedia('(max-width: 700px)').matches) return;
+  const week = currentWeekStart.toISOString();
+  if (calendarScrolledWeek === week) return;
+  calendarScrolledWeek = week;
+  const today = grid.querySelector('.day-header.today');
+  const timeColumn = grid.querySelector('.time-slot');
+  grid.scrollLeft = today ? Math.max(0, today.offsetLeft - (timeColumn ? timeColumn.offsetWidth : 0) - 4) : 0;
 }
 
 function updateWeekLabel() {
@@ -4487,6 +4509,9 @@ async function bootstrap() {
   if (typeof registerMenuTranslations === 'function') {
     registerMenuTranslations();
   }
+  if (typeof registerInstallTranslations === 'function') {
+    registerInstallTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4518,6 +4543,9 @@ async function bootstrap() {
   }
   if (typeof initMenuTool === 'function') {
     initMenuTool();
+  }
+  if (typeof initInstall === 'function') {
+    initInstall();
   }
 }
 

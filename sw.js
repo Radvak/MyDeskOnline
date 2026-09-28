@@ -1,7 +1,7 @@
 /* Service worker : rend l'app installable et utilisable hors ligne.
    Stratégie « réseau d'abord » pour toujours servir la dernière version,
    avec repli sur le cache hors connexion. */
-const CACHE_NAME = 'mydesk-shell-v11';
+const CACHE_NAME = 'mydesk-shell-v12';
 const APP_SHELL = [
   './',
   'index.html',
@@ -15,9 +15,16 @@ const APP_SHELL = [
   'sport.js',
   'menu-engine.js',
   'menu.js',
+  'install.js',
   'version.json',
   'manifest.webmanifest',
   'MyDeskOnlineLogo.png',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-192.png',
+  'icons/icon-maskable-512.png',
+  'icons/apple-touch-icon.png',
+  'icons/favicon-48.png',
   'settings_icon.png'
 ];
 
