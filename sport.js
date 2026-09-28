@@ -81,7 +81,8 @@ const SPORT_TRANSLATIONS = {
     pickSession: "Aucune séance n'est liée à ce créneau. Choisissez-en une :",
     loadConfirm: "Charger le programme recommandé ?\n\n3 séances au poids du corps (débutant, accent pecs et abdos, équilibrées avec le dos), placées lundi, mercredi et vendredi à 18:00 dans l'agenda. Vous pourrez les déplacer ensuite.",
     updateConfirm: 'Mettre à jour le programme recommandé vers la nouvelle version ?\n\nLes exercices des séances A, B et C seront remplacés (plus équilibrés, avec progression automatique). Vos créneaux dans l’agenda sont conservés.',
-    alreadyLoaded: 'Le programme recommandé est déjà chargé et à jour.',
+    upToDate: 'Programme déjà en place : séances et créneaux de l’agenda sont bons.',
+    repaired: 'Programme vérifié et corrigé : {count} créneau(x) ajouté(s) dans l’agenda.',
     loaded: "Programme chargé : 3 séances ajoutées à l'agenda.",
     updated: 'Programme mis à jour.',
     guideTitle: 'Guide pour progresser seul',
@@ -156,7 +157,8 @@ const SPORT_TRANSLATIONS = {
     pickSession: 'No workout is linked to this slot. Pick one:',
     loadConfirm: 'Load the recommended program?\n\n3 bodyweight workouts (beginner, chest and abs focus, balanced with back work), scheduled Monday, Wednesday and Friday at 18:00.',
     updateConfirm: 'Update the recommended program to the new version?\n\nExercises of workouts A, B and C will be replaced. Your calendar slots are kept.',
-    alreadyLoaded: 'The recommended program is already loaded and up to date.',
+    upToDate: 'Program already in place: workouts and calendar slots are fine.',
+    repaired: 'Program checked and fixed: {count} slot(s) added to the calendar.',
     loaded: 'Program loaded: 3 workouts added to the calendar.',
     updated: 'Program updated.',
     guideTitle: 'Guide to progress on your own',
@@ -231,7 +233,8 @@ const SPORT_TRANSLATIONS = {
     pickSession: 'Chưa có buổi tập nào gắn với lịch này. Hãy chọn:',
     loadConfirm: 'Tải chương trình đề xuất?\n\n3 buổi tập với trọng lượng cơ thể, vào thứ Hai, Tư, Sáu lúc 18:00.',
     updateConfirm: 'Cập nhật chương trình đề xuất lên phiên bản mới?\n\nCác bài tập của buổi A, B, C sẽ được thay thế. Lịch vẫn được giữ.',
-    alreadyLoaded: 'Chương trình đề xuất đã được tải và cập nhật.',
+    upToDate: 'Chương trình đã sẵn sàng: buổi tập và lịch đều đúng.',
+    repaired: 'Đã kiểm tra và sửa chương trình: thêm {count} lịch.',
     loaded: 'Đã tải chương trình: thêm 3 buổi tập vào lịch.',
     updated: 'Đã cập nhật chương trình.',
     guideTitle: 'Hướng dẫn tự tập',
@@ -1164,10 +1167,11 @@ function renderSport() {
 
 /* ── Actions ───────────────────────────────────────────────── */
 
+// Première date, à partir d'aujourd'hui, qui tombe sur ce jour de la semaine.
 function nextDateForWeekday(weekday, fromDate = new Date()) {
-  const monday = startOfWeek(fromDate);
-  const date = new Date(monday);
-  date.setDate(monday.getDate() + ((weekday + 6) % 7));
+  const date = new Date(fromDate);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + ((weekday - date.getDay() + 7) % 7));
   return date;
 }
 
@@ -1203,58 +1207,100 @@ function buildProgramExercises(template) {
   });
 }
 
+// Associe chaque séance du programme à une séance existante (si elle existe).
+function matchProgramSessions() {
+  const existing = appData.sport.sessions.filter((session) => session.template === SPORT_TEMPLATE_KEY);
+  const used = new Set();
+  const take = (session) => {
+    if (session) used.add(session.id);
+    return session || null;
+  };
+  const byIndex = SPORT_PROGRAM.map((template, index) =>
+    take(existing.find((session) => session.templateIndex === index && !used.has(session.id)))
+  );
+  return byIndex.map((found, index) => {
+    if (found) return found;
+    const template = SPORT_PROGRAM[index];
+    return (
+      take(existing.find((session) => !used.has(session.id) && session.templateIndex === undefined && session.name === template.name)) ||
+      take(existing.find((session) => !used.has(session.id) && session.templateIndex === undefined))
+    );
+  });
+}
+
+// Charge, met à jour ou répare le programme recommandé :
+// 3 séances bien nommées + un créneau hebdomadaire chacune au bon jour.
 function loadSportProgram() {
   ensureSportData();
-  const existing = appData.sport.sessions.filter((session) => session.template === SPORT_TEMPLATE_KEY);
-  if (existing.length) {
-    if (existing.every((session) => session.templateVersion >= SPORT_PROGRAM_VERSION)) {
-      window.alert(t('sport.alreadyLoaded'));
-      return;
-    }
-    if (!window.confirm(t('sport.updateConfirm'))) return;
-    SPORT_PROGRAM.forEach((template, index) => {
-      const session = existing[index];
-      if (!session) return;
-      session.name = template.name;
-      session.description = template.description;
+  const matches = matchProgramSessions();
+  const isNew = matches.every((session) => !session);
+  const isOutdated = matches.some((session) => session && !(session.templateVersion >= SPORT_PROGRAM_VERSION));
+  if (isNew && !window.confirm(t('sport.loadConfirm'))) return;
+  if (!isNew && isOutdated && !window.confirm(t('sport.updateConfirm'))) return;
+
+  const type = getOrCreateSportType();
+  let addedSlots = 0;
+  let fixed = 0;
+  SPORT_PROGRAM.forEach((template, index) => {
+    let session = matches[index];
+    if (!session) {
+      session = { id: uid(), template: SPORT_TEMPLATE_KEY, exercises: buildProgramExercises(template) };
+      appData.sport.sessions.push(session);
+      fixed += 1;
+    } else if (!(session.templateVersion >= SPORT_PROGRAM_VERSION)) {
       session.exercises = buildProgramExercises(template);
-      session.templateVersion = SPORT_PROGRAM_VERSION;
-      appData.calendar.events
-        .filter((event) => event.sportSessionId === session.id)
-        .forEach((event) => {
-          event.title = template.name;
-        });
+      fixed += 1;
+    }
+    if (session.name !== template.name) fixed += 1;
+    session.name = template.name;
+    session.templateIndex = index;
+    session.templateVersion = SPORT_PROGRAM_VERSION;
+    if (!session.description) session.description = template.description;
+    if (isOutdated || isNew) session.description = template.description;
+
+    // Créneaux : titre et type corrects, et au moins un créneau hebdo au bon jour.
+    const linked = appData.calendar.events.filter((event) => event.sportSessionId === session.id);
+    linked.forEach((event) => {
+      if (event.title !== template.name || event.typeId !== type.id) fixed += 1;
+      event.title = template.name;
+      event.typeId = type.id;
+      event.color = type.color;
     });
-    saveData();
-    sportView = 'workout';
-    renderSport();
-    renderCalendar();
-    showSportMessage(t('sport.updated'));
-    return;
-  }
-  if (!window.confirm(t('sport.loadConfirm'))) return;
-  let firstId = null;
-  SPORT_PROGRAM.forEach((template) => {
-    const session = {
-      id: uid(),
-      template: SPORT_TEMPLATE_KEY,
-      templateVersion: SPORT_PROGRAM_VERSION,
-      name: template.name,
-      description: template.description,
-      exercises: buildProgramExercises(template)
-    };
-    appData.sport.sessions.push(session);
-    addSportSessionToCalendar(session, template.weekday, '18:00', 45);
-    if (!firstId) firstId = session.id;
+    const hasSlot = linked.some(
+      (event) => event.recurrence === 'weekly' && new Date(event.start).getDay() === template.weekday && !event.until
+    );
+    if (!hasSlot) {
+      addSportSessionToCalendar(session, template.weekday, '18:00', 45);
+      addedSlots += 1;
+    }
   });
-  appData.sport.activeSessionId = firstId;
-  selectSessionForDate(new Date());
+
+  // Garde les séances du programme dans l'ordre A, B, C en tête de liste.
+  appData.sport.sessions.sort((a, b) => {
+    const ia = a.template === SPORT_TEMPLATE_KEY ? a.templateIndex : 99;
+    const ib = b.template === SPORT_TEMPLATE_KEY ? b.templateIndex : 99;
+    return ia - ib;
+  });
+
+  if (!appData.sport.sessions.some((session) => session.id === appData.sport.activeSessionId)) {
+    appData.sport.activeSessionId = appData.sport.sessions[0].id;
+  }
+  selectSessionForDate(sportSelectedDate || new Date());
   sportView = 'workout';
   saveData();
   renderSport();
   renderEventTypes();
   renderCalendar();
-  showSportMessage(t('sport.loaded'));
+
+  if (isNew) {
+    showSportMessage(t('sport.loaded'));
+  } else if (isOutdated) {
+    showSportMessage(t('sport.updated'));
+  } else if (addedSlots || fixed) {
+    showSportMessage(t('sport.repaired', { count: addedSlots }));
+  } else {
+    showSportMessage(t('sport.upToDate'));
+  }
 }
 
 function initSport() {
