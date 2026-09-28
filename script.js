@@ -160,6 +160,13 @@ const translations = {
       nextWeekLabel: 'Semaine suivante',
       eventDefaultTitle: 'Évènement',
       eventDeleteTitle: 'Supprimer',
+      deleteRepeating: {
+        title: 'Supprimer un évènement répété',
+        one: 'Cette occurrence seulement',
+        following: 'Cette occurrence et les suivantes',
+        all: 'Toutes les occurrences',
+        cancel: 'Annuler'
+      },
       newEventTitle: 'Nouvel évènement',
       eventModal: {
         createTitle: 'Nouvel évènement',
@@ -409,6 +416,13 @@ const translations = {
       nextWeekLabel: 'Next week',
       eventDefaultTitle: 'Event',
       eventDeleteTitle: 'Delete',
+      deleteRepeating: {
+        title: 'Delete a repeating event',
+        one: 'This occurrence only',
+        following: 'This and following occurrences',
+        all: 'All occurrences',
+        cancel: 'Cancel'
+      },
       newEventTitle: 'New event',
       eventModal: {
         createTitle: 'New event',
@@ -658,6 +672,13 @@ const translations = {
       nextWeekLabel: 'Tuần sau',
       eventDefaultTitle: 'Sự kiện',
       eventDeleteTitle: 'Xóa',
+      deleteRepeating: {
+        title: 'Xóa sự kiện lặp lại',
+        one: 'Chỉ lần này',
+        following: 'Lần này và các lần sau',
+        all: 'Tất cả các lần',
+        cancel: 'Hủy'
+      },
       newEventTitle: 'Sự kiện mới',
       eventModal: {
         createTitle: 'Sự kiện mới',
@@ -1251,9 +1272,34 @@ function scheduleFileSave() {
 function saveData() {
   persistToLocalStorage();
   scheduleFileSave();
+  if (typeof recordUndoSnapshot === 'function') {
+    recordUndoSnapshot();
+  }
   if (typeof onLocalDataChanged === 'function') {
     onLocalDataChanged();
   }
+}
+
+function renderAllViews() {
+  [
+    renderCalendar,
+    renderEventTypes,
+    renderMindmapList,
+    renderMindmap,
+    renderGantt,
+    renderNotes,
+    renderDailyChallenges,
+    renderTodo,
+    renderTabVisibilitySettings,
+    applyTabVisibility,
+    updateSnakeScores
+  ].forEach((render) => {
+    try {
+      render();
+    } catch (error) {
+      console.warn('Rendu impossible', error);
+    }
+  });
 }
 
 function migrateData() {
@@ -2139,9 +2185,12 @@ function getOccurrencesForWeek(event) {
   if (Number.isNaN(duration) || duration <= 0) {
     return occurrences;
   }
+  const exceptions = new Set(Array.isArray(event.exceptions) ? event.exceptions : []);
+  const until = event.until ? new Date(`${event.until}T00:00`) : null;
+  const isSkipped = (date) => exceptions.has(toISODateString(date)) || (until && date >= until);
 
   if (!event.recurrence || event.recurrence === 'none') {
-    if (base >= weekStart && base < weekEnd) {
+    if (base >= weekStart && base < weekEnd && !isSkipped(base)) {
       occurrences.push({ start: new Date(base), duration, sourceEvent: event });
     }
     return occurrences;
@@ -2194,7 +2243,7 @@ function getOccurrencesForWeek(event) {
   }
 
   while (occurrence < weekEnd && iterations < maxIterations) {
-    if (occurrence >= weekStart) {
+    if (occurrence >= weekStart && !isSkipped(occurrence)) {
       occurrences.push({ start: new Date(occurrence), duration, sourceEvent: event });
     }
     iterations += 1;
@@ -2290,7 +2339,7 @@ function renderCalendarEvents() {
     // Actions
     eventEl.querySelector('.delete-event').addEventListener('click', (e) => {
       e.stopPropagation();
-      deleteEvent(occ.sourceEvent.id);
+      requestDeleteOccurrence(occ);
     });
     const handle = eventEl.querySelector('.resize-handle.bottom');
     handle.addEventListener('pointerdown', (e) => startDurationResize(e, occ, eventEl, handle));
@@ -2479,6 +2528,54 @@ function deleteEvent(eventId) {
   appData.calendar.events = appData.calendar.events.filter((event) => event.id !== eventId);
   saveData();
   renderCalendar();
+}
+
+// scope : 'one' (cette occurrence), 'following' (celle-ci et les suivantes), 'all'
+function deleteOccurrence(occurrence, scope) {
+  const event = occurrence.sourceEvent;
+  const dateKey = toISODateString(new Date(occurrence.start));
+  if (scope === 'all' || !event.recurrence || event.recurrence === 'none') {
+    deleteEvent(event.id);
+  } else if (scope === 'following') {
+    if (dateKey <= toISODateString(new Date(event.start))) {
+      deleteEvent(event.id);
+    } else {
+      event.until = dateKey;
+      saveData();
+      renderCalendar();
+    }
+  } else {
+    const exceptions = Array.isArray(event.exceptions) ? event.exceptions : [];
+    event.exceptions = Array.from(new Set([...exceptions, dateKey]));
+    saveData();
+    renderCalendar();
+  }
+  if (typeof showUndoToast === 'function') {
+    showUndoToast('undo.eventDeleted');
+  }
+}
+
+function requestDeleteOccurrence(occurrence) {
+  const event = occurrence.sourceEvent;
+  if (!event.recurrence || event.recurrence === 'none') {
+    deleteOccurrence(occurrence, 'all');
+    return;
+  }
+  const modal = document.getElementById('delete-occurrence-modal');
+  const close = () => {
+    modal.hidden = true;
+  };
+  modal.querySelectorAll('[data-delete-scope]').forEach((button) => {
+    button.onclick = () => {
+      close();
+      deleteOccurrence(occurrence, button.dataset.deleteScope);
+    };
+  });
+  document.getElementById('delete-occurrence-cancel').onclick = close;
+  modal.onclick = (clickEvent) => {
+    if (clickEvent.target === modal) close();
+  };
+  modal.hidden = false;
 }
 
 function openEventModal({ start, event: existingEvent = null, occurrenceStart = null }) {
@@ -4283,6 +4380,9 @@ async function bootstrap() {
   if (typeof registerPrintTranslations === 'function') {
     registerPrintTranslations();
   }
+  if (typeof registerUndoTranslations === 'function') {
+    registerUndoTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4305,6 +4405,9 @@ async function bootstrap() {
   }
   if (typeof initSchedulePrint === 'function') {
     initSchedulePrint();
+  }
+  if (typeof initUndo === 'function') {
+    initUndo();
   }
 }
 

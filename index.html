@@ -28,6 +28,10 @@
       </div>
       <a href="https://github.com/NapGames-Dev/MyDeskOnline/tree/main"><button id="version-indicator" class="version-indicator" type="button" aria-live="polite" data-i18n="version.checking">Vérification...</button></a>
       <h1 data-i18n="app.title">MyDesk Online - By Nap</h1>
+      <div class="undo-controls">
+        <button type="button" id="undo-button" class="undo-control" data-i18n-title="undo.undoShortcut" data-i18n-aria-label="undo.undoShortcut" disabled>↶</button>
+        <button type="button" id="redo-button" class="undo-control" data-i18n-title="undo.redoShortcut" data-i18n-aria-label="undo.redoShortcut" disabled>↷</button>
+      </div>
     </div>
     <nav class="tab-bar">
       <button class="tab-link active" data-target="home" data-i18n="tabs.home">Accueil</button>
@@ -531,6 +535,23 @@
     </div>
   </div>
 
+  <div class="modal" id="delete-occurrence-modal" hidden>
+    <div class="modal-content">
+      <h3 data-i18n="calendar.deleteRepeating.title">Supprimer un évènement répété</h3>
+      <div class="delete-occurrence-choices">
+        <button type="button" data-delete-scope="one" data-i18n="calendar.deleteRepeating.one">Cette occurrence seulement</button>
+        <button type="button" data-delete-scope="following" data-i18n="calendar.deleteRepeating.following">Cette occurrence et les suivantes</button>
+        <button type="button" data-delete-scope="all" class="danger" data-i18n="calendar.deleteRepeating.all">Toutes les occurrences</button>
+        <button type="button" id="delete-occurrence-cancel" class="btn-secondary" data-i18n="calendar.deleteRepeating.cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="undo-toast" id="undo-toast" role="status" hidden>
+    <span id="undo-toast-text"></span>
+    <button type="button" id="undo-toast-button" data-i18n="undo.undo">Annuler</button>
+  </div>
+
   <div class="modal" id="print-modal" hidden>
     <div class="modal-content">
       <h3 data-i18n="calendar.printing.title">Imprimer l'emploi du temps</h3>
@@ -564,6 +585,7 @@
   <script src="sync.js" defer></script>
   <script src="ical.js" defer></script>
   <script src="print.js" defer></script>
+  <script src="undo.js" defer></script>
   <script src="script.js" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {

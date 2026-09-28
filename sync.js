@@ -294,26 +294,10 @@ function syncApplyData(data) {
   migrateData();
   persistToLocalStorage();
   scheduleFileSave();
-
-  [
-    renderCalendar,
-    renderEventTypes,
-    renderMindmapList,
-    renderMindmap,
-    renderGantt,
-    renderNotes,
-    renderDailyChallenges,
-    renderTodo,
-    renderTabVisibilitySettings,
-    applyTabVisibility,
-    updateSnakeScores
-  ].forEach((render) => {
-    try {
-      render();
-    } catch (error) {
-      console.warn('Rendu après synchronisation impossible', error);
-    }
-  });
+  renderAllViews();
+  if (typeof resetUndoBaseline === 'function') {
+    resetUndoBaseline();
+  }
 }
 
 /* ── API GitHub ────────────────────────────────────────────── */
