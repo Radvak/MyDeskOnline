@@ -301,6 +301,40 @@ main {
   color: var(--muted);
 }
 
+.sync-panel {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.storage-controls[hidden] {
+  display: none;
+}
+
+.sync-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.sync-token-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sync-token-link:hover {
+  text-decoration: underline;
+}
+
+.storage-controls input[type="password"] {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font: inherit;
+}
+
 .calendar-header {
   display: flex;
   justify-content: space-between;

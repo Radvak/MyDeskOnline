@@ -1248,6 +1248,9 @@ function scheduleFileSave() {
 function saveData() {
   persistToLocalStorage();
   scheduleFileSave();
+  if (typeof onLocalDataChanged === 'function') {
+    onLocalDataChanged();
+  }
 }
 
 function migrateData() {
@@ -4247,6 +4250,9 @@ function initSnake() {
 }
 
 async function bootstrap() {
+  if (typeof registerSyncTranslations === 'function') {
+    registerSyncTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4261,6 +4267,9 @@ async function bootstrap() {
   initDailyChallenges();
   initTodo();
   initSnake();
+  if (typeof initSync === 'function') {
+    initSync();
+  }
 }
 
 if (document.readyState === 'loading') {

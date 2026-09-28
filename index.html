@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n="app.title">MyDesk Online - By Nap</title>
   <link rel="icon" type="image/png" href="MyDeskOnlineLogo.png">
+  <link rel="apple-touch-icon" href="MyDeskOnlineLogo.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#4e73df">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -57,6 +62,34 @@
         </div>
         <input type="file" id="import-input" accept="application/json" hidden>
         <p class="storage-status" id="storage-status"></p>
+      </div>
+
+      <div class="sync-panel" id="sync-panel">
+        <h2 data-i18n="sync.heading">Synchronisation entre appareils</h2>
+        <p data-i18n="sync.description">
+          Synchronisez vos données entre votre téléphone et vos ordinateurs grâce à un Gist privé sur votre compte GitHub (gratuit).
+        </p>
+        <div class="storage-controls" id="sync-disconnected">
+          <ol class="sync-steps">
+            <li data-i18n="sync.step1">Créez un token GitHub avec uniquement la permission « gist ».</li>
+            <li data-i18n="sync.step2">Collez-le ci-dessous puis cliquez sur « Connecter ».</li>
+            <li data-i18n="sync.step3">Répétez sur chaque appareil avec le même token.</li>
+          </ol>
+          <a class="sync-token-link" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=MyDesk%20Online%20Sync" target="_blank" rel="noopener noreferrer" data-i18n="sync.createToken">Créer un token GitHub ↗</a>
+          <label for="sync-token" data-i18n="sync.tokenLabel">Token GitHub</label>
+          <input type="password" id="sync-token" autocomplete="off" spellcheck="false" placeholder="ghp_…" data-i18n-placeholder="sync.tokenPlaceholder">
+          <div class="storage-buttons">
+            <button id="sync-connect" data-i18n="sync.connect">Connecter</button>
+          </div>
+        </div>
+        <div class="storage-controls" id="sync-connected" hidden>
+          <p id="sync-info"></p>
+          <div class="storage-buttons">
+            <button id="sync-now" data-i18n="sync.syncNow">Synchroniser maintenant</button>
+            <button id="sync-disconnect" class="btn-secondary" data-i18n="sync.disconnect">Déconnecter</button>
+          </div>
+        </div>
+        <p class="storage-status" id="sync-status"></p>
       </div>
     </section>
 
@@ -489,6 +522,14 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
+  <script src="sync.js" defer></script>
   <script src="script.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch((error) => console.warn('Service worker indisponible', error));
+      });
+    }
+  </script>
 </body>
 </html>

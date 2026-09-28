@@ -1,0 +1,13 @@
+{
+  "name": "MyDesk Online",
+  "short_name": "MyDesk",
+  "description": "Agenda, notes, to-do, cartes mentales et plus, synchronisés entre vos appareils.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4e73df",
+  "icons": [
+    { "src": "MyDeskOnlineLogo.png", "sizes": "663x632", "type": "image/png", "purpose": "any" }
+  ]
+}
