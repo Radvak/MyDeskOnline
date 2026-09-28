@@ -178,6 +178,9 @@ const translations = {
         typeLabel: "Type d'évènement",
         colorLabel: 'Couleur',
         recurrenceLabel: 'Répétition',
+        scopeLabel: 'Appliquer à',
+        scopeOne: 'Cette occurrence seulement',
+        scopeAll: 'Toutes les occurrences',
         typeNone: 'Aucun',
         recurrence: {
           none: 'Aucune',
@@ -434,6 +437,9 @@ const translations = {
         typeLabel: 'Event type',
         colorLabel: 'Color',
         recurrenceLabel: 'Repeat',
+        scopeLabel: 'Apply to',
+        scopeOne: 'This occurrence only',
+        scopeAll: 'All occurrences',
         typeNone: 'None',
         recurrence: {
           none: 'None',
@@ -690,6 +696,9 @@ const translations = {
         typeLabel: 'Loại sự kiện',
         colorLabel: 'Màu sắc',
         recurrenceLabel: 'Lặp lại',
+        scopeLabel: 'Áp dụng cho',
+        scopeOne: 'Chỉ lần này',
+        scopeAll: 'Tất cả các lần',
         typeNone: 'Không',
         recurrence: {
           none: 'Không',
@@ -2419,7 +2428,7 @@ function finishDurationResize(event) {
   resizeState.handle.removeEventListener('pointercancel', finishDurationResize);
   const finalDuration = resizeState.previewDuration;
   if (finalDuration !== resizeState.originalDuration) {
-    resizeState.sourceEvent.duration = finalDuration;
+    updateSingleOccurrence(resizeState.sourceEvent, resizeState.occurrenceStart, { duration: finalDuration });
     saveData();
   }
   resizeState = null;
@@ -2511,17 +2520,62 @@ function finishStartResize() {
   const finalStart = resizeState.previewStart || resizeState.originalStart;
   const finalDuration = resizeState.previewDuration || resizeState.originalDuration;
 
-  // convertir en valeur "datetime-local" (YYYY-MM-DDTHH:MM) comme le reste de l’app
-  const localInputValue = new Date(finalStart.getTime() - finalStart.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-
-  resizeState.sourceEvent.start = localInputValue;
-  resizeState.sourceEvent.duration = finalDuration;
-
-  saveData();
+  if (finalStart.getTime() !== resizeState.originalStart.getTime() || finalDuration !== resizeState.originalDuration) {
+    updateSingleOccurrence(resizeState.sourceEvent, resizeState.originalStart, {
+      start: toLocalInputValue(finalStart),
+      duration: finalDuration
+    });
+    saveData();
+  }
   resizeState = null;
   renderCalendar();
+}
+
+function toLocalInputValue(date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+// Applique à la série le décalage (jours + heure) fait sur une de ses occurrences,
+// sans jamais ramener le début de la série sur cette occurrence.
+function shiftSeriesStart(event, occurrenceStart, newOccurrenceStart) {
+  const from = new Date(occurrenceStart);
+  const to = new Date(newOccurrenceStart);
+  const midnight = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const dayDelta = Math.round((midnight(to) - midnight(from)) / DAY_IN_MS);
+  const minuteDelta = to.getHours() * 60 + to.getMinutes() - (from.getHours() * 60 + from.getMinutes());
+  const start = new Date(event.start);
+  start.setDate(start.getDate() + dayDelta);
+  start.setMinutes(start.getMinutes() + minuteDelta);
+  event.start = toLocalInputValue(start);
+}
+
+function isRecurringEvent(event) {
+  return Boolean(event && event.recurrence && event.recurrence !== 'none');
+}
+
+// Modifie une seule occurrence : pour une série, l'occurrence est retirée de la
+// série (exception) et remplacée par un évènement indépendant portant les changements.
+function updateSingleOccurrence(event, occurrenceStart, changes) {
+  if (!isRecurringEvent(event)) {
+    Object.assign(event, changes);
+    return event;
+  }
+  const dateKey = toISODateString(new Date(occurrenceStart));
+  const exceptions = Array.isArray(event.exceptions) ? event.exceptions : [];
+  event.exceptions = Array.from(new Set([...exceptions, dateKey]));
+  const single = {
+    id: uid(),
+    title: event.title,
+    start: toLocalInputValue(new Date(occurrenceStart)),
+    duration: event.duration,
+    typeId: event.typeId,
+    color: event.color,
+    seriesId: event.id,
+    ...changes,
+    recurrence: 'none'
+  };
+  appData.calendar.events.push(single);
+  return single;
 }
 
 function deleteEvent(eventId) {
@@ -2588,6 +2642,8 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
   const recurrenceInput = document.getElementById('event-recurrence');
   const typeInput = document.getElementById('event-type');
   const colorInput = document.getElementById('event-color');
+  const scopeRow = document.getElementById('event-scope-row');
+  const scopeInput = document.getElementById('event-scope');
   const modalTitle = modal.querySelector('h3');
 
   const baseDate = existingEvent
@@ -2623,6 +2679,18 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     modal.dataset.mode = 'create';
     modal.dataset.eventId = '';
   }
+
+  // Série : choisir si la modification vise cette occurrence ou toute la série.
+  const editingSeries = Boolean(existingEvent) && isRecurringEvent(existingEvent);
+  scopeRow.hidden = !editingSeries;
+  scopeInput.value = 'one';
+  const updateScope = () => {
+    const single = editingSeries && scopeInput.value === 'one';
+    recurrenceInput.disabled = single;
+    if (single) recurrenceInput.value = existingEvent.recurrence;
+  };
+  scopeInput.onchange = updateScope;
+  updateScope();
 
   // Heure de fin ⇄ durée : modifier l'une met l'autre à jour.
   const pad = (n) => String(n).padStart(2, '0');
@@ -2697,12 +2765,18 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     if (modal.dataset.mode === 'edit' && modal.dataset.eventId) {
       const targetEvent = appData.calendar.events.find((evt) => evt.id === modal.dataset.eventId);
       if (targetEvent) {
-        targetEvent.title = title || t('calendar.newEventTitle');
-        targetEvent.start = datetimeValue;
-        targetEvent.duration = duration;
-        targetEvent.recurrence = recurrence;
-        targetEvent.typeId = typeId;
-        targetEvent.color = color;
+        const changes = {
+          title: title || t('calendar.newEventTitle'),
+          duration,
+          typeId,
+          color
+        };
+        if (isRecurringEvent(targetEvent) && scopeInput.value === 'one') {
+          updateSingleOccurrence(targetEvent, baseDate, { ...changes, start: datetimeValue });
+        } else {
+          shiftSeriesStart(targetEvent, baseDate, startDate);
+          Object.assign(targetEvent, changes, { recurrence });
+        }
       }
     } else {
       const newEvent = {

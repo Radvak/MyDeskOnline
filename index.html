@@ -527,6 +527,13 @@
             <option value="yearly" data-i18n="calendar.eventModal.recurrence.yearly">Annuelle</option>
           </select>
         </label>
+        <label id="event-scope-row" hidden>
+          <span data-i18n="calendar.eventModal.scopeLabel">Appliquer à</span>
+          <select id="event-scope">
+            <option value="one" data-i18n="calendar.eventModal.scopeOne">Cette occurrence seulement</option>
+            <option value="all" data-i18n="calendar.eventModal.scopeAll">Toutes les occurrences</option>
+          </select>
+        </label>
         <div class="modal-actions">
           <button type="submit" data-i18n="calendar.eventModal.save">Enregistrer</button>
           <button type="button" id="cancel-event" data-i18n="calendar.eventModal.cancel">Annuler</button>
