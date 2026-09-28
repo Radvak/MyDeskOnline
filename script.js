@@ -2324,15 +2324,21 @@ function renderCalendarEvents() {
     // Contenu (titre + horaire)
     const endDate = new Date(startDate.getTime() + occ.duration * 60000);
     const displayTitle = occ.sourceEvent.title || t('calendar.eventDefaultTitle');
+    const timeLabel = `${formatTime(startDate)} – ${formatTime(endDate)}`;
     eventEl.innerHTML = `
       <div class="resize-handle top"></div>
       <div class="event-header">
-        <div class="title">${displayTitle}</div>
-        <button class="delete-event" title="${t('calendar.eventDeleteTitle')}">✕</button>
+        <div class="title"></div>
+        <button class="delete-event">✕</button>
       </div>
-      <div class="time-range">${formatTime(startDate)} – ${formatTime(endDate)}</div>
+      <div class="time-range"></div>
       <div class="resize-handle bottom"></div>
     `;
+    // textContent : un titre (ex. importé d'un .ics) ne peut pas injecter de HTML.
+    eventEl.querySelector('.title').textContent = displayTitle;
+    eventEl.querySelector('.time-range').textContent = timeLabel;
+    eventEl.querySelector('.delete-event').title = t('calendar.eventDeleteTitle');
+    eventEl.title = `${displayTitle}\n${timeLabel}`;
 
     // Position verticale dans la cellule + hauteur (le débordement est permis)
     const startMinutes = startDate.getMinutes();

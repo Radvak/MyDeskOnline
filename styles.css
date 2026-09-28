@@ -464,16 +464,19 @@ main {
 
 .calendar-grid .event {
   position: absolute;
-  left: 6px;
-  right: 6px;
-  border-radius: 10px;
-  padding: 0.4rem 0.6rem 0.75rem;
+  left: 4px;
+  right: 4px;
+  border-radius: 8px;
+  padding: 0.3rem 0.45rem;
   background: var(--event-color, var(--event));
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.15rem;
+  overflow: hidden;
+  box-sizing: border-box;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
   transition: box-shadow 0.2s ease;
   z-index: 2; /* passe au-dessus des cellules suivantes */
@@ -486,55 +489,99 @@ main {
 .calendar-grid .event .event-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .calendar-grid .event .title {
   font-weight: 600;
   flex: 1;
-  word-break: break-word;
+  min-width: 0;
+  overflow: hidden;
+  hyphens: auto;
+  -webkit-hyphens: auto;
 }
 
 .calendar-grid .event .time-range {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-grid .event .delete-event {
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
   border-radius: 999px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+}
+
+/* Sur ordinateur, le bouton de suppression n'apparaît qu'au survol. */
+@media (hover: hover) {
+  .calendar-grid .event .delete-event {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 2;
+    background: rgba(15, 23, 42, 0.35);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .calendar-grid .event:hover .delete-event,
+  .calendar-grid .event .delete-event:focus-visible {
+    opacity: 1;
+  }
 }
 
 .calendar-grid .event .delete-event:hover {
   background: rgba(255, 255, 255, 0.35);
 }
 
+/* Poignées : zone de saisie invisible sur les bords, petit trait visible au survol. */
 .calendar-grid .event .resize-handle {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60%;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
+  left: 0;
+  right: 0;
+  height: 7px;
   cursor: ns-resize;
+  z-index: 1;
+  touch-action: none;
+}
+
+.calendar-grid .event .resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 32px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.calendar-grid .event:hover .resize-handle::after {
+  opacity: 1;
 }
 
 .calendar-grid .event .resize-handle.bottom {
-  bottom: 4px;
+  bottom: 0;
 }
 
 .calendar-grid .event .resize-handle.top {
-  top: 4px;
+  top: 0;
 }
 
 .event-types-panel {
