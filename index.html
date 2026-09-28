@@ -238,6 +238,7 @@
           <button id="today-button" data-i18n="calendar.today">Aujourd'hui</button>
           <button id="ics-import" type="button" data-i18n="calendar.ics.importButton">Importer un .ics</button>
           <input type="file" id="ics-input" accept=".ics,text/calendar" multiple hidden>
+          <button id="print-schedule" type="button" data-i18n="calendar.printing.button">Imprimer</button>
           <span id="ics-status" class="ics-status" aria-live="polite"></span>
           <span class="hint" data-i18n="calendar.hint">Astuce : utilisez les flèches du clavier pour naviguer de semaine.</span>
         </div>
@@ -492,10 +493,16 @@
           <span data-i18n="calendar.eventModal.datetimeLabel">Date et heure</span>
           <input type="datetime-local" id="event-datetime" required>
         </label>
-        <label>
-          <span data-i18n="calendar.eventModal.durationLabel">Durée (minutes)</span>
-          <input type="number" id="event-duration" min="15" step="15" value="60">
-        </label>
+        <div class="event-time-row">
+          <label>
+            <span data-i18n="calendar.eventModal.endTimeLabel">Heure de fin</span>
+            <input type="time" id="event-end-time" step="60">
+          </label>
+          <label>
+            <span data-i18n="calendar.eventModal.durationLabel">Durée (minutes)</span>
+            <input type="number" id="event-duration" min="1" step="1" value="60">
+          </label>
+        </div>
         <label>
           <span data-i18n="calendar.eventModal.typeLabel">Type d'évènement</span>
           <select id="event-type">
@@ -524,9 +531,39 @@
     </div>
   </div>
 
+  <div class="modal" id="print-modal" hidden>
+    <div class="modal-content">
+      <h3 data-i18n="calendar.printing.title">Imprimer l'emploi du temps</h3>
+      <form id="print-form">
+        <label>
+          <span data-i18n="calendar.printing.firstWeek">À partir de la semaine du</span>
+          <input type="date" id="print-first-week" required>
+        </label>
+        <label>
+          <span data-i18n="calendar.printing.weekCount">Nombre de semaines</span>
+          <input type="number" id="print-week-count" min="1" max="52" step="1" value="1">
+        </label>
+        <fieldset class="print-week-fieldset">
+          <legend data-i18n="calendar.printing.weeksToPrint">Semaines à imprimer</legend>
+          <div class="print-week-list" id="print-week-list"></div>
+        </fieldset>
+        <label class="print-inline-option">
+          <input type="checkbox" id="print-include-weekend" checked>
+          <span data-i18n="calendar.printing.includeWeekend">Inclure le week-end</span>
+        </label>
+        <p class="print-error" id="print-error" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button type="submit" data-i18n="calendar.printing.print">Imprimer</button>
+          <button type="button" id="print-cancel" data-i18n="calendar.printing.cancel">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
   <script src="sync.js" defer></script>
   <script src="ical.js" defer></script>
+  <script src="print.js" defer></script>
   <script src="script.js" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {

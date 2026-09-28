@@ -167,6 +167,7 @@ const translations = {
         titleLabel: 'Titre',
         datetimeLabel: 'Date et heure',
         durationLabel: 'Durée (minutes)',
+        endTimeLabel: 'Heure de fin',
         typeLabel: "Type d'évènement",
         colorLabel: 'Couleur',
         recurrenceLabel: 'Répétition',
@@ -415,6 +416,7 @@ const translations = {
         titleLabel: 'Title',
         datetimeLabel: 'Date & time',
         durationLabel: 'Duration (minutes)',
+        endTimeLabel: 'End time',
         typeLabel: 'Event type',
         colorLabel: 'Color',
         recurrenceLabel: 'Repeat',
@@ -663,6 +665,7 @@ const translations = {
         titleLabel: 'Tiêu đề',
         datetimeLabel: 'Ngày & giờ',
         durationLabel: 'Thời lượng (phút)',
+        endTimeLabel: 'Giờ kết thúc',
         typeLabel: 'Loại sự kiện',
         colorLabel: 'Màu sắc',
         recurrenceLabel: 'Lặp lại',
@@ -2484,6 +2487,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
   const titleInput = document.getElementById('event-title');
   const datetimeInput = document.getElementById('event-datetime');
   const durationInput = document.getElementById('event-duration');
+  const endTimeInput = document.getElementById('event-end-time');
   const recurrenceInput = document.getElementById('event-recurrence');
   const typeInput = document.getElementById('event-type');
   const colorInput = document.getElementById('event-color');
@@ -2523,6 +2527,29 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     modal.dataset.eventId = '';
   }
 
+  // Heure de fin ⇄ durée : modifier l'une met l'autre à jour.
+  const pad = (n) => String(n).padStart(2, '0');
+  const updateEndFromDuration = () => {
+    const startDate = new Date(datetimeInput.value);
+    const minutes = Number(durationInput.value);
+    if (Number.isNaN(startDate.getTime()) || !Number.isFinite(minutes) || minutes <= 0) return;
+    const end = new Date(startDate.getTime() + minutes * 60000);
+    endTimeInput.value = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  };
+  const updateDurationFromEnd = () => {
+    const startDate = new Date(datetimeInput.value);
+    const [hours, minutes] = (endTimeInput.value || '').split(':').map(Number);
+    if (Number.isNaN(startDate.getTime()) || !Number.isFinite(hours) || !Number.isFinite(minutes)) return;
+    const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+    let duration = hours * 60 + minutes - startMinutes;
+    if (duration <= 0) duration += 24 * 60; // fin après minuit
+    durationInput.value = duration;
+  };
+  durationInput.oninput = updateEndFromDuration;
+  datetimeInput.oninput = updateEndFromDuration;
+  endTimeInput.oninput = updateDurationFromEnd;
+  updateEndFromDuration();
+
   modal.hidden = false;
 
   const cancelButton = document.getElementById('cancel-event');
@@ -2550,10 +2577,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     if (!Number.isFinite(duration) || duration <= 0) {
       duration = 60;
     }
-    duration = Math.round(duration / EVENT_DURATION_STEP) * EVENT_DURATION_STEP;
-    if (duration < EVENT_DURATION_STEP) {
-      duration = EVENT_DURATION_STEP;
-    }
+    duration = Math.max(MIN_EVENT_DURATION, Math.round(duration));
     const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
     const available = Math.max(0, CALENDAR_END_MINUTE - startMinutes);
     if (available > 0) {
@@ -4256,6 +4280,9 @@ async function bootstrap() {
   if (typeof registerIcsTranslations === 'function') {
     registerIcsTranslations();
   }
+  if (typeof registerPrintTranslations === 'function') {
+    registerPrintTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4275,6 +4302,9 @@ async function bootstrap() {
   }
   if (typeof initIcsImport === 'function') {
     initIcsImport();
+  }
+  if (typeof initSchedulePrint === 'function') {
+    initSchedulePrint();
   }
 }
 
