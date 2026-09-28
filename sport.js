@@ -303,11 +303,14 @@ function ensureSportData() {
   if (!Array.isArray(appData.sport.sessions)) appData.sport.sessions = [];
   if (!appData.sport.logs || typeof appData.sport.logs !== 'object') appData.sport.logs = {};
   if (!Array.isArray(appData.sport.excluded)) appData.sport.excluded = SPORT_DEFAULT_EXCLUDED.slice();
+  migrerProgrammeV3();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
     session.exercises.forEach(normalizeLadderExercise);
-    if (session.description && session.description.includes('rowings serviette')) {
-      session.description = session.description.replace('rowings serviette', 'rowings sous table');
+    if (session.description) {
+      session.description = session.description
+        .replace('10 rowings serviette faciles', '10 supermans lents')
+        .replace('10 rowings sous table faciles', '10 supermans lents');
     }
   });
   if (!appData.sport.sessions.some((session) => session.id === appData.sport.activeSessionId)) {
@@ -384,6 +387,39 @@ function getLadderStep(exercise) {
   return { ladder, step: ladder.steps[exercise.step] || null };
 }
 
+// v3 (28/09/2026) : plus de rowing sous table ni à la porte (tirage au sac à
+// dos + dos au sol), et l'exercice 4 de la séance A n'est plus une deuxième
+// variante de pompes classiques mais des pompes larges. Les exercices gardent
+// leur identifiant : seuls ceux qui changent de nature sont remplacés.
+function migrerProgrammeV3() {
+  if ((appData.sport.migration || 0) >= 3) return;
+  SPORT_DEFAULT_EXCLUDED.forEach((name) => {
+    if (!appData.sport.excluded.includes(name)) appData.sport.excluded.push(name);
+  });
+  const aRemplacer = { 0: [1, 3], 1: [0], 2: [1] }; // séance -> positions modifiées
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY || !(session.templateVersion >= 2)) return;
+    let index = Number.isInteger(session.templateIndex) ? session.templateIndex : null;
+    if (index === null) {
+      const parNom = SPORT_PROGRAM.findIndex((t) => t.name === session.name);
+      index = parNom === -1 ? null : parNom;
+    }
+    const template = index !== null ? SPORT_PROGRAM[index] : null;
+    if (!template) return;
+    (aRemplacer[index] || []).forEach((position) => {
+      const exercise = session.exercises[position];
+      const cible = template.exercises[position];
+      if (!exercise || !cible || !['pull', 'push'].includes(exercise.ladder)) return;
+      const [ladderId, stepIndex, sets, rest] = cible;
+      applyLadderStep(exercise, ladderId, stepIndex);
+      exercise.sets = sets;
+      exercise.rest = rest;
+    });
+    session.templateVersion = SPORT_PROGRAM_VERSION;
+  });
+  appData.sport.migration = 3;
+}
+
 function isExcludedName(name) {
   return Boolean(appData.sport && Array.isArray(appData.sport.excluded) && appData.sport.excluded.includes(name));
 }
@@ -412,7 +448,14 @@ function normalizeLadderExercise(exercise) {
   if (!ladder.steps[exercise.step]) exercise.step = Math.min(Math.max(0, Number(exercise.step) || 0), ladder.steps.length - 1);
   if (isExcludedName(ladder.steps[exercise.step].name)) {
     const replacement = findAllowedStep(exercise.ladder, exercise.step, 1);
-    if (replacement !== null) applyLadderStep(exercise, exercise.ladder, replacement);
+    if (replacement !== null) {
+      applyLadderStep(exercise, exercise.ladder, replacement);
+    } else if (SPORT_LADDER_FALLBACK[exercise.ladder]) {
+      // Toute l'échelle est exclue : on passe à l'échelle de repli.
+      const repli = SPORT_LADDER_FALLBACK[exercise.ladder];
+      const etape = findAllowedStep(repli, 0, 1);
+      if (etape !== null) applyLadderStep(exercise, repli, etape);
+    }
   }
 }
 

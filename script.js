@@ -4709,21 +4709,42 @@ function applyThemeVars(vars) {
   });
 }
 
+// Couleurs de fond/texte gérées par le mode sombre ([data-theme="dark"] dans styles.css).
+const DARK_MODE_SURFACE_VARS = ['--background', '--surface', '--text', '--border', '--header-bg'];
+
+function isLightColor(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || '').trim());
+  if (!m) return true;
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
+}
+
 function applyAppearance() {
   const a = currentAppearance;
 
   // Color mode
   applyColorMode(a.colorMode);
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-  // Base theme
+  // Base theme. En mode sombre, un thème clair ne garde que ses couleurs
+  // d'accent : ses fonds et son texte clairs, écrits en style inline sur
+  // :root, écrasaient les variables du mode sombre (page claire, texte sombre
+  // sur fond sombre dans l'agenda...).
   const preset = THEME_PRESETS.find(p => p.id === a.themeId);
+  const keepDarkSurfaces = isDark && (!preset || isLightColor(preset.vars['--background']));
+  const withoutSurfaces = (vars) => Object.fromEntries(
+    Object.entries(vars).filter(([key]) => !DARK_MODE_SURFACE_VARS.includes(key))
+  );
+  if (keepDarkSurfaces) {
+    DARK_MODE_SURFACE_VARS.forEach((key) => document.documentElement.style.removeProperty(key));
+  }
   if (preset) {
-    applyThemeVars(preset.vars);
+    applyThemeVars(keepDarkSurfaces ? withoutSurfaces(preset.vars) : preset.vars);
   }
 
   // Custom overrides
   if (a.customVars && Object.keys(a.customVars).length) {
-    applyThemeVars(a.customVars);
+    applyThemeVars(keepDarkSurfaces ? withoutSurfaces(a.customVars) : a.customVars);
   }
 
   // Font
@@ -4834,7 +4855,7 @@ function initAppearance() {
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   mq.addEventListener('change', () => {
     if (currentAppearance.colorMode === 'auto') {
-      applyColorMode('auto');
+      applyAppearance();
     }
   });
 

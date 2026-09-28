@@ -181,6 +181,78 @@ const SPORT_LADDERS = {
       }
     ]
   },
+  row: {
+    name: 'Rowing avec sac à dos',
+    muscles: 'Dos (grands dorsaux, milieu du dos), arrière des épaules, biceps',
+    cue: 'Dos plat, tire le coude vers la hanche, serre l’omoplate en haut.',
+    note: 'Charge le sac avec des livres ou des bouteilles d’eau. Au début, garde-le assez léger pour une technique propre ; ajoute du poids avant de changer de variante.',
+    steps: [
+      {
+        name: 'Rowing un bras avec sac à dos',
+        reps: '10–15 / bras',
+        how: [
+          'Une main et un genou posés sur une chaise, l’autre pied au sol, dos plat.',
+          'Sac à dos chargé tenu par la poignée, bras tendu vers le sol.',
+          'Tire le sac vers la hanche en gardant le coude près du corps, puis redescends en 2 secondes.',
+          'Fais toutes les répétitions d’un côté, puis change.'
+        ],
+        mistakes: ['Dos arrondi.', 'Tourner le buste pour lancer le sac.']
+      },
+      {
+        name: 'Rowing penché deux mains avec sac à dos',
+        reps: '10–15',
+        how: [
+          'Debout, pieds largeur de hanches, genoux légèrement fléchis.',
+          'Penche le buste vers l’avant (environ 45°), dos bien plat, sac tenu à deux mains.',
+          'Tire le sac vers le bas du ventre en serrant les omoplates, redescends lentement.'
+        ],
+        mistakes: ['Dos rond : plie davantage les genoux.', 'Se redresser pendant le mouvement.']
+      },
+      {
+        name: 'Rowing penché sac à dos lesté, descente lente',
+        reps: '8–12',
+        how: [
+          'Même position, sac plus lourd.',
+          'Tiens 1 seconde en haut, omoplates serrées, puis descends en 3 secondes.'
+        ],
+        mistakes: ['Sacrifier l’amplitude pour le poids.']
+      }
+    ]
+  },
+  back: {
+    name: 'Dos au sol',
+    muscles: 'Bas et haut du dos, arrière des épaules (posture)',
+    cue: 'Allongé sur le ventre, regard vers le sol, mouvements lents et contrôlés.',
+    steps: [
+      {
+        name: 'Superman',
+        reps: '10–15',
+        how: [
+          'Allongé sur le ventre, bras tendus devant toi.',
+          'Décolle en même temps bras, poitrine et jambes de quelques centimètres.',
+          'Tiens 2 secondes en haut en serrant les fessiers, puis redescends.'
+        ],
+        mistakes: ['Relever la tête (garde le regard vers le sol).', 'Monter trop haut en cambrant fort.']
+      },
+      {
+        name: 'Y-T-W allongé',
+        reps: '6–8 par lettre',
+        how: [
+          'Allongé sur le ventre, front sur une serviette roulée.',
+          'Y : bras tendus en diagonale au-dessus de la tête, pouces vers le haut, décolle-les du sol.',
+          'T : bras tendus sur les côtés, décolle-les en serrant les omoplates.',
+          'W : coudes pliés le long du corps, ramène les omoplates vers le bas et l’arrière.'
+        ],
+        mistakes: ['Hausser les épaules vers les oreilles.', 'Aller trop vite.']
+      },
+      {
+        name: 'Y-T-W tenus 3 secondes',
+        reps: '5–8 par lettre',
+        how: ['Même enchaînement, en tenant chaque position 3 secondes en haut.'],
+        mistakes: ['Retenir sa respiration.']
+      }
+    ]
+  },
   squat: {
     name: 'Squats et fentes',
     muscles: 'Cuisses, fessiers',
@@ -420,7 +492,7 @@ const SPORT_LADDERS = {
 
 // Programme v2 : 3 séances full body, équilibrées pousser / tirer,
 // accent pecs + abdos. [échelle, étape de départ, séries, repos en s]
-const SPORT_PROGRAM_VERSION = 2;
+const SPORT_PROGRAM_VERSION = 3;
 const SPORT_PROGRAM = [
   {
     weekday: 1,
@@ -430,9 +502,9 @@ const SPORT_PROGRAM = [
       'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
     exercises: [
       ['push', 2, 4, 90],
-      ['pull', 0, 3, 90],
+      ['row', 0, 3, 90],
       ['squat', 1, 3, 60],
-      ['push', 1, 3, 75],
+      ['wide', 0, 3, 75],
       ['legraise', 0, 3, 45],
       ['plank', 1, 3, 45]
     ]
@@ -441,10 +513,10 @@ const SPORT_PROGRAM = [
     weekday: 3,
     name: 'B — Dos, jambes & gainage',
     description:
-      'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 rowings sous table faciles.\n' +
+      'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 supermans lents.\n' +
       'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.',
     exercises: [
-      ['pull', 0, 4, 90],
+      ['row', 1, 4, 90],
       ['close', 1, 3, 75],
       ['squat', 2, 3, 60],
       ['hinge', 0, 3, 60],
@@ -460,7 +532,7 @@ const SPORT_PROGRAM = [
       'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.',
     exercises: [
       ['wide', 0, 4, 90],
-      ['pull', 0, 3, 90],
+      ['back', 1, 3, 60],
       ['squat', 1, 3, 60],
       ['push', 2, 3, 75],
       ['hollow', 1, 3, 45],
@@ -476,6 +548,8 @@ const SPORT_VIDEOS = {
   wide: ['hzDFtOWJstY', 'hzDFtOWJstY', 'hzDFtOWJstY'],
   close: ['FvnPL4cYUQk', 'FvnPL4cYUQk', '5QH97LnIXgo', 'mhVgRRoNAgg'],
   pull: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
+  row: ['puaKVJOY8eg', 'aGTrrWvX6vk', '4PqtlMA-45Y'],
+  back: ['KuddSXD0Jk0', 'ZpZEQ2JCXyc', 'LSy6R7j3PDc'],
   squat: ['tPTVVEaYza0', 'RhusC-zA56k', 'Ey1o1oQ8x6M', 'eCJxHKDXBqk', null],
   hinge: ['9Wma4mC8wpw', 'QWu5ApIBD9A', null],
   plank: ['JCLxkG7ULfM', 'mv42eVXvMDc', null],
@@ -487,7 +561,15 @@ const SPORT_VIDEOS = {
 };
 
 // Exercices exclus par défaut (à la demande de l'utilisateur).
-const SPORT_DEFAULT_EXCLUDED = ['Rowing serviette à la porte'];
+const SPORT_DEFAULT_EXCLUDED = [
+  'Rowing serviette à la porte',
+  'Rowing inversé sous une table, genoux fléchis',
+  'Rowing inversé sous une table, jambes tendues',
+  'Rowing inversé pieds surélevés'
+];
+
+// Échelle de repli quand toutes les variantes d'une échelle sont exclues.
+const SPORT_LADDER_FALLBACK = { pull: 'row' };
 
 // Conseils affichés dans la fiche « ? » de chaque exercice.
 const SPORT_TIPS = {

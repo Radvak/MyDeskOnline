@@ -62,6 +62,7 @@
 [data-theme="dark"] .todo-item { background: #172032; border-color: var(--border); }
 [data-theme="dark"] .gantt-task-row { border-color: var(--border); }
 [data-theme="dark"] .calendar-grid .day-header.today { background: #1e3058; color: #93b4ff; }
+[data-theme="dark"] .calendar-grid .hour-cell.today { background: #22304f; }
 [data-theme="dark"] .daily-history-cell { background: #172032; border-color: #334155; color: var(--text); }
 [data-theme="dark"] .daily-history-cell--date { background: #1a2a4a; border-color: #3a4f7a; }
 
