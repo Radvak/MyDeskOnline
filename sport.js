@@ -98,6 +98,7 @@ const SPORT_TRANSLATIONS = {
     exclude: '🚫 Je ne veux pas faire cet exercice',
     excludeConfirm: 'Ne plus proposer « {name} » ? Il sera remplacé par la variante la plus proche.',
     target: 'Objectif : autant ou mieux que le {date} → {values}',
+    intensity: 'Chaque série : arrête-toi quand il te reste 1 à 3 répétitions propres en réserve.',
     addSet: 'Ajouter une série'
   },
   en: {
@@ -185,6 +186,7 @@ const SPORT_TRANSLATIONS = {
     exclude: '🚫 I don\'t want to do this exercise',
     excludeConfirm: 'Stop suggesting "{name}"? It will be replaced by the closest variation.',
     target: 'Goal: match or beat {date} → {values}',
+    intensity: 'Every set: stop when you have 1 to 3 clean reps left in the tank.',
     addSet: 'Add a set'
   },
   vi: {
@@ -272,6 +274,7 @@ const SPORT_TRANSLATIONS = {
     exclude: '🚫 Tôi không muốn tập bài này',
     excludeConfirm: 'Không đề xuất "{name}" nữa? Bài sẽ được thay bằng biến thể gần nhất.',
     target: 'Mục tiêu: bằng hoặc hơn ngày {date} → {values}',
+    intensity: 'Mỗi hiệp: dừng khi còn 1–3 lần lặp chuẩn trong sức.',
     addSet: 'Thêm một hiệp'
   }
 };
@@ -304,6 +307,7 @@ function ensureSportData() {
   if (!appData.sport.logs || typeof appData.sport.logs !== 'object') appData.sport.logs = {};
   if (!Array.isArray(appData.sport.excluded)) appData.sport.excluded = SPORT_DEFAULT_EXCLUDED.slice();
   migrerProgrammeV3();
+  migrerProgrammeV4();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
     session.exercises.forEach(normalizeLadderExercise);
@@ -415,9 +419,36 @@ function migrerProgrammeV3() {
       exercise.sets = sets;
       exercise.rest = rest;
     });
-    session.templateVersion = SPORT_PROGRAM_VERSION;
+    session.templateVersion = 3;
   });
   appData.sport.migration = 3;
+}
+
+// v4 (28/09/2026) : abdos en flexion plutôt qu'en cardio, et plus de tirage.
+// A : relevés de jambes → crunch inversé ; C : Y-T-W → rowing sac à dos,
+// mountain climbers → crunch. Les autres exercices gardent leur progression.
+function migrerProgrammeV4() {
+  if ((appData.sport.migration || 0) >= 4) return;
+  const aRemplacer = { 0: { 4: 'legraise' }, 2: { 1: 'back', 5: 'climbers' } }; // séance -> position -> ancienne échelle
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 3) return;
+    const index = Number.isInteger(session.templateIndex)
+      ? session.templateIndex
+      : SPORT_PROGRAM.findIndex((t) => t.name === session.name);
+    const template = SPORT_PROGRAM[index];
+    if (!template) return;
+    Object.entries(aRemplacer[index] || {}).forEach(([position, ancienne]) => {
+      const exercise = session.exercises[position];
+      const cible = template.exercises[position];
+      if (!exercise || !cible || exercise.ladder !== ancienne) return;
+      const [ladderId, stepIndex, sets, rest] = cible;
+      applyLadderStep(exercise, ladderId, stepIndex);
+      exercise.sets = sets;
+      exercise.rest = rest;
+    });
+    session.templateVersion = SPORT_PROGRAM_VERSION;
+  });
+  appData.sport.migration = 4;
 }
 
 function isExcludedName(name) {
@@ -953,6 +984,7 @@ function renderSportWorkout(main, session, date) {
   const progressLabel = sportEl('p', 'sport-progress__label');
   progressLabel.id = 'sport-progress-label';
   card.append(progress, progressLabel);
+  card.appendChild(sportEl('p', 'sport-hero__intensity', t('sport.intensity')));
 
   if (session.description) {
     const details = sportEl('details', 'sport-instructions');

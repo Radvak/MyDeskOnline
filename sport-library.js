@@ -60,7 +60,8 @@ const SPORT_LADDERS = {
         how: [
           'Pieds sur une chaise ou un canapé, mains au sol.',
           'Même technique que les pompes classiques.',
-          'Travaille davantage le haut des pecs. Plus les pieds sont hauts, plus c’est dur.'
+          'Plus dur : les bras portent ≈ 70 % du poids du corps (≈ 64 % en pompes classiques). Sollicite un peu plus le haut des pecs.',
+          'Plus les pieds sont hauts, plus c’est dur.'
         ],
         mistakes: ['Cambrer le bas du dos.']
       },
@@ -78,7 +79,7 @@ const SPORT_LADDERS = {
   },
   wide: {
     name: 'Pompes larges',
-    muscles: 'Pecs (surtout), avant des épaules',
+    muscles: 'Pecs, avant des épaules, triceps (une variante des pompes, pas « plus pecs » que les classiques)',
     cue: 'Mains ~1,5× la largeur des épaules, épaules basses, amplitude complète.',
     steps: [
       {
@@ -104,14 +105,14 @@ const SPORT_LADDERS = {
       {
         name: 'Pompes larges pieds surélevés',
         reps: '8–12',
-        how: ['Pieds sur une chaise, mains larges.', 'Cible le haut et l’extérieur des pecs.'],
+        how: ['Pieds sur une chaise, mains larges.', 'Plus dur que les pompes larges au sol : plus de poids sur les bras.'],
         mistakes: ['Cambrer le dos.']
       }
     ]
   },
   close: {
     name: 'Pompes serrées',
-    muscles: 'Triceps, intérieur des pecs',
+    muscles: 'Triceps, pecs',
     cue: 'Mains sous les épaules, coudes qui frôlent le buste.',
     steps: [
       {
@@ -384,7 +385,7 @@ const SPORT_LADDERS = {
   },
   legraise: {
     name: 'Relevés de jambes',
-    muscles: 'Abdos (surtout le bas du grand droit)',
+    muscles: 'Surtout les fléchisseurs de hanche ; les abdos travaillent vraiment quand le bassin s’enroule (voir le crunch inversé)',
     cue: 'Bas du dos plaqué au sol, descente lente, pas d’élan.',
     steps: [
       {
@@ -408,6 +409,43 @@ const SPORT_LADDERS = {
         reps: '8–12',
         how: ['Comme les relevés de jambes, puis décolle les fesses du sol en haut du mouvement.'],
         mistakes: ['Balancer les jambes.']
+      }
+    ]
+  },
+  revcrunch: {
+    name: 'Crunch inversé',
+    muscles: 'Abdos (grand droit) : le bassin s’enroule vers les côtes',
+    cue: 'Le mouvement vient du bassin qui s’enroule, pas des jambes qui se balancent.',
+    steps: [
+      {
+        name: 'Crunch inversé',
+        reps: '10–15',
+        how: [
+          'Allongé sur le dos, bras le long du corps, paumes au sol.',
+          'Genoux pliés à 90°, cuisses à la verticale au-dessus des hanches.',
+          'Enroule le bassin pour décoller les fesses du sol et rapprocher les genoux de la poitrine, en soufflant.',
+          'Redescends en 2 secondes jusqu’à ce que le bas du dos touche le sol, sans reposer les pieds.'
+        ],
+        mistakes: ['Prendre de l’élan avec les jambes.', 'Pousser fort sur les mains pour décoller.']
+      },
+      {
+        name: 'Crunch inversé, descente lente (3 s)',
+        reps: '10–15',
+        how: [
+          'Même mouvement que le crunch inversé.',
+          'Tiens 1 seconde en haut, puis déroule le dos vertèbre par vertèbre en 3 secondes.'
+        ],
+        mistakes: ['Laisser retomber le bassin d’un coup.']
+      },
+      {
+        name: 'Crunch inversé jambes tendues',
+        reps: '8–12',
+        how: [
+          'Allongé, mains au sol ou sous les fesses, jambes tendues à la verticale.',
+          'Décolle les fesses en montant les pieds vers le plafond (pas vers la tête).',
+          'Redescends lentement le bassin, puis les jambes sans toucher le sol.'
+        ],
+        mistakes: ['Balancer les jambes pour monter.', 'Dos qui se cambre en bas.']
       }
     ]
   },
@@ -485,14 +523,25 @@ const SPORT_LADDERS = {
         reps: '10–15 / côté',
         how: ['Coude vers le genou opposé, l’autre jambe tendue.', 'Lentement, en contrôlant.'],
         mistakes: ['Aller trop vite.']
+      },
+      {
+        name: 'Crunch lesté (sac à dos contre la poitrine)',
+        reps: '10–15',
+        how: [
+          'Même position que le crunch, un sac à dos chargé (ou des livres) tenu contre la poitrine.',
+          'Enroule le haut du dos en soufflant, tiens 1 seconde, redescends en 2 secondes.',
+          'Ajoute du poids dans le sac quand tu dépasses 15 répétitions.'
+        ],
+        mistakes: ['Tirer le sac vers le haut avec les bras.', 'Décoller le bas du dos.']
       }
     ]
   }
 };
 
-// Programme v2 : 3 séances full body, équilibrées pousser / tirer,
-// accent pecs + abdos. [échelle, étape de départ, séries, repos en s]
-const SPORT_PROGRAM_VERSION = 3;
+// Programme v4 : 3 séances full body, accent pecs + abdos.
+// Par semaine : ≈ 17 séries de poussée, 10 de tirage, 12 de jambes,
+// abdos en flexion (crunchs) + gainage. [échelle, étape de départ, séries, repos en s]
+const SPORT_PROGRAM_VERSION = 4;
 const SPORT_PROGRAM = [
   {
     weekday: 1,
@@ -505,7 +554,7 @@ const SPORT_PROGRAM = [
       ['row', 0, 3, 90],
       ['squat', 1, 3, 60],
       ['wide', 0, 3, 75],
-      ['legraise', 0, 3, 45],
+      ['revcrunch', 0, 3, 45],
       ['plank', 1, 3, 45]
     ]
   },
@@ -532,11 +581,11 @@ const SPORT_PROGRAM = [
       'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.',
     exercises: [
       ['wide', 0, 4, 90],
-      ['back', 1, 3, 60],
+      ['row', 0, 3, 90],
       ['squat', 1, 3, 60],
       ['push', 2, 3, 75],
       ['hollow', 1, 3, 45],
-      ['climbers', 0, 3, 45]
+      ['crunch', 0, 3, 45]
     ]
   }
 ];
@@ -555,9 +604,10 @@ const SPORT_VIDEOS = {
   plank: ['JCLxkG7ULfM', 'mv42eVXvMDc', null],
   side: ['hAWS7C17uJY', 'fIkpxa-kuIA', 'hAWS7C17uJY'],
   legraise: [null, 'ce-DMxpDIf8', null],
+  revcrunch: [null, null, null],
   hollow: ['6n7ZWnV8snU', 'HAfUt2Cco74', 'HAfUt2Cco74'],
   climbers: ['e9Nwd8ckkYA', 'e9Nwd8ckkYA', 'K3Xt4QH4b-U'],
-  crunch: ['PtqG6BmZW4o', null]
+  crunch: ['PtqG6BmZW4o', null, null]
 };
 
 // Exercices exclus par défaut (à la demande de l'utilisateur).
@@ -577,7 +627,7 @@ const SPORT_TIPS = {
     'Objectif de chaque séance : faire autant ou mieux que la dernière fois (les chiffres grisés dans les cases).',
     'Quand tu atteins le haut de la fourchette sur toutes les séries, passe à la variante suivante (le site te le propose).',
     'Si tu n’atteins pas le bas de la fourchette, reviens à la variante précédente.',
-    'Arrête chaque série en gardant 1 à 2 répétitions « en réserve », avec une technique propre.'
+    'Intensité : arrête chaque série quand il ne te reste plus que 1 à 3 répétitions propres « en réserve ». Des séries trop faciles ne font presque pas progresser.'
   ],
   safety: [
     'Courbatures : normal. Douleur vive ou articulaire : arrête et prends la variante plus facile.',
@@ -585,6 +635,8 @@ const SPORT_TIPS = {
   ],
   abs: [
     'Les abdos se construisent ici, mais ne deviennent visibles que si la graisse du ventre est assez fine : ça se joue surtout dans l’assiette.',
-    'Vise un léger déficit calorique (≈ 300–500 kcal de moins par jour) et assez de protéines (≈ 1,6–2 g par kg de poids par jour).'
+    'Faire des abdos ne fait pas fondre la graisse du ventre : on ne perd pas de gras à un endroit choisi.',
+    'Vise un léger déficit calorique (≈ 300–500 kcal de moins par jour) et assez de protéines (≈ 1,6–2 g par kg de poids par jour).',
+    'Dors 7 à 9 h : le manque de sommeil freine la récupération et augmente la faim.'
   ]
 };
