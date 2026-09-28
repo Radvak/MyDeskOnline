@@ -1,7 +1,7 @@
 /* Service worker : rend l'app installable et utilisable hors ligne.
    Stratégie « réseau d'abord » pour toujours servir la dernière version,
    avec repli sur le cache hors connexion. */
-const CACHE_NAME = 'mydesk-shell-v9';
+const CACHE_NAME = 'mydesk-shell-v10';
 const APP_SHELL = [
   './',
   'index.html',
@@ -13,6 +13,8 @@ const APP_SHELL = [
   'undo.js',
   'sport-library.js',
   'sport.js',
+  'menu-engine.js',
+  'menu.js',
   'version.json',
   'manifest.webmanifest',
   'MyDeskOnlineLogo.png',

@@ -373,6 +373,14 @@ function syncUserIsEditing() {
   const element = document.activeElement;
   if (!element || element === document.body) return false;
   if (element.closest && element.closest('#sync-panel')) return false;
+  if (element.tagName === 'IFRAME') {
+    try {
+      const inner = element.contentDocument && element.contentDocument.activeElement;
+      return Boolean(inner && (inner.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(inner.tagName)));
+    } catch (error) {
+      return false;
+    }
+  }
   if (element.isContentEditable) return true;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
 }

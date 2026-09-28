@@ -42,6 +42,7 @@ const defaultData = {
       notes: true,
       daily: true,
       sport: true,
+      menutool: true,
       gantt: true,
       snake: true,
       trackirigo: true
@@ -56,6 +57,7 @@ const OPTIONAL_TABS = [
   { id: 'notes', labelKey: 'tabs.notes' },
   { id: 'daily', labelKey: 'tabs.daily' },
   { id: 'sport', labelKey: 'tabs.sport' },
+  { id: 'menutool', labelKey: 'tabs.menutool' },
   { id: 'gantt', labelKey: 'tabs.gantt' },
   { id: 'snake', labelKey: 'tabs.snake' },
   { id: 'trackirigo', labelKey: 'tabs.track' }
@@ -4482,6 +4484,9 @@ async function bootstrap() {
   if (typeof registerSportTranslations === 'function') {
     registerSportTranslations();
   }
+  if (typeof registerMenuTranslations === 'function') {
+    registerMenuTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4510,6 +4515,9 @@ async function bootstrap() {
   }
   if (typeof initSport === 'function') {
     initSport();
+  }
+  if (typeof initMenuTool === 'function') {
+    initMenuTool();
   }
 }
 

@@ -55,6 +55,7 @@ function registerUndoTranslations() {
 function undoSnapshot() {
   const data = typeof syncExtractData === 'function' ? syncExtractData(appData) : JSON.parse(JSON.stringify(appData));
   delete data.snake;
+  delete data.menu;
   delete data.storagePath;
   return JSON.stringify(data);
 }
@@ -87,6 +88,7 @@ function resetUndoBaseline() {
 function undoRestore(serialized) {
   const data = JSON.parse(serialized);
   data.snake = appData.snake;
+  data.menu = appData.menu;
   if (typeof syncApplyData === 'function') {
     syncApplyData(data); // conserve l'état local, migre, enregistre et redessine
   } else {

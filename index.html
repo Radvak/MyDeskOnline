@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <header class="app-header">
@@ -41,6 +41,7 @@
       <button class="tab-link" data-target="notes" data-i18n="tabs.notes">Notes</button>
       <button class="tab-link" data-target="daily" data-i18n="tabs.daily">Défis Quotidiens</button>
       <button class="tab-link" data-target="sport" data-i18n="tabs.sport">Sport</button>
+      <button class="tab-link" data-target="menutool" data-i18n="tabs.menutool">Menu</button>
       <button class="tab-link" data-target="gantt" data-i18n="tabs.gantt">GANTT</button>
       <button class="tab-link" data-target="snake" data-i18n="tabs.snake">Snake</button>
       <button class="tab-link" data-target="trackirigo" data-i18n="tabs.track">Track'Irigo</button>
@@ -416,6 +417,15 @@
       </div>
     </section>
 
+    <section id="menutool" class="tab-panel">
+      <div class="menutool-bar">
+        <span class="menutool-info" id="menutool-info"></span>
+        <span class="menutool-status" id="menutool-status" aria-live="polite"></span>
+        <button type="button" id="menutool-refresh" class="btn-secondary" data-i18n="menutool.refresh">↻ Vérifier les mises à jour</button>
+      </div>
+      <div class="menutool-frame" id="menutool-frame"></div>
+    </section>
+
     <section id="gantt" class="tab-panel">
       <div class="gantt-layout">
         <aside class="gantt-sidebar">
@@ -605,13 +615,15 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=9" defer></script>
-  <script src="ical.js?v=9" defer></script>
-  <script src="print.js?v=9" defer></script>
-  <script src="undo.js?v=9" defer></script>
-  <script src="sport-library.js?v=9" defer></script>
-  <script src="sport.js?v=9" defer></script>
-  <script src="script.js?v=9" defer></script>
+  <script src="sync.js?v=10" defer></script>
+  <script src="ical.js?v=10" defer></script>
+  <script src="print.js?v=10" defer></script>
+  <script src="undo.js?v=10" defer></script>
+  <script src="sport-library.js?v=10" defer></script>
+  <script src="sport.js?v=10" defer></script>
+  <script src="menu-engine.js?v=10" defer></script>
+  <script src="menu.js?v=10" defer></script>
+  <script src="script.js?v=10" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
