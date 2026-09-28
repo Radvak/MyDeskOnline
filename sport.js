@@ -87,7 +87,18 @@ const SPORT_TRANSLATIONS = {
     updated: 'Programme mis à jour.',
     guideTitle: 'Guide pour progresser seul',
     libraryTitle: 'Bibliothèque d’exercices',
-    back: '← Retour à la séance'
+    back: '← Retour à la séance',
+    playVideo: 'Lire la vidéo',
+    moreVideos: '▶ Autres vidéos sur YouTube',
+    findVideos: '▶ Voir des vidéos sur YouTube',
+    tipsProgression: 'Comment progresser',
+    tipsSafety: 'Sécurité',
+    tipsAbs: 'Abdos visibles',
+    allowAgain: 'Réautoriser',
+    exclude: '🚫 Je ne veux pas faire cet exercice',
+    excludeConfirm: 'Ne plus proposer « {name} » ? Il sera remplacé par la variante la plus proche.',
+    target: 'Objectif : autant ou mieux que le {date} → {values}',
+    addSet: 'Ajouter une série'
   },
   en: {
     sessionsTitle: 'Workouts',
@@ -163,7 +174,18 @@ const SPORT_TRANSLATIONS = {
     updated: 'Program updated.',
     guideTitle: 'Guide to progress on your own',
     libraryTitle: 'Exercise library',
-    back: '← Back to workout'
+    back: '← Back to workout',
+    playVideo: 'Play video',
+    moreVideos: '▶ More videos on YouTube',
+    findVideos: '▶ Find videos on YouTube',
+    tipsProgression: 'How to progress',
+    tipsSafety: 'Safety',
+    tipsAbs: 'Visible abs',
+    allowAgain: 'Allow again',
+    exclude: '🚫 I don\'t want to do this exercise',
+    excludeConfirm: 'Stop suggesting "{name}"? It will be replaced by the closest variation.',
+    target: 'Goal: match or beat {date} → {values}',
+    addSet: 'Add a set'
   },
   vi: {
     sessionsTitle: 'Buổi tập',
@@ -239,7 +261,18 @@ const SPORT_TRANSLATIONS = {
     updated: 'Đã cập nhật chương trình.',
     guideTitle: 'Hướng dẫn tự tập',
     libraryTitle: 'Thư viện bài tập',
-    back: '← Quay lại buổi tập'
+    back: '← Quay lại buổi tập',
+    playVideo: 'Phát video',
+    moreVideos: '▶ Thêm video trên YouTube',
+    findVideos: '▶ Tìm video trên YouTube',
+    tipsProgression: 'Cách tiến bộ',
+    tipsSafety: 'An toàn',
+    tipsAbs: 'Cơ bụng rõ nét',
+    allowAgain: 'Cho phép lại',
+    exclude: '🚫 Tôi không muốn tập bài này',
+    excludeConfirm: 'Không đề xuất "{name}" nữa? Bài sẽ được thay bằng biến thể gần nhất.',
+    target: 'Mục tiêu: bằng hoặc hơn ngày {date} → {values}',
+    addSet: 'Thêm một hiệp'
   }
 };
 
@@ -247,7 +280,7 @@ const SPORT_TAB_TRANSLATIONS = { fr: 'Sport', en: 'Sport', vi: 'Thể thao' };
 
 let sportSelectedDate = null;
 let sportPickerEvent = null;
-let sportView = 'workout'; // 'workout' | 'edit' | 'guide'
+let sportView = 'workout'; // 'workout' | 'edit'
 let sportOpenHelp = null; // id de l'exercice dont la fiche est ouverte
 let sportTimer = null;
 
@@ -269,8 +302,13 @@ function ensureSportData() {
   }
   if (!Array.isArray(appData.sport.sessions)) appData.sport.sessions = [];
   if (!appData.sport.logs || typeof appData.sport.logs !== 'object') appData.sport.logs = {};
+  if (!Array.isArray(appData.sport.excluded)) appData.sport.excluded = SPORT_DEFAULT_EXCLUDED.slice();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
+    session.exercises.forEach(normalizeLadderExercise);
+    if (session.description && session.description.includes('rowings serviette')) {
+      session.description = session.description.replace('rowings serviette', 'rowings sous table');
+    }
   });
   if (!appData.sport.sessions.some((session) => session.id === appData.sport.activeSessionId)) {
     appData.sport.activeSessionId = appData.sport.sessions.length ? appData.sport.sessions[0].id : null;
@@ -346,6 +384,43 @@ function getLadderStep(exercise) {
   return { ladder, step: ladder.steps[exercise.step] || null };
 }
 
+function isExcludedName(name) {
+  return Boolean(appData.sport && Array.isArray(appData.sport.excluded) && appData.sport.excluded.includes(name));
+}
+
+// Étape autorisée la plus proche : d'abord dans la direction demandée, puis dans l'autre.
+function findAllowedStep(ladderId, stepIndex, direction = 1) {
+  const ladder = SPORT_LADDERS[ladderId];
+  if (!ladder) return null;
+  const allowed = (index) => index >= 0 && index < ladder.steps.length && !isExcludedName(ladder.steps[index].name);
+  for (let i = stepIndex; i >= 0 && i < ladder.steps.length; i += direction) {
+    if (allowed(i)) return i;
+  }
+  for (let i = stepIndex - direction; i >= 0 && i < ladder.steps.length; i -= direction) {
+    if (allowed(i)) return i;
+  }
+  return null;
+}
+
+// Retrouve l'étape d'après le nom (robuste aux changements de bibliothèque)
+// et remplace une variante exclue par la plus proche autorisée.
+function normalizeLadderExercise(exercise) {
+  const ladder = exercise.ladder ? SPORT_LADDERS[exercise.ladder] : null;
+  if (!ladder) return;
+  const byName = ladder.steps.findIndex((step) => step.name === exercise.name);
+  if (byName !== -1) exercise.step = byName;
+  if (!ladder.steps[exercise.step]) exercise.step = Math.min(Math.max(0, Number(exercise.step) || 0), ladder.steps.length - 1);
+  if (isExcludedName(ladder.steps[exercise.step].name)) {
+    const replacement = findAllowedStep(exercise.ladder, exercise.step, 1);
+    if (replacement !== null) applyLadderStep(exercise, exercise.ladder, replacement);
+  }
+}
+
+function getVideoId(ladderId, stepIndex) {
+  const videos = SPORT_VIDEOS[ladderId];
+  return videos && videos[stepIndex] ? videos[stepIndex] : null;
+}
+
 function applyLadderStep(exercise, ladderId, stepIndex) {
   const ladder = SPORT_LADDERS[ladderId];
   if (!ladder || !ladder.steps[stepIndex]) return;
@@ -366,15 +441,23 @@ function getProgressionAdvice(exercise, sets) {
     return range ? { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) } : null;
   }
   const { ladder } = getLadderStep(exercise);
+  // Étape voisine autorisée (on saute les variantes exclues).
+  const neighbour = (direction) => {
+    if (!ladder) return null;
+    for (let i = exercise.step + direction; i >= 0 && i < ladder.steps.length; i += direction) {
+      if (!isExcludedName(ladder.steps[i].name)) return i;
+    }
+    return null;
+  };
   if (values.every((value) => value >= range.max)) {
-    const next = ladder && ladder.steps[exercise.step + 1];
-    return next
-      ? { kind: 'up', text: t('sport.suggestUp', { max: range.max, name: next.name }), step: exercise.step + 1 }
+    const next = neighbour(1);
+    return next !== null
+      ? { kind: 'up', text: t('sport.suggestUp', { max: range.max, name: ladder.steps[next].name }), step: next }
       : { kind: 'top', text: t('sport.suggestUpTop', { max: range.max }) };
   }
   if (values.some((value) => value < range.min)) {
-    const prev = ladder && exercise.step > 0 ? ladder.steps[exercise.step - 1] : null;
-    if (prev) return { kind: 'down', text: t('sport.suggestDown', { min: range.min, name: prev.name }), step: exercise.step - 1 };
+    const prev = neighbour(-1);
+    if (prev !== null) return { kind: 'down', text: t('sport.suggestDown', { min: range.min, name: ladder.steps[prev].name }), step: prev };
   }
   return { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) };
 }
@@ -575,7 +658,7 @@ function renderSportList() {
     const item = sportEl('li');
     const button = sportEl('button', 'sport-session-item');
     button.type = 'button';
-    if (session.id === appData.sport.activeSessionId && sportView !== 'guide') button.classList.add('active');
+    if (session.id === appData.sport.activeSessionId) button.classList.add('active');
     button.appendChild(sportEl('strong', '', session.name || t('sport.newSessionName')));
     const days = getSessionWeekdays(session.id);
     button.appendChild(
@@ -647,11 +730,6 @@ function renderSportMain() {
   if (!main) return;
   main.innerHTML = '';
 
-  if (sportView === 'guide') {
-    renderSportGuide(main);
-    return;
-  }
-
   const date = sportSelectedDate || new Date(new Date().setHours(0, 0, 0, 0));
   renderSportHeader(main, date);
 
@@ -675,14 +753,58 @@ function renderSportMain() {
 
 /* ── Mode séance ───────────────────────────────────────────── */
 
+// Vidéo : miniature cliquable, la vidéo YouTube (sans cookies) ne se charge qu'au clic.
+function renderExerciseVideo(panel, videoId, name) {
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} exercice technique`)}`;
+  if (videoId) {
+    const frame = sportEl('div', 'sport-video');
+    const play = sportEl('button', 'sport-video__play');
+    play.type = 'button';
+    play.setAttribute('aria-label', t('sport.playVideo'));
+    const img = document.createElement('img');
+    img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    img.alt = name;
+    img.loading = 'lazy';
+    play.append(img, sportEl('span', 'sport-video__icon', '▶'));
+    play.addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+      iframe.title = name;
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      iframe.allowFullscreen = true;
+      frame.replaceChildren(iframe);
+    });
+    frame.appendChild(play);
+    panel.appendChild(frame);
+  }
+  const more = sportEl('a', 'sport-video__more', videoId ? t('sport.moreVideos') : t('sport.findVideos'));
+  more.href = searchUrl;
+  more.target = '_blank';
+  more.rel = 'noopener noreferrer';
+  panel.appendChild(more);
+}
+
+function renderTipsList(panel, titleKey, lines) {
+  const details = sportEl('details', 'sport-help__tips');
+  details.appendChild(sportEl('summary', '', t(titleKey)));
+  const list = sportEl('ul');
+  lines.forEach((line) => list.appendChild(sportEl('li', '', line)));
+  details.appendChild(list);
+  panel.appendChild(details);
+}
+
 function renderExerciseHelp(container, session, exercise) {
   const { ladder, step } = getLadderStep(exercise);
   const panel = sportEl('div', 'sport-help');
   if (!ladder) {
-    panel.appendChild(sportEl('p', 'sport-help__muted', exercise.tip || '—'));
+    renderExerciseVideo(panel, null, exercise.name || t('sport.exercise'));
+    if (exercise.tip) panel.appendChild(sportEl('p', 'sport-help__muted', exercise.tip));
+    renderTipsList(panel, 'sport.tipsProgression', SPORT_TIPS.progression);
     container.appendChild(panel);
     return;
   }
+
+  renderExerciseVideo(panel, getVideoId(exercise.ladder, exercise.step), exercise.name);
   panel.appendChild(sportEl('p', 'sport-help__muted', t('sport.muscles', { muscles: ladder.muscles })));
   if (step) {
     panel.appendChild(sportEl('h4', '', t('sport.howToTitle')));
@@ -696,13 +818,23 @@ function renderExerciseHelp(container, session, exercise) {
       panel.appendChild(mistakes);
     }
   }
+
   panel.appendChild(sportEl('h4', '', t('sport.ladder')));
   const steps = sportEl('ol', 'sport-ladder');
   ladder.steps.forEach((ladderStep, index) => {
-    const item = sportEl('li', index === exercise.step ? 'current' : '');
+    const excluded = isExcludedName(ladderStep.name);
+    const item = sportEl('li', index === exercise.step ? 'current' : excluded ? 'excluded' : '');
     item.appendChild(sportEl('span', 'sport-ladder__name', `${ladderStep.name} · ${ladderStep.reps}`));
     if (index === exercise.step) {
       item.appendChild(sportEl('span', 'sport-ladder__badge', t('sport.current')));
+    } else if (excluded) {
+      item.appendChild(
+        sportButton('sport-link-btn', t('sport.allowAgain'), () => {
+          appData.sport.excluded = appData.sport.excluded.filter((name) => name !== ladderStep.name);
+          saveData();
+          renderSportMain();
+        })
+      );
     } else {
       item.appendChild(
         sportButton('sport-link-btn', t('sport.useVariant'), () => {
@@ -716,6 +848,20 @@ function renderExerciseHelp(container, session, exercise) {
   });
   panel.appendChild(steps);
   if (ladder.note) panel.appendChild(sportEl('p', 'sport-help__muted', ladder.note));
+
+  renderTipsList(panel, 'sport.tipsProgression', SPORT_TIPS.progression);
+  renderTipsList(panel, 'sport.tipsSafety', SPORT_TIPS.safety);
+  if (/abdo/i.test(ladder.muscles)) renderTipsList(panel, 'sport.tipsAbs', SPORT_TIPS.abs);
+
+  const exclude = sportButton('sport-exclude-btn', t('sport.exclude'), () => {
+    if (!window.confirm(t('sport.excludeConfirm', { name: exercise.name }))) return;
+    appData.sport.excluded = Array.from(new Set([...appData.sport.excluded, exercise.name]));
+    // Remplace l'exercice partout où il est utilisé.
+    appData.sport.sessions.forEach((s) => s.exercises.forEach(normalizeLadderExercise));
+    saveData();
+    renderSportMain();
+  });
+  panel.appendChild(exclude);
   container.appendChild(panel);
 }
 
@@ -817,12 +963,16 @@ function renderSportWorkout(main, session, date) {
 
     if (sportOpenHelp === exercise.id) renderExerciseHelp(body, session, exercise);
 
+    // Objectif : autant ou mieux que la dernière fois, série par série.
     const last = getLastPerformance(session.id, exercise, dateKey);
-    if (last) {
+    const lastSets = last ? last.sets.map(Number).filter((value) => value > 0) : [];
+    const targetCount = Math.max(setCount, lastSets.length);
+    if (lastSets.length) {
       body.appendChild(
-        sportEl('div', 'sport-workout__last', t('sport.lastTime', {
+        sportEl('div', 'sport-workout__target', t('sport.target', {
           date: formatShortDate(last.dateKey),
-          values: last.sets.filter((value) => value !== '' && value !== null && value !== undefined).join(' · ')
+          values: lastSets.join(' · '),
+          count: lastSets.length
         }))
       );
     }
@@ -853,15 +1003,23 @@ function renderSportWorkout(main, session, date) {
       }
       adviceBox.appendChild(banner);
     };
-    for (let i = 0; i < setCount; i += 1) {
+    const colorInput = (input, index) => {
+      const target = lastSets[index];
+      const value = Number(input.value);
+      input.classList.toggle('reached', Boolean(target) && value >= target);
+      input.classList.toggle('below', Boolean(target) && value > 0 && value < target);
+    };
+    const inputs = [];
+    const addSetInput = (i) => {
       const input = sportInput('number', values[i], (value) => {
         values[i] = value === '' ? '' : Number(value);
         sameVariant = true;
-        const allFilled = values.length >= setCount && values.slice(0, setCount).every((v) => Number(v) > 0);
+        colorInput(input, i);
+        const filled = values.filter((v) => Number(v) > 0).length;
         const patch = { sets: values.slice(), variant: exercise.name };
-        if (allFilled && !item.classList.contains('done')) patch.done = true;
+        if (filled >= setCount && !item.classList.contains('done')) patch.done = true;
         setSportLog(dateKey, session.id, exercise.id, patch);
-        if (allFilled && !item.classList.contains('done')) {
+        if (patch.done) {
           item.classList.add('done');
           check.textContent = '✓';
           updateSportProgress(session, dateKey);
@@ -872,10 +1030,20 @@ function renderSportWorkout(main, session, date) {
         min: '0',
         inputmode: 'numeric',
         'aria-label': t('sport.setLabel', { n: i + 1 }),
-        placeholder: last && last.sets[i] !== undefined && last.sets[i] !== '' ? String(last.sets[i]) : `S${i + 1}`
+        placeholder: lastSets[i] ? String(lastSets[i]) : `S${i + 1}`
       });
-      setsRow.appendChild(input);
-    }
+      colorInput(input, i);
+      inputs.push(input);
+      setsRow.insertBefore(input, addSetButton);
+    };
+    // Bouton « + série » : une série de plus que prévu, retenue comme objectif la prochaine fois.
+    const addSetButton = sportButton('sport-add-set', '+', () => {
+      addSetInput(inputs.length);
+      inputs[inputs.length - 1].focus();
+    }, t('sport.addSet'));
+    setsRow.appendChild(addSetButton);
+    const initialCount = Math.max(targetCount, values.length);
+    for (let i = 0; i < initialCount; i += 1) addSetInput(i);
     if (Number(exercise.rest) > 0) {
       setsRow.appendChild(
         sportButton('sport-rest-btn', t('sport.restTimer', { rest: formatRest(exercise.rest) }), () => {
@@ -911,7 +1079,7 @@ function buildVariantSelect(exercise, onChange) {
     const group = document.createElement('optgroup');
     group.label = ladder.name;
     ladder.steps.forEach((step, index) => {
-      const option = sportEl('option', '', step.name);
+      const option = sportEl('option', '', isExcludedName(step.name) ? `🚫 ${step.name}` : step.name);
       option.value = `${ladderId}:${index}`;
       group.appendChild(option);
     });
@@ -1100,52 +1268,6 @@ function renderSportEdit(main, session) {
   main.appendChild(danger);
 }
 
-/* ── Guide ─────────────────────────────────────────────────── */
-
-function renderSportGuide(main) {
-  const top = sportEl('div', 'sport-date-nav');
-  top.appendChild(
-    sportButton('sport-link-btn', t('sport.back'), () => {
-      sportView = 'workout';
-      renderSport();
-    })
-  );
-  main.appendChild(top);
-
-  const intro = sportEl('div', 'sport-card');
-  intro.appendChild(sportEl('h2', 'sport-hero__title', t('sport.guideTitle')));
-  SPORT_GUIDE.forEach((section) => {
-    const details = sportEl('details', 'sport-guide-section');
-    details.appendChild(sportEl('summary', '', section.title));
-    const list = sportEl('ul');
-    section.items.forEach((line) => list.appendChild(sportEl('li', '', line)));
-    details.appendChild(list);
-    intro.appendChild(details);
-  });
-  main.appendChild(intro);
-
-  const library = sportEl('div', 'sport-card');
-  library.appendChild(sportEl('h2', 'sport-hero__title', t('sport.libraryTitle')));
-  Object.values(SPORT_LADDERS).forEach((ladder) => {
-    const details = sportEl('details', 'sport-guide-section');
-    details.appendChild(sportEl('summary', '', `${ladder.name} — ${ladder.muscles}`));
-    const steps = sportEl('ol', 'sport-guide-steps');
-    ladder.steps.forEach((step) => {
-      const item = sportEl('li');
-      item.appendChild(sportEl('strong', '', `${step.name} · ${step.reps}`));
-      const how = sportEl('ul');
-      step.how.forEach((line) => how.appendChild(sportEl('li', '', line)));
-      (step.mistakes || []).forEach((line) => how.appendChild(sportEl('li', 'sport-help__mistake', `⚠ ${line}`)));
-      item.appendChild(how);
-      steps.appendChild(item);
-    });
-    details.appendChild(steps);
-    if (ladder.note) details.appendChild(sportEl('p', 'sport-help__muted', ladder.note));
-    library.appendChild(details);
-  });
-  main.appendChild(library);
-}
-
 function showSportMessage(text) {
   const status = document.getElementById('sport-status');
   if (!status) return;
@@ -1161,8 +1283,6 @@ function renderSport() {
   ensureSportData();
   renderSportList();
   renderSportMain();
-  const guideBtn = document.getElementById('sport-guide');
-  if (guideBtn) guideBtn.classList.toggle('active', sportView === 'guide');
 }
 
 /* ── Actions ───────────────────────────────────────────────── */
@@ -1203,6 +1323,7 @@ function buildProgramExercises(template) {
   return template.exercises.map(([ladderId, stepIndex, sets, rest]) => {
     const exercise = { id: uid(), sets, rest };
     applyLadderStep(exercise, ladderId, stepIndex);
+    normalizeLadderExercise(exercise);
     return exercise;
   });
 }
@@ -1320,10 +1441,6 @@ function initSport() {
     }
   });
   document.getElementById('sport-load-program').addEventListener('click', loadSportProgram);
-  document.getElementById('sport-guide').addEventListener('click', () => {
-    sportView = sportView === 'guide' ? 'workout' : 'guide';
-    renderSport();
-  });
   selectSessionForDate(new Date());
   renderSport();
 

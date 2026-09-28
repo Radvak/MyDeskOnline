@@ -441,7 +441,7 @@ const SPORT_PROGRAM = [
     weekday: 3,
     name: 'B — Dos, jambes & gainage',
     description:
-      'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 rowings serviette faciles.\n' +
+      'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 rowings sous table faciles.\n' +
       'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.',
     exercises: [
       ['pull', 0, 4, 90],
@@ -469,64 +469,40 @@ const SPORT_PROGRAM = [
   }
 ];
 
-// Guide : tout ce qu'il faut pour progresser en autonomie.
-const SPORT_GUIDE = [
-  {
-    title: 'Utiliser l’onglet Sport',
-    items: [
-      'Clique sur une séance « Sport » dans l’agenda : tu arrives directement sur la séance du jour.',
-      'Pour chaque exercice, note tes répétitions (ou secondes) série par série dans les petites cases.',
-      'Lance le minuteur de repos entre deux séries avec le bouton ⏱.',
-      'Le bouton ? affiche la technique, les erreurs à éviter et l’échelle de progression.',
-      'Quand tu réussis le haut de la fourchette sur toutes les séries, un bandeau te propose la variante suivante : un clic et c’est changé.'
-    ]
-  },
-  {
-    title: 'La règle de progression (double progression)',
-    items: [
-      'Chaque exercice a une fourchette, par exemple 8–12 répétitions.',
-      'Tant que tu n’atteins pas 12 sur toutes les séries, garde la même variante et essaie de faire 1 répétition de plus que la dernière fois.',
-      'Quand tu fais 12 sur toutes les séries : passe à la variante suivante de l’échelle. Tu repartiras vers 8 répétitions, c’est normal.',
-      'Si tu n’arrives pas à faire le bas de la fourchette (ex. moins de 8) : reviens à la variante précédente.',
-      'Arrête chaque série en gardant 1 à 2 répétitions « en réserve » : proche de l’échec, mais avec une technique propre.'
-    ]
-  },
-  {
-    title: 'Technique et sécurité',
-    items: [
-      'La qualité avant la quantité : amplitude complète et descente lente (2–3 secondes).',
-      'Courbatures les jours suivants : normal. Douleur vive ou articulaire (épaule, poignet, genou, dos) : arrête l’exercice et prends la variante plus facile.',
-      'Vérifie toujours la solidité de ton matériel (table, porte, chaise) avant de t’en servir.',
-      'Si tu as un problème de santé ou une ancienne blessure, demande l’avis d’un médecin avant de commencer.'
-    ]
-  },
-  {
-    title: 'Récupération',
-    items: [
-      'Garde au moins un jour de repos entre deux séances (lundi, mercredi, vendredi, c’est parfait).',
-      'Le muscle se construit pendant le repos : vise 7 à 9 heures de sommeil.',
-      'Tu as raté une séance ? Pas grave : reprends à la suivante, sans doubler.',
-      'Toutes les 8 à 10 semaines, fais une semaine plus légère (2 séries au lieu de 3–4) pour récupérer.'
-    ]
-  },
-  {
-    title: 'Abdos visibles et pecs plus marqués',
-    items: [
-      'Tout le monde a des abdos : ils deviennent visibles quand la couche de graisse du ventre est assez fine.',
-      'On ne peut pas « brûler la graisse du ventre » avec des abdos : elle part avec l’alimentation, sur tout le corps.',
-      'Vise un léger déficit calorique (environ 300 à 500 kcal de moins par jour) : perdre environ 0,5 % de son poids par semaine préserve les muscles.',
-      'Mange assez de protéines : environ 1,6 à 2 g par kg de poids par jour (viande, poisson, œufs, laitages, légumineuses, tofu).',
-      'Pour les pecs, la clé est la progression : passer régulièrement aux variantes plus dures.',
-      'Sois patient : les premiers changements visibles arrivent généralement après 8 à 12 semaines de régularité.'
-    ]
-  },
-  {
-    title: 'Quand faire évoluer le programme',
-    items: [
-      'Quand tu es en haut d’une échelle (ex. pompes archer faciles), ajoute une série ou mets un sac à dos chargé (livres, bouteilles d’eau).',
-      'Le meilleur achat pour progresser : une barre de traction de porte (≈ 20–30 €) pour les tractions, excellentes pour le dos.',
-      'Des élastiques de musculation ou des anneaux permettent ensuite de varier les exercices.',
-      'Tu peux modifier chaque séance avec « ✎ Modifier » : changer une variante, ajouter un exercice depuis la bibliothèque, ajuster séries et repos.'
-    ]
-  }
-];
+// Vidéos YouTube (vérifiées : existantes et intégrables), une par variante.
+// null = pas de vidéo fiable trouvée : le bouton « Autres vidéos » reste disponible.
+const SPORT_VIDEOS = {
+  push: ['emhF1efZ-38', '5O7QVJ4s6iw', 'SWUw2epT8P4', '50Yr6Mm78u0', 'Dl1M2oeljAw', 'T3vnPh3Cjnk'],
+  wide: ['hzDFtOWJstY', 'hzDFtOWJstY', 'hzDFtOWJstY'],
+  close: ['FvnPL4cYUQk', 'FvnPL4cYUQk', '5QH97LnIXgo', 'mhVgRRoNAgg'],
+  pull: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
+  squat: ['tPTVVEaYza0', 'RhusC-zA56k', 'Ey1o1oQ8x6M', 'eCJxHKDXBqk', null],
+  hinge: ['9Wma4mC8wpw', 'QWu5ApIBD9A', null],
+  plank: ['JCLxkG7ULfM', 'mv42eVXvMDc', null],
+  side: ['hAWS7C17uJY', 'fIkpxa-kuIA', 'hAWS7C17uJY'],
+  legraise: [null, 'ce-DMxpDIf8', null],
+  hollow: ['6n7ZWnV8snU', 'HAfUt2Cco74', 'HAfUt2Cco74'],
+  climbers: ['e9Nwd8ckkYA', 'e9Nwd8ckkYA', 'K3Xt4QH4b-U'],
+  crunch: ['PtqG6BmZW4o', null]
+};
+
+// Exercices exclus par défaut (à la demande de l'utilisateur).
+const SPORT_DEFAULT_EXCLUDED = ['Rowing serviette à la porte'];
+
+// Conseils affichés dans la fiche « ? » de chaque exercice.
+const SPORT_TIPS = {
+  progression: [
+    'Objectif de chaque séance : faire autant ou mieux que la dernière fois (les chiffres grisés dans les cases).',
+    'Quand tu atteins le haut de la fourchette sur toutes les séries, passe à la variante suivante (le site te le propose).',
+    'Si tu n’atteins pas le bas de la fourchette, reviens à la variante précédente.',
+    'Arrête chaque série en gardant 1 à 2 répétitions « en réserve », avec une technique propre.'
+  ],
+  safety: [
+    'Courbatures : normal. Douleur vive ou articulaire : arrête et prends la variante plus facile.',
+    'Vérifie la solidité du matériel (table, chaise) avant de t’en servir.'
+  ],
+  abs: [
+    'Les abdos se construisent ici, mais ne deviennent visibles que si la graisse du ventre est assez fine : ça se joue surtout dans l’assiette.',
+    'Vise un léger déficit calorique (≈ 300–500 kcal de moins par jour) et assez de protéines (≈ 1,6–2 g par kg de poids par jour).'
+  ]
+};

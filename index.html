@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <header class="app-header">
@@ -408,7 +408,6 @@
           <ul class="sport-session-list" id="sport-session-list"></ul>
           <div class="sport-sidebar__actions">
             <button id="sport-add-session" type="button" data-i18n="sport.addSession">Nouvelle séance</button>
-            <button id="sport-guide" type="button" class="btn-secondary sport-guide-btn" data-i18n="sport.guide">📖 Guide &amp; exercices</button>
             <button id="sport-load-program" type="button" class="btn-secondary" data-i18n="sport.loadProgram">Programme recommandé</button>
           </div>
           <p class="sport-status" id="sport-status" aria-live="polite"></p>
@@ -606,13 +605,13 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=8" defer></script>
-  <script src="ical.js?v=8" defer></script>
-  <script src="print.js?v=8" defer></script>
-  <script src="undo.js?v=8" defer></script>
-  <script src="sport-library.js?v=8" defer></script>
-  <script src="sport.js?v=8" defer></script>
-  <script src="script.js?v=8" defer></script>
+  <script src="sync.js?v=9" defer></script>
+  <script src="ical.js?v=9" defer></script>
+  <script src="print.js?v=9" defer></script>
+  <script src="undo.js?v=9" defer></script>
+  <script src="sport-library.js?v=9" defer></script>
+  <script src="sport.js?v=9" defer></script>
+  <script src="script.js?v=9" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
