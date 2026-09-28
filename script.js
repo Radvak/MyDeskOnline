@@ -4253,6 +4253,9 @@ async function bootstrap() {
   if (typeof registerSyncTranslations === 'function') {
     registerSyncTranslations();
   }
+  if (typeof registerIcsTranslations === 'function') {
+    registerIcsTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4269,6 +4272,9 @@ async function bootstrap() {
   initSnake();
   if (typeof initSync === 'function') {
     initSync();
+  }
+  if (typeof initIcsImport === 'function') {
+    initIcsImport();
   }
 }
 

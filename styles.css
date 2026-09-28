@@ -361,6 +361,26 @@ main {
   gap: 1rem;
 }
 
+.calendar-actions {
+  flex-wrap: wrap;
+}
+
+.ics-status {
+  font-size: 0.9rem;
+}
+
+.ics-status.success {
+  color: #059669;
+}
+
+.ics-status.error {
+  color: #dc2626;
+}
+
+.ics-status.info {
+  color: var(--muted);
+}
+
 .calendar-actions .hint {
   color: var(--muted);
   font-size: 0.9rem;

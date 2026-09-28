@@ -236,6 +236,9 @@
         </div>
         <div class="calendar-actions">
           <button id="today-button" data-i18n="calendar.today">Aujourd'hui</button>
+          <button id="ics-import" type="button" data-i18n="calendar.ics.importButton">Importer un .ics</button>
+          <input type="file" id="ics-input" accept=".ics,text/calendar" multiple hidden>
+          <span id="ics-status" class="ics-status" aria-live="polite"></span>
           <span class="hint" data-i18n="calendar.hint">Astuce : utilisez les flèches du clavier pour naviguer de semaine.</span>
         </div>
       </div>
@@ -523,6 +526,7 @@
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
   <script src="sync.js" defer></script>
+  <script src="ical.js" defer></script>
   <script src="script.js" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
