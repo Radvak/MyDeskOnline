@@ -19,7 +19,8 @@ const SYNC_LOCAL_ONLY_PATHS = [
   'calendar.lastWeekStart',
   'mindmap.activeMapId',
   'notes.activePageId',
-  'gantt.activeChartId'
+  'gantt.activeChartId',
+  'sport.activeSessionId'
 ];
 
 const SYNC_TRANSLATIONS = {

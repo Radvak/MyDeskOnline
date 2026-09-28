@@ -40,6 +40,7 @@
       <button class="tab-link" data-target="todo" data-i18n="tabs.todo">To Do List</button>
       <button class="tab-link" data-target="notes" data-i18n="tabs.notes">Notes</button>
       <button class="tab-link" data-target="daily" data-i18n="tabs.daily">Défis Quotidiens</button>
+      <button class="tab-link" data-target="sport" data-i18n="tabs.sport">Sport</button>
       <button class="tab-link" data-target="gantt" data-i18n="tabs.gantt">GANTT</button>
       <button class="tab-link" data-target="snake" data-i18n="tabs.snake">Snake</button>
       <button class="tab-link" data-target="trackirigo" data-i18n="tabs.track">Track'Irigo</button>
@@ -400,6 +401,21 @@
       </div>
     </section>
 
+    <section id="sport" class="tab-panel">
+      <div class="sport-layout">
+        <aside class="sport-sidebar">
+          <h3 data-i18n="sport.sessionsTitle">Séances</h3>
+          <ul class="sport-session-list" id="sport-session-list"></ul>
+          <div class="sport-sidebar__actions">
+            <button id="sport-add-session" type="button" data-i18n="sport.addSession">Nouvelle séance</button>
+            <button id="sport-load-program" type="button" class="btn-secondary" data-i18n="sport.loadProgram">Programme recommandé</button>
+          </div>
+          <p class="sport-status" id="sport-status" aria-live="polite"></p>
+        </aside>
+        <div class="sport-main" id="sport-main"></div>
+      </div>
+    </section>
+
     <section id="gantt" class="tab-panel">
       <div class="gantt-layout">
         <aside class="gantt-sidebar">
@@ -593,6 +609,7 @@
   <script src="ical.js" defer></script>
   <script src="print.js" defer></script>
   <script src="undo.js" defer></script>
+  <script src="sport.js" defer></script>
   <script src="script.js" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {

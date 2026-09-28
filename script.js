@@ -29,6 +29,11 @@ const defaultData = {
   snake: {
     bestScore: 0
   },
+  sport: {
+    sessions: [],
+    logs: {},
+    activeSessionId: null
+  },
   tabs: {
     visibility: {
       calendar: true,
@@ -36,6 +41,7 @@ const defaultData = {
       todo: true,
       notes: true,
       daily: true,
+      sport: true,
       gantt: true,
       snake: true,
       trackirigo: true
@@ -49,6 +55,7 @@ const OPTIONAL_TABS = [
   { id: 'todo', labelKey: 'tabs.todo' },
   { id: 'notes', labelKey: 'tabs.notes' },
   { id: 'daily', labelKey: 'tabs.daily' },
+  { id: 'sport', labelKey: 'tabs.sport' },
   { id: 'gantt', labelKey: 'tabs.gantt' },
   { id: 'snake', labelKey: 'tabs.snake' },
   { id: 'trackirigo', labelKey: 'tabs.track' }
@@ -1301,8 +1308,10 @@ function renderAllViews() {
     renderTodo,
     renderTabVisibilitySettings,
     applyTabVisibility,
-    updateSnakeScores
+    updateSnakeScores,
+    typeof renderSport === 'function' ? renderSport : null
   ].forEach((render) => {
+    if (!render) return;
     try {
       render();
     } catch (error) {
@@ -1572,6 +1581,10 @@ function migrateData() {
 
   if (!Number.isFinite(appData.snake.bestScore) || appData.snake.bestScore < 0) {
     appData.snake.bestScore = 0;
+  }
+
+  if (typeof ensureSportData === 'function') {
+    ensureSportData();
   }
 
   if (!appData.tabs || typeof appData.tabs !== 'object') {
@@ -2366,6 +2379,9 @@ function renderCalendarEvents() {
       e.stopPropagation();
       openEventModal({ event: occ.sourceEvent, occurrenceStart: occ.start });
     });
+    if (typeof attachSportClick === 'function') {
+      attachSportClick(eventEl, occ);
+    }
 
     cell.appendChild(eventEl);
   });
@@ -4463,6 +4479,9 @@ async function bootstrap() {
   if (typeof registerUndoTranslations === 'function') {
     registerUndoTranslations();
   }
+  if (typeof registerSportTranslations === 'function') {
+    registerSportTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4488,6 +4507,9 @@ async function bootstrap() {
   }
   if (typeof initUndo === 'function') {
     initUndo();
+  }
+  if (typeof initSport === 'function') {
+    initSport();
   }
 }
 

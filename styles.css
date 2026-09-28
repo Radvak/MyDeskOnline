@@ -2134,3 +2134,261 @@ main {
 .modal-content form label[hidden] {
   display: none;
 }
+
+/* ── Onglet Sport ────────────────────────────────────────── */
+
+.sport-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.sport-sidebar,
+.sport-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.sport-sidebar h3 {
+  margin: 0 0 0.75rem;
+}
+
+.sport-session-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sport-session-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+}
+
+.sport-session-item small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.sport-session-item.active {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.sport-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sport-sidebar__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sport-status {
+  margin: 0.75rem 0 0;
+  min-height: 1rem;
+  color: #059669;
+  font-size: 0.9rem;
+}
+
+.sport-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.sport-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sport-date-nav h2 {
+  margin: 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.sport-card h3 {
+  margin: 0 0 0.75rem;
+}
+
+.sport-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.sport-field span,
+.sport-exercise__meta span,
+.sport-schedule span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sport-card input,
+.sport-card textarea,
+.sport-card select {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.sport-card textarea {
+  resize: vertical;
+}
+
+.sport-progress__label {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
+.sport-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.sport-progress__bar {
+  height: 100%;
+  background: #f97316;
+  transition: width 0.25s ease;
+}
+
+.sport-exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.sport-exercise {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+
+.sport-exercise.done {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.sport-exercise.done .sport-exercise__name {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.sport-card input.sport-exercise__check {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+  accent-color: #10b981;
+}
+
+.sport-exercise__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sport-exercise__top {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sport-card input.sport-exercise__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.sport-exercise__delete {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.2rem 0.5rem;
+}
+
+.sport-exercise__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.sport-exercise__meta label,
+.sport-schedule label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sport-card input.sport-exercise__tip {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.sport-card input.sport-exercise__note {
+  font-size: 0.85rem;
+  border-style: dashed;
+}
+
+.sport-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.sport-delete-session {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+}
+
+.sport-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calendar-grid .event.event--sport {
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .sport-layout {
+    grid-template-columns: 1fr;
+  }
+}
