@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════
    ONGLET SPORT
-   - Séances (programmes) composées d'exercices
-   - Suivi par date : exercices faits + note (reps, variante…)
-   - Lien avec l'agenda : un évènement de type « Sport » (ou lié
-     à une séance) ouvre cet onglet sur la séance du jour
-   - Programme recommandé prêt à charger
+   - Séances composées d'exercices (souvent liés à une « échelle »
+     de progression de la bibliothèque, cf. sport-library.js)
+   - Mode séance : répétitions par série, minuteur de repos,
+     suggestion automatique de variante plus dure / plus facile
+   - Mode modification, guide, lien avec l'agenda
    ═══════════════════════════════════════════════════════════ */
 
 const SPORT_TYPE_NAME = 'Sport';
@@ -17,27 +17,57 @@ const SPORT_TRANSLATIONS = {
     sessionsTitle: 'Séances',
     addSession: 'Nouvelle séance',
     loadProgram: 'Programme recommandé',
+    guide: '📖 Guide & exercices',
     newSessionName: 'Nouvelle séance',
     emptyList: 'Aucune séance. Créez-en une ou chargez le programme recommandé.',
     noSession: 'Sélectionnez ou créez une séance.',
-    sessionOf: 'Séance du {date}',
-    notPlanned: "Cette séance n'est pas prévue ce jour-là dans l'agenda.",
+    notPlanned: "Pas prévue ce jour-là dans l'agenda",
     plannedOn: 'Prévue : {days}',
+    plannedAt: 'Aujourd’hui à {time} · {duration} min',
     notScheduled: "Pas encore dans l'agenda",
     progress: '{done}/{total} exercices faits',
+    allDone: 'Séance terminée, bravo !',
+    noExercises: 'Aucun exercice. Cliquez sur « Modifier » pour en ajouter.',
+    instructions: 'Échauffement et consignes',
+    edit: '✎ Modifier',
+    editTitle: 'Modifier la séance',
+    doneEditing: 'Terminé',
     nameLabel: 'Nom de la séance',
-    descriptionLabel: 'Objectif / consignes',
+    descriptionLabel: 'Échauffement / consignes',
+    exercisesTitle: 'Exercices',
     exercise: 'Exercice',
+    variant: 'Exercice de la bibliothèque',
+    customExercise: 'Personnalisé',
     sets: 'Séries',
     reps: 'Répétitions',
     rest: 'Repos (s)',
     tip: 'Consigne',
+    setsReps: '{sets} séries × {reps}',
+    restShort: 'repos {rest}',
+    setLabel: 'Série {n}',
+    lastTime: 'Dernière fois ({date}) : {values}',
     todayNote: 'Note du jour',
-    todayNotePlaceholder: 'reps faites, variante…',
+    todayNotePlaceholder: 'Note (ressenti, variante…)',
+    restTimer: '⏱ {rest}',
+    timerRunning: 'Repos',
+    timerDone: 'Repos terminé : série suivante !',
+    timerStop: 'Passer',
+    howTo: 'Technique',
+    howToTitle: 'Comment faire',
+    mistakes: 'Erreurs à éviter',
+    ladder: 'Progression',
+    muscles: 'Muscles : {muscles}',
+    current: 'actuel',
+    useVariant: 'Choisir',
+    suggestUp: 'Bravo, tu as atteint {max} partout. Passe à : {name}',
+    suggestUpTop: 'Bravo, tu as atteint {max} partout. Ajoute une série ou ralentis la descente (3 s).',
+    suggestDown: 'Moins de {min} sur certaines séries. Essaie plutôt : {name}',
+    suggestKeep: 'Objectif : {max} sur toutes les séries, puis variante suivante.',
+    switchVariant: 'Passer à cette variante',
     addExercise: 'Ajouter un exercice',
-    newExercise: 'Nouvel exercice',
+    moveUp: 'Monter',
     deleteSession: 'Supprimer la séance',
-    deleteSessionConfirm: 'Supprimer cette séance ? Ses créneaux dans l\'agenda seront aussi supprimés.',
+    deleteSessionConfirm: "Supprimer cette séance ? Ses créneaux dans l'agenda seront aussi supprimés.",
     deleteExercise: "Supprimer l'exercice",
     scheduleTitle: "Ajouter à l'agenda chaque semaine",
     scheduleDay: 'Jour',
@@ -49,34 +79,68 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Jour suivant',
     today: "Aujourd'hui",
     pickSession: "Aucune séance n'est liée à ce créneau. Choisissez-en une :",
-    loadConfirm: "Charger le programme recommandé ?\n\n3 séances au poids du corps (débutant, accent pecs et abdos), placées lundi, mercredi et vendredi à 18:00 dans l'agenda. Vous pourrez les déplacer ensuite.",
-    alreadyLoaded: 'Le programme recommandé est déjà chargé.',
+    loadConfirm: "Charger le programme recommandé ?\n\n3 séances au poids du corps (débutant, accent pecs et abdos, équilibrées avec le dos), placées lundi, mercredi et vendredi à 18:00 dans l'agenda. Vous pourrez les déplacer ensuite.",
+    updateConfirm: 'Mettre à jour le programme recommandé vers la nouvelle version ?\n\nLes exercices des séances A, B et C seront remplacés (plus équilibrés, avec progression automatique). Vos créneaux dans l’agenda sont conservés.',
+    alreadyLoaded: 'Le programme recommandé est déjà chargé et à jour.',
     loaded: "Programme chargé : 3 séances ajoutées à l'agenda.",
-    sessionLabel: 'Séance'
+    updated: 'Programme mis à jour.',
+    guideTitle: 'Guide pour progresser seul',
+    libraryTitle: 'Bibliothèque d’exercices',
+    back: '← Retour à la séance'
   },
   en: {
     sessionsTitle: 'Workouts',
     addSession: 'New workout',
     loadProgram: 'Recommended program',
+    guide: '📖 Guide & exercises',
     newSessionName: 'New workout',
     emptyList: 'No workouts yet. Create one or load the recommended program.',
     noSession: 'Select or create a workout.',
-    sessionOf: 'Workout of {date}',
-    notPlanned: 'This workout is not scheduled on this day.',
+    notPlanned: 'Not scheduled on this day',
     plannedOn: 'Scheduled: {days}',
+    plannedAt: 'Today at {time} · {duration} min',
     notScheduled: 'Not in the calendar yet',
     progress: '{done}/{total} exercises done',
+    allDone: 'Workout complete, well done!',
+    noExercises: 'No exercises yet. Click "Edit" to add some.',
+    instructions: 'Warm-up and instructions',
+    edit: '✎ Edit',
+    editTitle: 'Edit workout',
+    doneEditing: 'Done',
     nameLabel: 'Workout name',
-    descriptionLabel: 'Goal / instructions',
+    descriptionLabel: 'Warm-up / instructions',
+    exercisesTitle: 'Exercises',
     exercise: 'Exercise',
+    variant: 'Library exercise',
+    customExercise: 'Custom',
     sets: 'Sets',
     reps: 'Reps',
     rest: 'Rest (s)',
     tip: 'Tip',
+    setsReps: '{sets} sets × {reps}',
+    restShort: 'rest {rest}',
+    setLabel: 'Set {n}',
+    lastTime: 'Last time ({date}): {values}',
     todayNote: "Today's note",
-    todayNotePlaceholder: 'reps done, variation…',
+    todayNotePlaceholder: 'Note (feeling, variation…)',
+    restTimer: '⏱ {rest}',
+    timerRunning: 'Rest',
+    timerDone: 'Rest over: next set!',
+    timerStop: 'Skip',
+    howTo: 'Technique',
+    howToTitle: 'How to',
+    mistakes: 'Common mistakes',
+    ladder: 'Progression',
+    muscles: 'Muscles: {muscles}',
+    current: 'current',
+    useVariant: 'Choose',
+    suggestUp: 'Well done, {max} on every set. Move to: {name}',
+    suggestUpTop: 'Well done, {max} on every set. Add a set or slow down the descent (3 s).',
+    suggestDown: 'Below {min} on some sets. Try: {name}',
+    suggestKeep: 'Goal: {max} on every set, then the next variation.',
+    switchVariant: 'Switch to this variation',
     addExercise: 'Add exercise',
-    newExercise: 'New exercise',
+    moveUp: 'Move up',
     deleteSession: 'Delete workout',
     deleteSessionConfirm: 'Delete this workout? Its calendar slots will be deleted too.',
     deleteExercise: 'Delete exercise',
@@ -90,34 +154,68 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Next day',
     today: 'Today',
     pickSession: 'No workout is linked to this slot. Pick one:',
-    loadConfirm: 'Load the recommended program?\n\n3 bodyweight workouts (beginner, chest and abs focus), scheduled Monday, Wednesday and Friday at 18:00. You can move them later.',
-    alreadyLoaded: 'The recommended program is already loaded.',
+    loadConfirm: 'Load the recommended program?\n\n3 bodyweight workouts (beginner, chest and abs focus, balanced with back work), scheduled Monday, Wednesday and Friday at 18:00.',
+    updateConfirm: 'Update the recommended program to the new version?\n\nExercises of workouts A, B and C will be replaced. Your calendar slots are kept.',
+    alreadyLoaded: 'The recommended program is already loaded and up to date.',
     loaded: 'Program loaded: 3 workouts added to the calendar.',
-    sessionLabel: 'Workout'
+    updated: 'Program updated.',
+    guideTitle: 'Guide to progress on your own',
+    libraryTitle: 'Exercise library',
+    back: '← Back to workout'
   },
   vi: {
     sessionsTitle: 'Buổi tập',
     addSession: 'Buổi tập mới',
     loadProgram: 'Chương trình đề xuất',
+    guide: '📖 Hướng dẫn & bài tập',
     newSessionName: 'Buổi tập mới',
     emptyList: 'Chưa có buổi tập. Hãy tạo mới hoặc tải chương trình đề xuất.',
     noSession: 'Chọn hoặc tạo một buổi tập.',
-    sessionOf: 'Buổi tập ngày {date}',
-    notPlanned: 'Buổi tập này không có lịch vào ngày này.',
+    notPlanned: 'Không có lịch vào ngày này',
     plannedOn: 'Lịch: {days}',
+    plannedAt: 'Hôm nay lúc {time} · {duration} phút',
     notScheduled: 'Chưa có trong lịch',
     progress: 'Đã tập {done}/{total} bài',
+    allDone: 'Hoàn thành buổi tập, tuyệt vời!',
+    noExercises: 'Chưa có bài tập. Nhấn "Sửa" để thêm.',
+    instructions: 'Khởi động và hướng dẫn',
+    edit: '✎ Sửa',
+    editTitle: 'Sửa buổi tập',
+    doneEditing: 'Xong',
     nameLabel: 'Tên buổi tập',
-    descriptionLabel: 'Mục tiêu / hướng dẫn',
+    descriptionLabel: 'Khởi động / hướng dẫn',
+    exercisesTitle: 'Bài tập',
     exercise: 'Bài tập',
+    variant: 'Bài tập trong thư viện',
+    customExercise: 'Tùy chỉnh',
     sets: 'Hiệp',
     reps: 'Lần',
     rest: 'Nghỉ (giây)',
     tip: 'Lưu ý',
+    setsReps: '{sets} hiệp × {reps}',
+    restShort: 'nghỉ {rest}',
+    setLabel: 'Hiệp {n}',
+    lastTime: 'Lần trước ({date}): {values}',
     todayNote: 'Ghi chú hôm nay',
-    todayNotePlaceholder: 'số lần đã làm, biến thể…',
+    todayNotePlaceholder: 'Ghi chú (cảm nhận, biến thể…)',
+    restTimer: '⏱ {rest}',
+    timerRunning: 'Nghỉ',
+    timerDone: 'Hết giờ nghỉ: hiệp tiếp theo!',
+    timerStop: 'Bỏ qua',
+    howTo: 'Kỹ thuật',
+    howToTitle: 'Cách thực hiện',
+    mistakes: 'Lỗi thường gặp',
+    ladder: 'Tiến độ',
+    muscles: 'Nhóm cơ: {muscles}',
+    current: 'hiện tại',
+    useVariant: 'Chọn',
+    suggestUp: 'Tuyệt, đạt {max} ở mọi hiệp. Chuyển sang: {name}',
+    suggestUpTop: 'Tuyệt, đạt {max} ở mọi hiệp. Thêm một hiệp hoặc hạ chậm hơn (3 giây).',
+    suggestDown: 'Dưới {min} ở một số hiệp. Hãy thử: {name}',
+    suggestKeep: 'Mục tiêu: {max} ở mọi hiệp, rồi chuyển biến thể tiếp theo.',
+    switchVariant: 'Chuyển sang biến thể này',
     addExercise: 'Thêm bài tập',
-    newExercise: 'Bài tập mới',
+    moveUp: 'Lên trên',
     deleteSession: 'Xóa buổi tập',
     deleteSessionConfirm: 'Xóa buổi tập này? Các lịch tương ứng cũng sẽ bị xóa.',
     deleteExercise: 'Xóa bài tập',
@@ -131,72 +229,24 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Ngày sau',
     today: 'Hôm nay',
     pickSession: 'Chưa có buổi tập nào gắn với lịch này. Hãy chọn:',
-    loadConfirm: 'Tải chương trình đề xuất?\n\n3 buổi tập với trọng lượng cơ thể (người mới, tập trung ngực và bụng), vào thứ Hai, Tư, Sáu lúc 18:00.',
-    alreadyLoaded: 'Chương trình đề xuất đã được tải.',
+    loadConfirm: 'Tải chương trình đề xuất?\n\n3 buổi tập với trọng lượng cơ thể, vào thứ Hai, Tư, Sáu lúc 18:00.',
+    updateConfirm: 'Cập nhật chương trình đề xuất lên phiên bản mới?\n\nCác bài tập của buổi A, B, C sẽ được thay thế. Lịch vẫn được giữ.',
+    alreadyLoaded: 'Chương trình đề xuất đã được tải và cập nhật.',
     loaded: 'Đã tải chương trình: thêm 3 buổi tập vào lịch.',
-    sessionLabel: 'Buổi tập'
+    updated: 'Đã cập nhật chương trình.',
+    guideTitle: 'Hướng dẫn tự tập',
+    libraryTitle: 'Thư viện bài tập',
+    back: '← Quay lại buổi tập'
   }
 };
 
 const SPORT_TAB_TRANSLATIONS = { fr: 'Sport', en: 'Sport', vi: 'Thể thao' };
 
-// Programme débutant au poids du corps, 3 séances/semaine, accent pecs + abdos.
-// Full body à chaque séance (le plus efficace pour débuter), avec 2 séances
-// orientées pecs/abdos et une séance dos/jambes pour l'équilibre et la posture.
-const SPORT_PROGRAM = [
-  {
-    weekday: 1,
-    name: 'A — Pecs & abdos',
-    description:
-      "Échauffement 5 min : jumping jacks, rotations d'épaules et de bras, 10 pompes faciles.\n" +
-      "Progression : quand tu fais le haut de la fourchette de répétitions sur toutes les séries, passe à la variante plus dure (ex. pompes sur les genoux → pompes classiques).\n" +
-      "Abdos visibles : ils se construisent ici, mais ne se voient qu'avec un taux de graisse assez bas. Alimentation : léger déficit calorique et assez de protéines.",
-    exercises: [
-      ['Pompes classiques (sur les genoux si besoin)', 4, '8–12', 90, 'Corps gainé, poitrine près du sol, coudes à ~45°.'],
-      ['Pompes mains surélevées (chaise ou canapé)', 3, '12–15', 75, 'Cible le bas des pecs. Descente lente (3 s).'],
-      ['Squats', 3, '15', 60, 'Talons au sol, dos droit, descends cuisses parallèles au sol.'],
-      ['Crunchs', 3, '15', 45, "Monte en soufflant, menton loin de la poitrine, pas d'élan."],
-      ['Planche', 3, '30–45 s', 45, 'Fesses alignées, abdos et fessiers serrés.'],
-      ['Relevés de jambes allongé', 3, '10–12', 45, 'Bas du dos plaqué au sol, mains sous les fesses si besoin.']
-    ]
-  },
-  {
-    weekday: 3,
-    name: 'B — Dos, jambes & gainage',
-    description:
-      "Échauffement 5 min : montées de genoux, rotations de hanches, 10 squats lents.\n" +
-      "Le dos et les jambes équilibrent le travail des pecs et améliorent la posture (pecs plus mis en valeur).\n" +
-      "Rowing inversé : sous une table très solide, ou avec un sac à dos chargé si ce n'est pas possible.",
-    exercises: [
-      ['Rowing inversé sous une table (ou rowing sac à dos)', 4, '8–12', 90, 'Tire la poitrine vers la table, omoplates serrées.'],
-      ['Fentes alternées', 3, '10 / jambe', 60, 'Genou arrière frôle le sol, buste droit.'],
-      ['Pont fessier', 3, '15', 45, 'Serre les fessiers 1 s en haut.'],
-      ['Pompes serrées (sur les genoux si besoin)', 3, '6–10', 75, 'Mains sous les épaules, coudes le long du corps.'],
-      ['Planche latérale', 3, '20–30 s / côté', 45, 'Hanches hautes, corps aligné.'],
-      ['Dead bug', 3, '10 / côté', 45, 'Bas du dos collé au sol, mouvements lents.']
-    ]
-  },
-  {
-    weekday: 5,
-    name: 'C — Pecs & abdos (volume)',
-    description:
-      "Échauffement 5 min : jumping jacks, rotations d'épaules, 10 pompes faciles.\n" +
-      "Dips entre deux chaises : chaises stables et calées contre un mur. Stoppe si douleur à l'épaule.\n" +
-      "Pompes pieds surélevés trop dures au début ? Remplace par des pompes classiques.",
-    exercises: [
-      ['Pompes larges', 4, '8–12', 90, "Mains plus larges que les épaules, amplitude complète."],
-      ['Pompes pieds surélevés', 3, '6–10', 90, 'Cible le haut des pecs. Pieds sur une chaise basse.'],
-      ['Dips entre deux chaises', 3, '6–10', 75, "Descends jusqu'à 90° aux coudes, épaules basses."],
-      ['Squats', 3, '20', 60, 'Rythme contrôlé.'],
-      ['Mountain climbers', 3, '30 s', 45, 'Hanches basses, genoux vers la poitrine.'],
-      ['Crunchs vélo', 3, '12 / côté', 45, 'Coude vers le genou opposé, lentement.'],
-      ['Hollow hold', 3, '20 s', 45, 'Bas du dos plaqué, bras et jambes tendus.']
-    ]
-  }
-];
-
 let sportSelectedDate = null;
 let sportPickerEvent = null;
+let sportView = 'workout'; // 'workout' | 'edit' | 'guide'
+let sportOpenHelp = null; // id de l'exercice dont la fiche est ouverte
+let sportTimer = null;
 
 function registerSportTranslations() {
   Object.keys(SPORT_TRANSLATIONS).forEach((language) => {
@@ -265,6 +315,67 @@ function setSportLog(dateKey, sessionId, exerciseId, patch) {
   saveData();
 }
 
+// Dernière saisie avant la date donnée, pour la même variante de l'exercice.
+function getLastPerformance(sessionId, exercise, beforeKey) {
+  const keys = Object.keys(appData.sport.logs).filter((key) => key < beforeKey).sort().reverse();
+  for (const key of keys) {
+    const entry = appData.sport.logs[key][sessionId] && appData.sport.logs[key][sessionId][exercise.id];
+    if (entry && entry.variant && entry.variant !== exercise.name) continue;
+    if (entry && Array.isArray(entry.sets) && entry.sets.some((value) => Number(value) > 0)) {
+      return { dateKey: key, sets: entry.sets };
+    }
+  }
+  return null;
+}
+
+// "8–12" → {min: 8, max: 12} ; "30–45 s" → {30, 45} ; "10 / jambe" → {10, 10}
+function parseRepRange(reps) {
+  const text = String(reps || '');
+  const range = /(\d+)\s*[–-]\s*(\d+)/.exec(text);
+  if (range) return { min: Number(range[1]), max: Number(range[2]) };
+  const single = /(\d+)/.exec(text);
+  return single ? { min: Number(single[1]), max: Number(single[1]) } : null;
+}
+
+function getLadderStep(exercise) {
+  const ladder = exercise.ladder ? SPORT_LADDERS[exercise.ladder] : null;
+  if (!ladder) return { ladder: null, step: null };
+  return { ladder, step: ladder.steps[exercise.step] || null };
+}
+
+function applyLadderStep(exercise, ladderId, stepIndex) {
+  const ladder = SPORT_LADDERS[ladderId];
+  if (!ladder || !ladder.steps[stepIndex]) return;
+  const step = ladder.steps[stepIndex];
+  exercise.ladder = ladderId;
+  exercise.step = stepIndex;
+  exercise.name = step.name;
+  exercise.reps = step.reps;
+  exercise.tip = ladder.cue;
+}
+
+// Suggestion de progression à partir des séries saisies.
+function getProgressionAdvice(exercise, sets) {
+  const range = parseRepRange(exercise.reps);
+  const count = Math.max(1, Number(exercise.sets) || 1);
+  const values = (sets || []).slice(0, count).map(Number);
+  if (!range || values.length < count || values.some((value) => !(value > 0))) {
+    return range ? { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) } : null;
+  }
+  const { ladder } = getLadderStep(exercise);
+  if (values.every((value) => value >= range.max)) {
+    const next = ladder && ladder.steps[exercise.step + 1];
+    return next
+      ? { kind: 'up', text: t('sport.suggestUp', { max: range.max, name: next.name }), step: exercise.step + 1 }
+      : { kind: 'top', text: t('sport.suggestUpTop', { max: range.max }) };
+  }
+  if (values.some((value) => value < range.min)) {
+    const prev = ladder && exercise.step > 0 ? ladder.steps[exercise.step - 1] : null;
+    if (prev) return { kind: 'down', text: t('sport.suggestDown', { min: range.min, name: prev.name }), step: exercise.step - 1 };
+  }
+  return { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) };
+}
+
 // Occurrences de l'agenda liées au sport sur une journée donnée.
 function getSportOccurrencesOn(date) {
   const day = new Date(date);
@@ -275,8 +386,7 @@ function getSportOccurrencesOn(date) {
   try {
     appData.calendar.events.filter(isSportEvent).forEach((event) => {
       getOccurrencesForWeek(event).forEach((occurrence) => {
-        const start = new Date(occurrence.start);
-        if (sportDateKey(start) === sportDateKey(day)) result.push(occurrence);
+        if (sportDateKey(new Date(occurrence.start)) === sportDateKey(day)) result.push(occurrence);
       });
     });
   } finally {
@@ -298,6 +408,19 @@ function weekdayName(day, format = 'long') {
   return new Date(2023, 0, 1 + day).toLocaleDateString(getCurrentLocale(), { weekday: format });
 }
 
+function formatRest(seconds) {
+  const value = Number(seconds) || 0;
+  if (value <= 0) return '';
+  if (value < 60) return `${value} s`;
+  const minutes = Math.floor(value / 60);
+  const rest = value % 60;
+  return rest ? `${minutes} min ${String(rest).padStart(2, '0')}` : `${minutes} min`;
+}
+
+function formatShortDate(dateKey) {
+  return new Date(`${dateKey}T00:00`).toLocaleDateString(getCurrentLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 /* ── Navigation depuis l'agenda ────────────────────────────── */
 
 function goToSportTab() {
@@ -311,6 +434,7 @@ function openSportFromCalendar(occurrence) {
   sportSelectedDate = new Date(occurrence.start);
   sportSelectedDate.setHours(0, 0, 0, 0);
   sportPickerEvent = null;
+  sportView = 'workout';
   if (event.sportSessionId && getSportSession(event.sportSessionId)) {
     appData.sport.activeSessionId = event.sportSessionId;
   } else if (appData.sport.sessions.length) {
@@ -334,13 +458,97 @@ function attachSportClick(eventEl, occurrence) {
   eventEl.addEventListener('dblclick', () => clearTimeout(timer));
 }
 
-/* ── Rendu ─────────────────────────────────────────────────── */
+/* ── Minuteur de repos ─────────────────────────────────────── */
+
+function sportBeep() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const context = new AudioCtx();
+    [0, 0.25, 0.5].forEach((offset) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.2, context.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + offset + 0.2);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(context.currentTime + offset);
+      oscillator.stop(context.currentTime + offset + 0.2);
+    });
+    setTimeout(() => context.close(), 1000);
+  } catch (error) {
+    // Son indisponible : pas grave.
+  }
+}
+
+function stopRestTimer() {
+  if (sportTimer) clearInterval(sportTimer.interval);
+  sportTimer = null;
+  const box = document.getElementById('sport-timer');
+  if (box) box.hidden = true;
+}
+
+function startRestTimer(seconds, label) {
+  stopRestTimer();
+  let box = document.getElementById('sport-timer');
+  if (!box) {
+    box = sportEl('div', 'sport-timer');
+    box.id = 'sport-timer';
+    box.setAttribute('role', 'timer');
+    document.body.appendChild(box);
+  }
+  box.hidden = false;
+  box.innerHTML = '';
+  const text = sportEl('div', 'sport-timer__text');
+  const count = sportEl('div', 'sport-timer__count');
+  const barWrap = sportEl('div', 'sport-timer__track');
+  const bar = sportEl('div', 'sport-timer__bar');
+  barWrap.appendChild(bar);
+  const stop = sportEl('button', 'sport-timer__stop', t('sport.timerStop'));
+  stop.type = 'button';
+  stop.addEventListener('click', stopRestTimer);
+  text.textContent = `${t('sport.timerRunning')} · ${label}`;
+  box.append(text, count, barWrap, stop);
+
+  const end = Date.now() + seconds * 1000;
+  const tick = () => {
+    const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+    count.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    bar.style.width = `${(left / seconds) * 100}%`;
+    if (left <= 0) {
+      clearInterval(sportTimer.interval);
+      text.textContent = t('sport.timerDone');
+      box.classList.add('sport-timer--done');
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      sportBeep();
+      setTimeout(() => {
+        if (sportTimer && sportTimer.end === end) stopRestTimer();
+      }, 5000);
+    }
+  };
+  box.classList.remove('sport-timer--done');
+  sportTimer = { end, interval: setInterval(tick, 250) };
+  tick();
+}
+
+/* ── Rendu : helpers ───────────────────────────────────────── */
 
 function sportEl(tag, className, text) {
   const element = document.createElement(tag);
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
   return element;
+}
+
+function sportButton(className, text, onClick, title) {
+  const button = sportEl('button', className, text);
+  button.type = 'button';
+  if (title) {
+    button.title = title;
+    button.setAttribute('aria-label', title);
+  }
+  button.addEventListener('click', onClick);
+  return button;
 }
 
 function sportInput(type, value, onInput, attributes = {}) {
@@ -364,7 +572,7 @@ function renderSportList() {
     const item = sportEl('li');
     const button = sportEl('button', 'sport-session-item');
     button.type = 'button';
-    if (session.id === appData.sport.activeSessionId) button.classList.add('active');
+    if (session.id === appData.sport.activeSessionId && sportView !== 'guide') button.classList.add('active');
     button.appendChild(sportEl('strong', '', session.name || t('sport.newSessionName')));
     const days = getSessionWeekdays(session.id);
     button.appendChild(
@@ -373,6 +581,7 @@ function renderSportList() {
     button.addEventListener('click', () => {
       appData.sport.activeSessionId = session.id;
       sportPickerEvent = null;
+      sportView = 'workout';
       saveData();
       renderSport();
     });
@@ -386,19 +595,48 @@ function renderSportPicker(main) {
   box.appendChild(sportEl('p', '', t('sport.pickSession')));
   const choices = sportEl('div', 'sport-picker');
   appData.sport.sessions.forEach((session) => {
-    const button = sportEl('button', '', session.name || t('sport.newSessionName'));
-    button.type = 'button';
-    button.addEventListener('click', () => {
-      sportPickerEvent.sportSessionId = session.id;
-      appData.sport.activeSessionId = session.id;
-      sportPickerEvent = null;
-      saveData();
-      renderSport();
-    });
-    choices.appendChild(button);
+    choices.appendChild(
+      sportButton('', session.name || t('sport.newSessionName'), () => {
+        sportPickerEvent.sportSessionId = session.id;
+        appData.sport.activeSessionId = session.id;
+        sportPickerEvent = null;
+        saveData();
+        renderSport();
+      })
+    );
   });
   box.appendChild(choices);
   main.appendChild(box);
+}
+
+function renderSportHeader(main, date) {
+  const header = sportEl('div', 'sport-date-nav');
+  const shift = (days) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    sportSelectedDate = d;
+    sportPickerEvent = null;
+    sportOpenHelp = null;
+    selectSessionForDate(d);
+    renderSport();
+  };
+  const label = date.toLocaleDateString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
+  header.append(
+    sportButton('sport-icon-btn', '‹', () => shift(-1), t('sport.prevDay')),
+    sportEl('span', 'sport-date-nav__label', `${label.charAt(0).toUpperCase()}${label.slice(1)}`),
+    sportButton('sport-icon-btn', '›', () => shift(1), t('sport.nextDay'))
+  );
+  if (sportDateKey(date) !== sportDateKey(new Date())) {
+    header.appendChild(
+      sportButton('sport-link-btn', t('sport.today'), () => {
+        sportSelectedDate = null;
+        sportPickerEvent = null;
+        selectSessionForDate(new Date());
+        renderSport();
+      })
+    );
+  }
+  main.appendChild(header);
 }
 
 function renderSportMain() {
@@ -406,38 +644,13 @@ function renderSportMain() {
   if (!main) return;
   main.innerHTML = '';
 
-  const date = sportSelectedDate || new Date(new Date().setHours(0, 0, 0, 0));
-  const dateKey = sportDateKey(date);
+  if (sportView === 'guide') {
+    renderSportGuide(main);
+    return;
+  }
 
-  // En-tête : navigation par jour
-  const header = sportEl('div', 'sport-date-nav');
-  const prev = sportEl('button', '', '◀');
-  prev.type = 'button';
-  prev.title = t('sport.prevDay');
-  const next = sportEl('button', '', '▶');
-  next.type = 'button';
-  next.title = t('sport.nextDay');
-  const todayBtn = sportEl('button', 'btn-secondary', t('sport.today'));
-  todayBtn.type = 'button';
-  const shift = (days) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    sportSelectedDate = d;
-    sportPickerEvent = null;
-    selectSessionForDate(d);
-    renderSport();
-  };
-  prev.addEventListener('click', () => shift(-1));
-  next.addEventListener('click', () => shift(1));
-  todayBtn.addEventListener('click', () => {
-    sportSelectedDate = null;
-    sportPickerEvent = null;
-    selectSessionForDate(new Date());
-    renderSport();
-  });
-  const dateLabel = date.toLocaleDateString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
-  header.append(prev, sportEl('h2', '', t('sport.sessionOf', { date: dateLabel })), next, todayBtn);
-  main.appendChild(header);
+  const date = sportSelectedDate || new Date(new Date().setHours(0, 0, 0, 0));
+  renderSportHeader(main, date);
 
   if (sportPickerEvent) {
     renderSportPicker(main);
@@ -446,20 +659,278 @@ function renderSportMain() {
 
   const session = getSportSession(appData.sport.activeSessionId);
   if (!session) {
-    main.appendChild(sportEl('p', 'hint', t('sport.noSession')));
+    main.appendChild(sportEl('p', 'sport-placeholder', t('sport.noSession')));
     return;
   }
 
-  const plannedToday = getSportOccurrencesOn(date).some((occ) => occ.sourceEvent.sportSessionId === session.id);
-  const days = getSessionWeekdays(session.id);
-  const status = sportEl(
-    'p',
-    'hint',
-    plannedToday ? t('sport.plannedOn', { days: days.map((d) => weekdayName(d)).join(', ') || dateLabel }) : t('sport.notPlanned')
-  );
+  if (sportView === 'edit') {
+    renderSportEdit(main, session);
+  } else {
+    renderSportWorkout(main, session, date);
+  }
+}
 
-  // Nom + description
+/* ── Mode séance ───────────────────────────────────────────── */
+
+function renderExerciseHelp(container, session, exercise) {
+  const { ladder, step } = getLadderStep(exercise);
+  const panel = sportEl('div', 'sport-help');
+  if (!ladder) {
+    panel.appendChild(sportEl('p', 'sport-help__muted', exercise.tip || '—'));
+    container.appendChild(panel);
+    return;
+  }
+  panel.appendChild(sportEl('p', 'sport-help__muted', t('sport.muscles', { muscles: ladder.muscles })));
+  if (step) {
+    panel.appendChild(sportEl('h4', '', t('sport.howToTitle')));
+    const how = sportEl('ol');
+    step.how.forEach((line) => how.appendChild(sportEl('li', '', line)));
+    panel.appendChild(how);
+    if (step.mistakes && step.mistakes.length) {
+      panel.appendChild(sportEl('h4', '', t('sport.mistakes')));
+      const mistakes = sportEl('ul', 'sport-help__mistakes');
+      step.mistakes.forEach((line) => mistakes.appendChild(sportEl('li', '', line)));
+      panel.appendChild(mistakes);
+    }
+  }
+  panel.appendChild(sportEl('h4', '', t('sport.ladder')));
+  const steps = sportEl('ol', 'sport-ladder');
+  ladder.steps.forEach((ladderStep, index) => {
+    const item = sportEl('li', index === exercise.step ? 'current' : '');
+    item.appendChild(sportEl('span', 'sport-ladder__name', `${ladderStep.name} · ${ladderStep.reps}`));
+    if (index === exercise.step) {
+      item.appendChild(sportEl('span', 'sport-ladder__badge', t('sport.current')));
+    } else {
+      item.appendChild(
+        sportButton('sport-link-btn', t('sport.useVariant'), () => {
+          applyLadderStep(exercise, exercise.ladder, index);
+          saveData();
+          renderSportMain();
+        })
+      );
+    }
+    steps.appendChild(item);
+  });
+  panel.appendChild(steps);
+  if (ladder.note) panel.appendChild(sportEl('p', 'sport-help__muted', ladder.note));
+  container.appendChild(panel);
+}
+
+function updateSportProgress(session, dateKey) {
+  const log = getSportLog(dateKey, session.id);
+  const total = session.exercises.length;
+  const done = session.exercises.filter((exercise) => log[exercise.id] && log[exercise.id].done).length;
+  const bar = document.getElementById('sport-progress-bar');
+  const label = document.getElementById('sport-progress-label');
+  if (bar) bar.style.width = total ? `${(done / total) * 100}%` : '0%';
+  if (label) label.textContent = done === total && total > 0 ? t('sport.allDone') : t('sport.progress', { done, total });
+}
+
+function renderSportWorkout(main, session, date) {
+  const dateKey = sportDateKey(date);
+  const log = getSportLog(dateKey, session.id);
+
+  const card = sportEl('div', 'sport-card sport-hero');
+  const titleRow = sportEl('div', 'sport-hero__top');
+  const titleBlock = sportEl('div');
+  titleBlock.appendChild(sportEl('h2', 'sport-hero__title', session.name || t('sport.newSessionName')));
+  const plannedToday = getSportOccurrencesOn(date).find((occ) => occ.sourceEvent.sportSessionId === session.id);
+  const days = getSessionWeekdays(session.id);
+  let subtitle;
+  if (plannedToday) {
+    subtitle = t('sport.plannedAt', { time: formatTime(new Date(plannedToday.start)), duration: plannedToday.duration });
+  } else if (days.length) {
+    subtitle = `${t('sport.notPlanned')} · ${t('sport.plannedOn', { days: days.map((d) => weekdayName(d)).join(', ') })}`;
+  } else {
+    subtitle = t('sport.notScheduled');
+  }
+  titleBlock.appendChild(sportEl('p', 'sport-hero__subtitle', subtitle));
+  titleRow.append(
+    titleBlock,
+    sportButton('sport-edit-btn', t('sport.edit'), () => {
+      sportView = 'edit';
+      renderSportMain();
+    })
+  );
+  card.appendChild(titleRow);
+
+  const progress = sportEl('div', 'sport-progress');
+  const bar = sportEl('div', 'sport-progress__bar');
+  bar.id = 'sport-progress-bar';
+  progress.appendChild(bar);
+  const progressLabel = sportEl('p', 'sport-progress__label');
+  progressLabel.id = 'sport-progress-label';
+  card.append(progress, progressLabel);
+
+  if (session.description) {
+    const details = sportEl('details', 'sport-instructions');
+    details.appendChild(sportEl('summary', '', t('sport.instructions')));
+    details.appendChild(sportEl('p', '', session.description));
+    card.appendChild(details);
+  }
+  main.appendChild(card);
+
+  if (session.exercises.length === 0) {
+    main.appendChild(sportEl('p', 'sport-placeholder', t('sport.noExercises')));
+    return;
+  }
+
+  const list = sportEl('ol', 'sport-workout');
+  session.exercises.forEach((exercise, index) => {
+    const entry = log[exercise.id] || {};
+    const item = sportEl('li', 'sport-workout__item');
+    if (entry.done) item.classList.add('done');
+    const setCount = Math.max(1, Number(exercise.sets) || 1);
+
+    const check = sportEl('button', 'sport-check', entry.done ? '✓' : String(index + 1));
+    check.type = 'button';
+    check.setAttribute('aria-pressed', entry.done ? 'true' : 'false');
+    check.setAttribute('aria-label', exercise.name || t('sport.exercise'));
+    const setDone = (done) => {
+      setSportLog(dateKey, session.id, exercise.id, { done });
+      item.classList.toggle('done', done);
+      check.textContent = done ? '✓' : String(index + 1);
+      check.setAttribute('aria-pressed', done ? 'true' : 'false');
+      updateSportProgress(session, dateKey);
+    };
+    check.addEventListener('click', () => setDone(!item.classList.contains('done')));
+
+    const body = sportEl('div', 'sport-workout__body');
+    const head = sportEl('div', 'sport-workout__head');
+    head.appendChild(sportEl('div', 'sport-workout__name', exercise.name || t('sport.exercise')));
+    head.appendChild(
+      sportButton(`sport-help-btn${sportOpenHelp === exercise.id ? ' active' : ''}`, '?', () => {
+        sportOpenHelp = sportOpenHelp === exercise.id ? null : exercise.id;
+        renderSportMain();
+      }, t('sport.howTo'))
+    );
+    body.appendChild(head);
+
+    const parts = [t('sport.setsReps', { sets: setCount, reps: exercise.reps || '—' })];
+    const restText = formatRest(exercise.rest);
+    if (restText) parts.push(t('sport.restShort', { rest: restText }));
+    body.appendChild(sportEl('div', 'sport-workout__meta', parts.join(' · ')));
+    if (exercise.tip) body.appendChild(sportEl('div', 'sport-workout__tip', exercise.tip));
+
+    if (sportOpenHelp === exercise.id) renderExerciseHelp(body, session, exercise);
+
+    const last = getLastPerformance(session.id, exercise, dateKey);
+    if (last) {
+      body.appendChild(
+        sportEl('div', 'sport-workout__last', t('sport.lastTime', {
+          date: formatShortDate(last.dateKey),
+          values: last.sets.filter((value) => value !== '' && value !== null && value !== undefined).join(' · ')
+        }))
+      );
+    }
+
+    // Saisie série par série
+    const setsRow = sportEl('div', 'sport-sets');
+    const values = Array.isArray(entry.sets) ? entry.sets.slice() : [];
+    // Les séries du jour ne comptent pour la suggestion que si elles ont été
+    // faites sur la variante actuelle (sinon on vient de changer de variante).
+    let sameVariant = !entry.variant || entry.variant === exercise.name;
+    const adviceBox = sportEl('div', 'sport-advice-slot');
+    const renderAdvice = () => {
+      adviceBox.innerHTML = '';
+      const hasToday = values.some((value) => Number(value) > 0);
+      const source = hasToday ? (sameVariant ? values : null) : last ? last.sets : null;
+      const advice = source ? getProgressionAdvice(exercise, source) : null;
+      if (!advice || advice.kind === 'keep') return;
+      const banner = sportEl('div', `sport-advice sport-advice--${advice.kind}`);
+      banner.appendChild(sportEl('span', '', advice.text));
+      if (typeof advice.step === 'number') {
+        banner.appendChild(
+          sportButton('sport-advice__btn', t('sport.switchVariant'), () => {
+            applyLadderStep(exercise, exercise.ladder, advice.step);
+            saveData();
+            renderSportMain();
+          })
+        );
+      }
+      adviceBox.appendChild(banner);
+    };
+    for (let i = 0; i < setCount; i += 1) {
+      const input = sportInput('number', values[i], (value) => {
+        values[i] = value === '' ? '' : Number(value);
+        sameVariant = true;
+        const allFilled = values.length >= setCount && values.slice(0, setCount).every((v) => Number(v) > 0);
+        const patch = { sets: values.slice(), variant: exercise.name };
+        if (allFilled && !item.classList.contains('done')) patch.done = true;
+        setSportLog(dateKey, session.id, exercise.id, patch);
+        if (allFilled && !item.classList.contains('done')) {
+          item.classList.add('done');
+          check.textContent = '✓';
+          updateSportProgress(session, dateKey);
+        }
+        renderAdvice();
+      }, {
+        class: 'sport-set',
+        min: '0',
+        inputmode: 'numeric',
+        'aria-label': t('sport.setLabel', { n: i + 1 }),
+        placeholder: last && last.sets[i] !== undefined && last.sets[i] !== '' ? String(last.sets[i]) : `S${i + 1}`
+      });
+      setsRow.appendChild(input);
+    }
+    if (Number(exercise.rest) > 0) {
+      setsRow.appendChild(
+        sportButton('sport-rest-btn', t('sport.restTimer', { rest: formatRest(exercise.rest) }), () => {
+          startRestTimer(Number(exercise.rest), exercise.name || t('sport.exercise'));
+        })
+      );
+    }
+    body.appendChild(setsRow);
+    body.appendChild(adviceBox);
+    renderAdvice();
+
+    body.appendChild(
+      sportInput('text', entry.note, (value) => {
+        setSportLog(dateKey, session.id, exercise.id, { note: value });
+      }, { class: 'sport-workout__note', placeholder: t('sport.todayNotePlaceholder'), 'aria-label': t('sport.todayNote') })
+    );
+
+    item.append(check, body);
+    list.appendChild(item);
+  });
+  main.appendChild(list);
+  updateSportProgress(session, dateKey);
+}
+
+/* ── Mode modification ─────────────────────────────────────── */
+
+function buildVariantSelect(exercise, onChange) {
+  const select = document.createElement('select');
+  const custom = sportEl('option', '', t('sport.customExercise'));
+  custom.value = '';
+  select.appendChild(custom);
+  Object.entries(SPORT_LADDERS).forEach(([ladderId, ladder]) => {
+    const group = document.createElement('optgroup');
+    group.label = ladder.name;
+    ladder.steps.forEach((step, index) => {
+      const option = sportEl('option', '', step.name);
+      option.value = `${ladderId}:${index}`;
+      group.appendChild(option);
+    });
+    select.appendChild(group);
+  });
+  select.value = exercise.ladder && SPORT_LADDERS[exercise.ladder] ? `${exercise.ladder}:${exercise.step}` : '';
+  select.addEventListener('change', () => onChange(select.value));
+  return select;
+}
+
+function renderSportEdit(main, session) {
   const card = sportEl('div', 'sport-card');
+  const top = sportEl('div', 'sport-hero__top');
+  top.appendChild(sportEl('h2', 'sport-hero__title', t('sport.editTitle')));
+  top.appendChild(
+    sportButton('', t('sport.doneEditing'), () => {
+      sportView = 'workout';
+      renderSportMain();
+    })
+  );
+  card.appendChild(top);
+
   const nameLabel = sportEl('label', 'sport-field');
   nameLabel.appendChild(sportEl('span', '', t('sport.nameLabel')));
   nameLabel.appendChild(
@@ -480,58 +951,56 @@ function renderSportMain() {
     sportInput('textarea', session.description, (value) => {
       session.description = value;
       saveData();
-    }, { rows: '5' })
+    }, { rows: '4' })
   );
-  card.append(nameLabel, descLabel, status);
+  card.append(nameLabel, descLabel);
   main.appendChild(card);
 
-  // Exercices du jour
-  const log = getSportLog(dateKey, session.id);
-  const doneCount = session.exercises.filter((exercise) => log[exercise.id] && log[exercise.id].done).length;
   const exercisesCard = sportEl('div', 'sport-card');
-  const progress = sportEl('div', 'sport-progress');
-  const bar = sportEl('div', 'sport-progress__bar');
-  bar.style.width = session.exercises.length ? `${(doneCount / session.exercises.length) * 100}%` : '0%';
-  progress.appendChild(bar);
-  exercisesCard.appendChild(sportEl('p', 'sport-progress__label', t('sport.progress', { done: doneCount, total: session.exercises.length })));
-  exercisesCard.appendChild(progress);
-
-  const list = sportEl('div', 'sport-exercises');
+  exercisesCard.appendChild(sportEl('h3', '', t('sport.exercisesTitle')));
+  const list = sportEl('div', 'sport-edit-list');
   session.exercises.forEach((exercise, index) => {
-    const entry = log[exercise.id] || {};
-    const row = sportEl('div', 'sport-exercise');
-    if (entry.done) row.classList.add('done');
-
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.className = 'sport-exercise__check';
-    check.checked = Boolean(entry.done);
-    check.setAttribute('aria-label', exercise.name || t('sport.exercise'));
-    check.addEventListener('change', () => {
-      setSportLog(dateKey, session.id, exercise.id, { done: check.checked });
-      renderSportMain();
-    });
-
-    const body = sportEl('div', 'sport-exercise__body');
-    const top = sportEl('div', 'sport-exercise__top');
-    top.appendChild(
-      sportInput('text', exercise.name, (value) => {
-        exercise.name = value;
-        saveData();
-      }, { class: 'sport-exercise__name', 'aria-label': t('sport.exercise') })
-    );
-    const remove = sportEl('button', 'sport-exercise__delete', '✕');
-    remove.type = 'button';
-    remove.title = t('sport.deleteExercise');
-    remove.addEventListener('click', () => {
-      session.exercises.splice(index, 1);
+    const row = sportEl('div', 'sport-edit-row');
+    const head = sportEl('div', 'sport-edit-row__head');
+    head.appendChild(sportEl('span', 'sport-edit-row__index', String(index + 1)));
+    const nameInput = sportInput('text', exercise.name, (value) => {
+      exercise.name = value;
+      saveData();
+    }, { class: 'sport-edit-row__name', 'aria-label': t('sport.exercise'), placeholder: t('sport.exercise') });
+    head.appendChild(nameInput);
+    const moveUp = sportButton('sport-icon-btn sport-icon-btn--ghost', '↑', () => {
+      session.exercises.splice(index - 1, 0, session.exercises.splice(index, 1)[0]);
       saveData();
       renderSportMain();
-    });
-    top.appendChild(remove);
+    }, t('sport.moveUp'));
+    moveUp.disabled = index === 0;
+    head.append(
+      moveUp,
+      sportButton('sport-icon-btn sport-icon-btn--ghost', '✕', () => {
+        session.exercises.splice(index, 1);
+        saveData();
+        renderSportMain();
+      }, t('sport.deleteExercise'))
+    );
 
-    const meta = sportEl('div', 'sport-exercise__meta');
-    const metaField = (labelKey, key, type, attrs = {}) => {
+    const variantLabel = sportEl('label', 'sport-edit-row__variant');
+    variantLabel.appendChild(sportEl('span', '', t('sport.variant')));
+    variantLabel.appendChild(
+      buildVariantSelect(exercise, (value) => {
+        if (!value) {
+          delete exercise.ladder;
+          delete exercise.step;
+        } else {
+          const [ladderId, stepIndex] = value.split(':');
+          applyLadderStep(exercise, ladderId, Number(stepIndex));
+        }
+        saveData();
+        renderSportMain();
+      })
+    );
+
+    const meta = sportEl('div', 'sport-edit-row__meta');
+    const field = (labelKey, key, type, attrs = {}) => {
       const label = sportEl('label');
       label.appendChild(sportEl('span', '', t(labelKey)));
       label.appendChild(
@@ -543,39 +1012,39 @@ function renderSportMain() {
       return label;
     };
     meta.append(
-      metaField('sport.sets', 'sets', 'number', { min: '1', step: '1' }),
-      metaField('sport.reps', 'reps', 'text'),
-      metaField('sport.rest', 'rest', 'number', { min: '0', step: '15' })
+      field('sport.sets', 'sets', 'number', { min: '1', step: '1' }),
+      field('sport.reps', 'reps', 'text'),
+      field('sport.rest', 'rest', 'number', { min: '0', step: '15' })
     );
-
-    const tip = sportInput('text', exercise.tip, (value) => {
-      exercise.tip = value;
-      saveData();
-    }, { class: 'sport-exercise__tip', placeholder: t('sport.tip'), 'aria-label': t('sport.tip') });
-
-    const note = sportInput('text', entry.note, (value) => {
-      setSportLog(dateKey, session.id, exercise.id, { note: value });
-    }, { class: 'sport-exercise__note', placeholder: `${t('sport.todayNote')} : ${t('sport.todayNotePlaceholder')}`, 'aria-label': t('sport.todayNote') });
-
-    body.append(top, meta, tip, note);
-    row.append(check, body);
+    const tipLabel = sportEl('label', 'sport-edit-row__tip');
+    tipLabel.appendChild(sportEl('span', '', t('sport.tip')));
+    tipLabel.appendChild(
+      sportInput('text', exercise.tip, (value) => {
+        exercise.tip = value;
+        saveData();
+      })
+    );
+    row.append(head, variantLabel, meta, tipLabel);
     list.appendChild(row);
   });
   exercisesCard.appendChild(list);
-
-  const addExercise = sportEl('button', '', t('sport.addExercise'));
-  addExercise.type = 'button';
-  addExercise.addEventListener('click', () => {
-    session.exercises.push({ id: uid(), name: t('sport.newExercise'), sets: 3, reps: '10', rest: 60, tip: '' });
-    saveData();
-    renderSportMain();
-  });
-  exercisesCard.appendChild(addExercise);
+  exercisesCard.appendChild(
+    sportButton('sport-add-btn', `+ ${t('sport.addExercise')}`, () => {
+      session.exercises.push({ id: uid(), name: '', sets: 3, reps: '8–12', rest: 60, tip: '' });
+      saveData();
+      renderSportMain();
+      const inputs = document.querySelectorAll('.sport-edit-row__name');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    })
+  );
   main.appendChild(exercisesCard);
 
-  // Planification hebdomadaire
   const schedule = sportEl('div', 'sport-card');
   schedule.appendChild(sportEl('h3', '', t('sport.scheduleTitle')));
+  const days = getSessionWeekdays(session.id);
+  schedule.appendChild(
+    sportEl('p', 'sport-hint', days.length ? t('sport.plannedOn', { days: days.map((d) => weekdayName(d)).join(', ') }) : t('sport.notScheduled'))
+  );
   const form = sportEl('form', 'sport-schedule');
   const daySelect = document.createElement('select');
   [1, 2, 3, 4, 5, 6, 0].forEach((day) => {
@@ -583,7 +1052,7 @@ function renderSportMain() {
     option.value = String(day);
     daySelect.appendChild(option);
   });
-  daySelect.value = String(date.getDay());
+  daySelect.value = String((sportSelectedDate || new Date()).getDay());
   const timeInput = document.createElement('input');
   timeInput.type = 'time';
   timeInput.value = '18:00';
@@ -610,20 +1079,68 @@ function renderSportMain() {
     showSportMessage(t('sport.scheduled'));
   });
   schedule.appendChild(form);
-
-  const deleteSession = sportEl('button', 'sport-delete-session', t('sport.deleteSession'));
-  deleteSession.type = 'button';
-  deleteSession.addEventListener('click', () => {
-    if (!window.confirm(t('sport.deleteSessionConfirm'))) return;
-    appData.sport.sessions = appData.sport.sessions.filter((s) => s.id !== session.id);
-    appData.calendar.events = appData.calendar.events.filter((event) => event.sportSessionId !== session.id);
-    ensureSportData();
-    saveData();
-    renderSport();
-    renderCalendar();
-  });
-  schedule.appendChild(deleteSession);
   main.appendChild(schedule);
+
+  const danger = sportEl('div', 'sport-danger');
+  danger.appendChild(
+    sportButton('sport-delete-session', t('sport.deleteSession'), () => {
+      if (!window.confirm(t('sport.deleteSessionConfirm'))) return;
+      appData.sport.sessions = appData.sport.sessions.filter((s) => s.id !== session.id);
+      appData.calendar.events = appData.calendar.events.filter((event) => event.sportSessionId !== session.id);
+      sportView = 'workout';
+      ensureSportData();
+      saveData();
+      renderSport();
+      renderCalendar();
+    })
+  );
+  main.appendChild(danger);
+}
+
+/* ── Guide ─────────────────────────────────────────────────── */
+
+function renderSportGuide(main) {
+  const top = sportEl('div', 'sport-date-nav');
+  top.appendChild(
+    sportButton('sport-link-btn', t('sport.back'), () => {
+      sportView = 'workout';
+      renderSport();
+    })
+  );
+  main.appendChild(top);
+
+  const intro = sportEl('div', 'sport-card');
+  intro.appendChild(sportEl('h2', 'sport-hero__title', t('sport.guideTitle')));
+  SPORT_GUIDE.forEach((section) => {
+    const details = sportEl('details', 'sport-guide-section');
+    details.appendChild(sportEl('summary', '', section.title));
+    const list = sportEl('ul');
+    section.items.forEach((line) => list.appendChild(sportEl('li', '', line)));
+    details.appendChild(list);
+    intro.appendChild(details);
+  });
+  main.appendChild(intro);
+
+  const library = sportEl('div', 'sport-card');
+  library.appendChild(sportEl('h2', 'sport-hero__title', t('sport.libraryTitle')));
+  Object.values(SPORT_LADDERS).forEach((ladder) => {
+    const details = sportEl('details', 'sport-guide-section');
+    details.appendChild(sportEl('summary', '', `${ladder.name} — ${ladder.muscles}`));
+    const steps = sportEl('ol', 'sport-guide-steps');
+    ladder.steps.forEach((step) => {
+      const item = sportEl('li');
+      item.appendChild(sportEl('strong', '', `${step.name} · ${step.reps}`));
+      const how = sportEl('ul');
+      step.how.forEach((line) => how.appendChild(sportEl('li', '', line)));
+      (step.mistakes || []).forEach((line) => how.appendChild(sportEl('li', 'sport-help__mistake', `⚠ ${line}`)));
+      item.appendChild(how);
+      steps.appendChild(item);
+    });
+    details.appendChild(steps);
+    if (ladder.note) details.appendChild(sportEl('p', 'sport-help__muted', ladder.note));
+    library.appendChild(details);
+  });
+  main.appendChild(library);
 }
 
 function showSportMessage(text) {
@@ -641,11 +1158,12 @@ function renderSport() {
   ensureSportData();
   renderSportList();
   renderSportMain();
+  const guideBtn = document.getElementById('sport-guide');
+  if (guideBtn) guideBtn.classList.toggle('active', sportView === 'guide');
 }
 
 /* ── Actions ───────────────────────────────────────────────── */
 
-// Première date >= aujourd'hui (semaine en cours) tombant sur ce jour.
 function nextDateForWeekday(weekday, fromDate = new Date()) {
   const monday = startOfWeek(fromDate);
   const date = new Date(monday);
@@ -677,10 +1195,41 @@ function selectSessionForDate(date) {
   }
 }
 
+function buildProgramExercises(template) {
+  return template.exercises.map(([ladderId, stepIndex, sets, rest]) => {
+    const exercise = { id: uid(), sets, rest };
+    applyLadderStep(exercise, ladderId, stepIndex);
+    return exercise;
+  });
+}
+
 function loadSportProgram() {
   ensureSportData();
-  if (appData.sport.sessions.some((session) => session.template === SPORT_TEMPLATE_KEY)) {
-    window.alert(t('sport.alreadyLoaded'));
+  const existing = appData.sport.sessions.filter((session) => session.template === SPORT_TEMPLATE_KEY);
+  if (existing.length) {
+    if (existing.every((session) => session.templateVersion >= SPORT_PROGRAM_VERSION)) {
+      window.alert(t('sport.alreadyLoaded'));
+      return;
+    }
+    if (!window.confirm(t('sport.updateConfirm'))) return;
+    SPORT_PROGRAM.forEach((template, index) => {
+      const session = existing[index];
+      if (!session) return;
+      session.name = template.name;
+      session.description = template.description;
+      session.exercises = buildProgramExercises(template);
+      session.templateVersion = SPORT_PROGRAM_VERSION;
+      appData.calendar.events
+        .filter((event) => event.sportSessionId === session.id)
+        .forEach((event) => {
+          event.title = template.name;
+        });
+    });
+    saveData();
+    sportView = 'workout';
+    renderSport();
+    renderCalendar();
+    showSportMessage(t('sport.updated'));
     return;
   }
   if (!window.confirm(t('sport.loadConfirm'))) return;
@@ -689,9 +1238,10 @@ function loadSportProgram() {
     const session = {
       id: uid(),
       template: SPORT_TEMPLATE_KEY,
+      templateVersion: SPORT_PROGRAM_VERSION,
       name: template.name,
       description: template.description,
-      exercises: template.exercises.map(([name, sets, reps, rest, tip]) => ({ id: uid(), name, sets, reps, rest, tip }))
+      exercises: buildProgramExercises(template)
     };
     appData.sport.sessions.push(session);
     addSportSessionToCalendar(session, template.weekday, '18:00', 45);
@@ -699,6 +1249,7 @@ function loadSportProgram() {
   });
   appData.sport.activeSessionId = firstId;
   selectSessionForDate(new Date());
+  sportView = 'workout';
   saveData();
   renderSport();
   renderEventTypes();
@@ -713,6 +1264,7 @@ function initSport() {
     appData.sport.sessions.push(session);
     appData.sport.activeSessionId = session.id;
     sportPickerEvent = null;
+    sportView = 'edit';
     saveData();
     renderSport();
     const input = document.querySelector('.sport-name-input');
@@ -722,6 +1274,10 @@ function initSport() {
     }
   });
   document.getElementById('sport-load-program').addEventListener('click', loadSportProgram);
+  document.getElementById('sport-guide').addEventListener('click', () => {
+    sportView = sportView === 'guide' ? 'workout' : 'guide';
+    renderSport();
+  });
   selectSessionForDate(new Date());
   renderSport();
 
