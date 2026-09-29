@@ -72,7 +72,15 @@ const ANKI_TRANSLATIONS = {
     fieldBack: 'Verso',
     fieldText: 'Texte',
     fieldExtra: 'Informations en plus (au dos)',
-    fieldTags: 'Tags (séparés par des espaces)',
+    fieldPart: 'Partie du cours',
+    partPlaceholder: 'ex. T1 - Chapitre 1',
+    partHelp: 'Sert à savoir à quelle partie du cours la carte correspond. Choisis une partie existante ou écris-en une nouvelle.',
+    allParts: 'Toutes les parties',
+    noPart: 'Sans partie',
+    colPart: 'Partie',
+    renamePart: '✎ Renommer cette partie',
+    renamePartPrompt: 'Nouveau nom pour « {name} » ({count} note(s)) :',
+    partRenamed: '{count} note(s) : « {name} ».',
     noteType: 'Type',
     addTitle: 'Ajouter des cartes',
     editTitle: 'Modifier la note',
@@ -93,7 +101,7 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Liste à puces',
     numbers: 'Liste numérotée',
     clearFormat: 'Effacer la mise en forme',
-    searchPlaceholder: 'Rechercher… (ex. société  deck:Société  tag:soc::chapitre1  is:due  is:new  is:suspended)',
+    searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, is:suspended)',
     colQuestion: 'Question',
     colDeck: 'Paquet',
     colDueDate: 'Échéance',
@@ -218,7 +226,15 @@ const ANKI_TRANSLATIONS = {
     fieldBack: 'Back',
     fieldText: 'Text',
     fieldExtra: 'Back extra',
-    fieldTags: 'Tags (space separated)',
+    fieldPart: 'Course section',
+    partPlaceholder: 'e.g. P1 - Chapter 1',
+    partHelp: 'Tells which part of the course the card belongs to. Pick an existing one or type a new one.',
+    allParts: 'All sections',
+    noPart: 'No section',
+    colPart: 'Section',
+    renamePart: '✎ Rename this section',
+    renamePartPrompt: 'New name for "{name}" ({count} note(s)):',
+    partRenamed: '{count} note(s): "{name}".',
     noteType: 'Type',
     addTitle: 'Add cards',
     editTitle: 'Edit note',
@@ -239,7 +255,7 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Bulleted list',
     numbers: 'Numbered list',
     clearFormat: 'Clear formatting',
-    searchPlaceholder: 'Search… (e.g. company  deck:Law  tag:chapter1  is:due  is:new  is:suspended)',
+    searchPlaceholder: 'Search a word… (or is:due, is:new, is:suspended)',
     colQuestion: 'Question',
     colDeck: 'Deck',
     colDueDate: 'Due',
@@ -333,12 +349,14 @@ let ankiEditNoteId = null;
 let ankiEditReturn = 'decks';
 let ankiUndoStack = [];
 let ankiSchedulerCache = null;
-let ankiBrowseQuery = null;
+let ankiBrowseQuery = '';
+let ankiBrowseDeck = ''; // '' = tous les paquets
+let ankiBrowsePart = ''; // '' = toutes les parties, ANKI_NO_PART = sans partie
 let ankiBrowseLimit = ANKI_BROWSE_PAGE;
 let ankiImportState = null;
 let ankiStatsDeckId = '';
 let ankiStatusTimer = null;
-let ankiAddDefaults = { type: 'basic', deckId: null, tags: '' };
+let ankiAddDefaults = { type: 'basic', deckId: null, part: '' };
 
 function registerAnkiTranslations() {
   Object.keys(translations).forEach((language) => {
@@ -384,6 +402,10 @@ function ensureAnkiData() {
   const deckIds = new Set(data.decks.map((deck) => deck.id));
   data.notes.forEach((note) => {
     if (!deckIds.has(note.deckId)) note.deckId = ankiDefaultDeck().id;
+  });
+
+  data.notes.forEach((note) => {
+    if (typeof note.part !== 'string') note.part = ankiPartFromTags(note.tags);
   });
 
   // Cartes et historiques orphelins (note supprimée ailleurs).
@@ -587,6 +609,84 @@ function ankiFindOrCreateDeck(name) {
     ankiData().decks.push(deck);
   }
   return deck;
+}
+
+/* ── Partie du cours ───────────────────────────────────────── */
+// Anki range les cartes avec des tags hiérarchiques (« soc::titre1::chap1 »).
+// Ici, une carte appartient à UNE partie du cours, affichée proprement
+// (« T1 - Chapitre 1 ») ; les tags d'origine sont gardés tels quels.
+
+const ANKI_NO_PART = '__none__';
+
+const ANKI_PART_PATTERNS = [
+  [/^(?:intro|introduction)$/, () => 'Introduction'],
+  [/^conclusion$/, () => 'Conclusion'],
+  [/^(?:titre|t)[\s_-]*(\d+)$/, (m) => `T${m[1]}`],
+  [/^(?:partie|part|p)[\s_-]*(\d+)$/, (m) => `Partie ${m[1]}`],
+  [/^(?:chapitre|chap|ch|c)[\s_-]*(\d+)$/, (m) => `Chapitre ${m[1]}`],
+  [/^(?:sous[\s_-]?section|ss)[\s_-]*(\d+)$/, (m) => `Sous-section ${m[1]}`],
+  [/^(?:section|sect|s)[\s_-]*(\d+)$/, (m) => `Section ${m[1]}`],
+  [/^(?:paragraphe|para|§)[\s_-]*(\d+)$/, (m) => `§${m[1]}`],
+  [/^td[\s_-]*(\d+)$/, (m) => `TD ${m[1]}`],
+  [/^annexe[\s_-]*(\d*)$/, (m) => `Annexe${m[1] ? ` ${m[1]}` : ''}`]
+];
+
+function ankiPartSegment(segment) {
+  const key = ankiNormalize(segment).trim();
+  for (const [pattern, label] of ANKI_PART_PATTERNS) {
+    const match = pattern.exec(key);
+    if (match) return { label: label(match), structural: true };
+  }
+  const text = String(segment)
+    .replace(/_+/g, ' ')
+    .replace(/([a-zà-ÿ])(\d)/gi, '$1 $2')
+    .trim();
+  return { label: text.charAt(0).toUpperCase() + text.slice(1), structural: false };
+}
+
+function ankiPartFromTag(tag) {
+  const segments = String(tag || '')
+    .split('::')
+    .filter((segment) => segment.trim())
+    .map(ankiPartSegment);
+  // Premier niveau non structurel = abréviation de la matière (« soc ») : inutile.
+  if (segments.length > 1 && !segments[0].structural) segments.shift();
+  return segments.map((segment) => segment.label).join(' - ');
+}
+
+// Parmi les tags d'une note, garde le plus « structuré » (titre, chapitre…).
+function ankiPartFromTags(tags) {
+  let best = '';
+  let bestScore = -1;
+  (tags || []).forEach((tag) => {
+    const score = String(tag)
+      .split('::')
+      .filter((segment) => ankiPartSegment(segment).structural).length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = ankiPartFromTag(tag);
+    }
+  });
+  return best;
+}
+
+function ankiCleanPart(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function ankiComparePart(a, b) {
+  const rank = (part) => (!part ? 3 : /^introduction/i.test(part) ? 0 : /^conclusion/i.test(part) ? 2 : 1);
+  return rank(a) - rank(b) || a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// Parties utilisées dans un paquet (et ses sous-paquets), dans l'ordre du cours.
+function ankiPartsIn(deckId) {
+  const family = deckId ? ankiDeckFamily(deckId) : null;
+  const parts = new Set();
+  ankiData().notes.forEach((note) => {
+    if (note.part && (!family || family.has(note.deckId))) parts.add(note.part);
+  });
+  return Array.from(parts).sort(ankiComparePart);
 }
 
 /* ── File d'attente du jour ────────────────────────────────── */
@@ -1018,10 +1118,6 @@ function renderAnkiNav() {
         ankiEditNoteId = null;
         ankiEditReturn = ['add', 'edit', 'review', 'done'].includes(ankiView) ? 'decks' : ankiView;
       }
-      if (view === 'browse' && ankiBrowseQuery === null) {
-        const deck = ankiGetDeck(ankiDeckId);
-        ankiBrowseQuery = deck ? `deck:"${deck.name}"` : '';
-      }
       ankiGo(view);
     });
     nav.appendChild(button);
@@ -1207,7 +1303,9 @@ function renderAnkiOverview(main) {
       ankiGo('add');
     }),
     ankiButton('anki-btn anki-btn--ghost', t('anki.navBrowse'), () => {
-      ankiBrowseQuery = `deck:"${deck.name}"`;
+      ankiBrowseDeck = deck.id;
+      ankiBrowsePart = '';
+      ankiBrowseQuery = '';
       ankiGo('browse');
     })
   );
@@ -1281,6 +1379,9 @@ function renderAnkiReview(main) {
   wrap.appendChild(top);
 
   const sides = ankiCardSides(card, note);
+  const deckOfNote = ankiGetDeck(note.deckId);
+  const where = [deckOfNote ? deckOfNote.name.split('::').join(' › ') : '', note.part].filter(Boolean).join(' · ');
+  if (where) wrap.appendChild(ankiEl('p', 'anki-review__where', where));
   const face = ankiEl('div', 'anki-face');
   face.innerHTML = ankiCurrent.answerShown ? sides.answer : sides.question;
   wrap.appendChild(face);
@@ -1589,13 +1690,28 @@ function renderAnkiEditor(main) {
     buildFields();
   });
 
-  const tagsLabel = ankiEl('label', 'anki-field');
-  tagsLabel.appendChild(ankiEl('span', 'anki-field__label', t('anki.fieldTags')));
-  const tagsInput = ankiEl('input', 'anki-input');
-  tagsInput.type = 'text';
-  tagsInput.value = editing ? (editing.tags || []).join(' ') : ankiAddDefaults.tags;
-  tagsLabel.appendChild(tagsInput);
-  form.appendChild(tagsLabel);
+  const partLabel = ankiEl('label', 'anki-field');
+  partLabel.appendChild(ankiEl('span', 'anki-field__label', t('anki.fieldPart')));
+  const partInput = ankiEl('input', 'anki-input anki-part-input');
+  partInput.type = 'text';
+  partInput.placeholder = t('anki.partPlaceholder');
+  partInput.value = editing ? editing.part || '' : ankiAddDefaults.part;
+  const partList = ankiEl('datalist');
+  partList.id = 'anki-part-list';
+  partInput.setAttribute('list', partList.id);
+  const fillParts = () => {
+    partList.innerHTML = '';
+    const deckId = deckSelect.value.startsWith('__') ? null : deckSelect.value;
+    ankiPartsIn(deckId).forEach((part) => {
+      const option = ankiEl('option');
+      option.value = part;
+      partList.appendChild(option);
+    });
+  };
+  fillParts();
+  deckSelect.addEventListener('change', fillParts);
+  partLabel.append(partInput, partList, ankiEl('span', 'anki-hint', t('anki.partHelp')));
+  form.appendChild(partLabel);
 
   const message = ankiEl('p', 'anki-form__message');
   message.setAttribute('aria-live', 'polite');
@@ -1649,7 +1765,7 @@ function renderAnkiEditor(main) {
         if (!known.has(d.id)) createdDecks.push(d.id);
       });
     }
-    const tags = tagsInput.value.split(/\s+/).map((tag) => tag.trim()).filter(Boolean);
+    const part = ankiCleanPart(partInput.value);
     const plainFront = ankiNormalize(ankiPlainText(values[firstKey]));
     const duplicate = data.notes.some(
       (note) => note.id !== (editing && editing.id) && note.type === type && ankiNormalize(ankiPlainText(note.fields[firstKey])) === plainFront
@@ -1666,7 +1782,7 @@ function renderAnkiEditor(main) {
       editing.type = type;
       editing.fields = values;
       editing.deckId = deckId;
-      editing.tags = tags;
+      editing.part = part;
       editing.updated = Date.now();
       const { added } = ankiSyncNoteCards(editing);
       before.cards = before.cards || {};
@@ -1683,7 +1799,7 @@ function renderAnkiEditor(main) {
     }
 
     const now = Date.now();
-    const note = { id: uid(), guid: uid(), deckId, type, fields: values, tags, created: now, updated: now };
+    const note = { id: uid(), guid: uid(), deckId, type, fields: values, tags: [], part, created: now, updated: now };
     data.notes.push(note);
     const { added } = ankiSyncNoteCards(note, now);
     const before = { notes: { [note.id]: null }, cards: {} };
@@ -1697,11 +1813,12 @@ function renderAnkiEditor(main) {
       });
     }
     ankiPushUndo('add', before);
-    ankiAddDefaults = { type, deckId, tags: tagsInput.value.trim() };
+    ankiAddDefaults = { type, deckId, part };
     saveData();
     renderAnkiNav();
     fields = {};
     buildFields();
+    fillParts();
     // Le paquet créé à la volée devient une vraie option.
     if (createdDecks.length) {
       Array.from(deckSelect.options)
@@ -1786,28 +1903,85 @@ function ankiSearchCards(query) {
 }
 
 function renderAnkiBrowse(main) {
-  if (ankiBrowseQuery === null) ankiBrowseQuery = '';
+  if (ankiBrowseDeck && !ankiGetDeck(ankiBrowseDeck)) ankiBrowseDeck = '';
   const card = ankiEl('div', 'anki-card');
   card.appendChild(ankiEl('h2', 'anki-title', t('anki.navBrowse')));
+
+  const filters = ankiEl('div', 'anki-filters');
+  const deckSelect = ankiEl('select', 'anki-filter');
+  deckSelect.setAttribute('aria-label', t('anki.deckName'));
+  const allDecks = ankiEl('option', '', t('anki.allDecks'));
+  allDecks.value = '';
+  deckSelect.appendChild(allDecks);
+  ankiSortedDecks().forEach((deck) => {
+    const option = ankiEl('option', '', `${'  '.repeat(ankiDeckDepth(deck))}${ankiDeckShortName(deck)}`);
+    option.value = deck.id;
+    deckSelect.appendChild(option);
+  });
+  deckSelect.value = ankiBrowseDeck;
+
+  const partSelect = ankiEl('select', 'anki-filter');
+  partSelect.setAttribute('aria-label', t('anki.colPart'));
   const search = ankiEl('input', 'anki-input anki-search');
   search.type = 'search';
   search.placeholder = t('anki.searchPlaceholder');
   search.value = ankiBrowseQuery;
-  card.appendChild(search);
+  filters.append(deckSelect, partSelect, search);
+  card.appendChild(filters);
+
+  const infoRow = ankiEl('div', 'anki-browse__info');
   const info = ankiEl('p', 'anki-muted');
-  card.appendChild(info);
+  const renameSlot = ankiEl('span');
+  infoRow.append(info, renameSlot);
+  card.appendChild(infoRow);
   const list = ankiEl('div', 'anki-browse');
   card.appendChild(list);
   main.appendChild(card);
 
   const notes = ankiNoteMap();
   const decks = new Map(ankiData().decks.map((deck) => [deck.id, deck]));
+
+  const fillParts = () => {
+    const parts = ankiPartsIn(ankiBrowseDeck);
+    const family = ankiBrowseDeck ? ankiDeckFamily(ankiBrowseDeck) : null;
+    const hasNoPart = ankiData().notes.some((note) => !note.part && (!family || family.has(note.deckId)));
+    partSelect.innerHTML = '';
+    const all = ankiEl('option', '', t('anki.allParts'));
+    all.value = '';
+    partSelect.appendChild(all);
+    parts.forEach((part) => {
+      const option = ankiEl('option', '', part);
+      option.value = part;
+      partSelect.appendChild(option);
+    });
+    if (hasNoPart) {
+      const none = ankiEl('option', '', t('anki.noPart'));
+      none.value = ANKI_NO_PART;
+      partSelect.appendChild(none);
+    }
+    if (ankiBrowsePart && !Array.from(partSelect.options).some((option) => option.value === ankiBrowsePart)) ankiBrowsePart = '';
+    partSelect.value = ankiBrowsePart;
+  };
+
   const draw = () => {
-    const results = ankiSearchCards(ankiBrowseQuery);
+    const family = ankiBrowseDeck ? ankiDeckFamily(ankiBrowseDeck) : null;
+    const results = ankiSearchCards(ankiBrowseQuery).filter((c) => {
+      const note = notes.get(c.noteId);
+      if (family && !family.has(note.deckId)) return false;
+      if (ankiBrowsePart === ANKI_NO_PART) return !note.part;
+      return !ankiBrowsePart || note.part === ankiBrowsePart;
+    });
     info.textContent = t('anki.resultsCount', { count: results.length });
+
+    // Renommer une partie d'un coup (ex. « Chapitre 1 » → « Introduction - Chapitre 1 »).
+    renameSlot.innerHTML = '';
+    if (ankiBrowsePart && ankiBrowsePart !== ANKI_NO_PART) {
+      renameSlot.appendChild(ankiButton('anki-link', t('anki.renamePart'), () => ankiRenamePart(ankiBrowsePart, ankiBrowseDeck)));
+    }
+
     list.innerHTML = '';
     const head = ankiEl('div', 'anki-browse__row anki-browse__row--head');
-    ['colQuestion', 'colDeck', 'colDueDate', 'colInterval', 'colReviews'].forEach((key) => head.appendChild(ankiEl('span', '', t(`anki.${key}`))));
+    ['colQuestion', 'colPart', 'colDeck', 'colDueDate', 'colInterval', 'colReviews'].forEach((key) => head.appendChild(ankiEl('span', '', t(`anki.${key}`))));
     list.appendChild(head);
     results.slice(0, ankiBrowseLimit).forEach((c) => {
       const note = notes.get(c.noteId);
@@ -1819,8 +1993,12 @@ function renderAnkiBrowse(main) {
       else if (c.state !== ANKI_STATE.REVIEW) dueText = t('anki.stateLearning');
       else dueText = ankiFormatDate(c.due);
       const deck = decks.get(note.deckId);
+      const questionCell = ankiEl('span', 'anki-browse__q');
+      questionCell.appendChild(ankiEl('span', 'anki-browse__qtext', question.length > 140 ? `${question.slice(0, 140)}…` : question));
+      if (note.part) questionCell.appendChild(ankiEl('span', 'anki-part anki-part--inline', note.part));
       row.append(
-        ankiEl('span', 'anki-browse__q', question.length > 140 ? `${question.slice(0, 140)}…` : question),
+        questionCell,
+        ankiEl('span', 'anki-browse__part', note.part || '—'),
         ankiEl('span', 'anki-browse__deck', deck ? deck.name : ''),
         ankiEl('span', '', dueText),
         ankiEl('span', '', c.state === ANKI_STATE.REVIEW ? ankiFormatInterval(c.scheduled_days * 86400000) : '—'),
@@ -1837,6 +2015,18 @@ function renderAnkiBrowse(main) {
       );
     }
   };
+
+  deckSelect.addEventListener('change', () => {
+    ankiBrowseDeck = deckSelect.value;
+    ankiBrowseLimit = ANKI_BROWSE_PAGE;
+    fillParts();
+    draw();
+  });
+  partSelect.addEventListener('change', () => {
+    ankiBrowsePart = partSelect.value;
+    ankiBrowseLimit = ANKI_BROWSE_PAGE;
+    draw();
+  });
   let timer = null;
   search.addEventListener('input', () => {
     clearTimeout(timer);
@@ -1846,7 +2036,24 @@ function renderAnkiBrowse(main) {
       draw();
     }, 150);
   });
+  fillParts();
   draw();
+}
+
+function ankiRenamePart(part, deckId) {
+  const family = deckId ? ankiDeckFamily(deckId) : null;
+  const notes = ankiData().notes.filter((note) => note.part === part && (!family || family.has(note.deckId)));
+  const name = ankiCleanPart(window.prompt(t('anki.renamePartPrompt', { name: part, count: notes.length }), part));
+  if (!name || name === part) return;
+  ankiPushUndo('edit', ankiCapture({ notes: notes.map((note) => note.id) }));
+  notes.forEach((note) => {
+    note.part = name;
+    note.updated = Date.now();
+  });
+  ankiBrowsePart = name;
+  saveData();
+  renderAnki(true);
+  ankiStatus(t('anki.partRenamed', { count: notes.length, name }), 'success');
 }
 
 /* ── Statistiques ──────────────────────────────────────────── */
@@ -2198,7 +2405,8 @@ function ankiParseImport(rawText) {
       typeName,
       deckName: deckCol >= 0 ? row[deckCol] || '' : headers.deck || '',
       fields: values,
-      tags: Array.from(new Set(tags))
+      tags: Array.from(new Set(tags)),
+      part: ankiPartFromTags(tags)
     });
   });
   return { notes, media, hasDecks: notes.some((note) => note.deckName) };
@@ -2339,6 +2547,8 @@ function ankiRunImport(parsed, target, duplicates) {
       Object.assign(before.cards, ankiCapture({ cards: cardIds }).cards || {});
       Object.assign(before.revlog, ankiCapture({ revlog: data.revlog.filter((log) => cardIds.includes(log.c)).map((log) => log.id) }).revlog || {});
       existing.fields = sameType ? item.fields : ankiConvertFields(item.fields, item.type, existing.type);
+      // Partie renommée à la main : on la garde tant que les tags Anki ne changent pas.
+      if (JSON.stringify(existing.tags || []) !== JSON.stringify(item.tags)) existing.part = item.part;
       existing.tags = item.tags;
       existing.deckId = deck.id;
       existing.updated = now;
@@ -2355,6 +2565,7 @@ function ankiRunImport(parsed, target, duplicates) {
       type: item.type,
       fields: item.fields,
       tags: item.tags,
+      part: item.part,
       created: now + index,
       updated: now
     };

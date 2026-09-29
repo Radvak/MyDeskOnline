@@ -3795,7 +3795,7 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 
 .anki-browse__row {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 1.3fr) 7rem 5rem 5.5rem;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1.4fr) minmax(0, 1fr) 6.5rem 4.5rem 5rem;
   gap: 0.6rem;
   align-items: center;
   text-align: left;
@@ -3812,7 +3812,48 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .anki-browse__row--head { border-top: none; cursor: default; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); }
 .anki-browse__row--head:hover { background: none; }
 .anki-browse__row.suspended { background: rgba(234, 179, 8, 0.12); }
-.anki-browse__q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anki-browse__q { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.anki-browse__qtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anki-browse__part { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anki-browse__info { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+
+.anki-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.anki-filters > * {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.anki-part {
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(78, 115, 223, 0.12);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .anki-part { background: rgba(147, 197, 253, 0.15); color: #93c5fd; }
+.anki-part--inline { display: none; }
+
+.anki-review__where {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
 .anki-browse__deck { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .anki-browse > .anki-btn { margin-top: 0.75rem; align-self: center; }
 
@@ -3907,10 +3948,14 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   .anki-deck-row--head .anki-count { font-size: 0.6rem; }
   .anki-face { padding: 1.25rem 1rem; font-size: 1.1rem; min-height: 180px; }
   .anki-grade { padding: 0.75rem 0.15rem; font-size: 0.9rem; }
-  .anki-browse__row { grid-template-columns: minmax(0, 1fr) 6.5rem; }
+  .anki-browse__row { grid-template-columns: minmax(0, 1fr) 6rem; }
   .anki-browse__row > :nth-child(2),
-  .anki-browse__row > :nth-child(4),
-  .anki-browse__row > :nth-child(5) { display: none; }
+  .anki-browse__row > :nth-child(3),
+  .anki-browse__row > :nth-child(5),
+  .anki-browse__row > :nth-child(6) { display: none; }
+  .anki-part--inline { display: inline-block; }
+  .anki-filters { grid-template-columns: 1fr 1fr; }
+  .anki-filters .anki-search { grid-column: 1 / -1; }
   .anki-counts { gap: 1.25rem; }
   .anki-btn--danger { margin-left: 0; }
   .anki-review .anki-hint { display: none; }
