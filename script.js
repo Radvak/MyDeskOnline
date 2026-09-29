@@ -39,6 +39,7 @@ const defaultData = {
     notes: [],
     cards: [],
     revlog: [],
+    tags: [],
     settings: {}
   },
   tabs: {
