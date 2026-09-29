@@ -34,6 +34,13 @@ const defaultData = {
     logs: {},
     activeSessionId: null
   },
+  anki: {
+    decks: [],
+    notes: [],
+    cards: [],
+    revlog: [],
+    settings: {}
+  },
   tabs: {
     visibility: {
       calendar: true,
@@ -43,6 +50,7 @@ const defaultData = {
       daily: true,
       sport: true,
       menutool: true,
+      anki: true,
       gantt: true,
       snake: true,
       trackirigo: true
@@ -58,6 +66,7 @@ const OPTIONAL_TABS = [
   { id: 'daily', labelKey: 'tabs.daily' },
   { id: 'sport', labelKey: 'tabs.sport' },
   { id: 'menutool', labelKey: 'tabs.menutool' },
+  { id: 'anki', labelKey: 'tabs.anki' },
   { id: 'gantt', labelKey: 'tabs.gantt' },
   { id: 'snake', labelKey: 'tabs.snake' },
   { id: 'trackirigo', labelKey: 'tabs.track' }
@@ -1311,7 +1320,8 @@ function renderAllViews() {
     renderTabVisibilitySettings,
     applyTabVisibility,
     updateSnakeScores,
-    typeof renderSport === 'function' ? renderSport : null
+    typeof renderSport === 'function' ? renderSport : null,
+    typeof renderAnki === 'function' ? renderAnki : null
   ].forEach((render) => {
     if (!render) return;
     try {
@@ -1587,6 +1597,10 @@ function migrateData() {
 
   if (typeof ensureSportData === 'function') {
     ensureSportData();
+  }
+
+  if (typeof ensureAnkiData === 'function') {
+    ensureAnkiData();
   }
 
   if (!appData.tabs || typeof appData.tabs !== 'object') {
@@ -4509,6 +4523,9 @@ async function bootstrap() {
   if (typeof registerMenuTranslations === 'function') {
     registerMenuTranslations();
   }
+  if (typeof registerAnkiTranslations === 'function') {
+    registerAnkiTranslations();
+  }
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();
   }
@@ -4543,6 +4560,9 @@ async function bootstrap() {
   }
   if (typeof initMenuTool === 'function') {
     initMenuTool();
+  }
+  if (typeof initAnki === 'function') {
+    initAnki();
   }
   if (typeof initInstall === 'function') {
     initInstall();

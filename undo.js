@@ -3,8 +3,9 @@
    Historique des états de appData enregistrés par saveData().
    Les modifications rapprochées (frappe continue) sont
    regroupées en une seule étape. L'état propre à l'appareil
-   (semaine affichée, page ouverte…) et le meilleur score
-   Snake ne sont pas concernés.
+   (semaine affichée, page ouverte…), le meilleur score Snake
+   et les révisions (anki.js a son propre Ctrl+Z) ne sont pas
+   concernés.
    ═══════════════════════════════════════════════════════════ */
 
 const UNDO_MAX_STEPS = 50;
@@ -56,6 +57,7 @@ function undoSnapshot() {
   const data = typeof syncExtractData === 'function' ? syncExtractData(appData) : JSON.parse(JSON.stringify(appData));
   delete data.snake;
   delete data.menu;
+  delete data.anki;
   delete data.storagePath;
   return JSON.stringify(data);
 }
@@ -89,6 +91,7 @@ function undoRestore(serialized) {
   const data = JSON.parse(serialized);
   data.snake = appData.snake;
   data.menu = appData.menu;
+  data.anki = appData.anki;
   if (typeof syncApplyData === 'function') {
     syncApplyData(data); // conserve l'état local, migre, enregistre et redessine
   } else {

@@ -22,6 +22,7 @@
     { "name": "Agenda", "url": "./?tab=calendar", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Sport", "url": "./?tab=sport", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Menu", "url": "./?tab=menutool", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Révisions", "url": "./?tab=anki", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "To Do List", "url": "./?tab=todo", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
