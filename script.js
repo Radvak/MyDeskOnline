@@ -1671,6 +1671,9 @@ async function initData() {
   }
 }
 
+// Onglet ouvert, retenu sur cet appareil pour le retrouver après un rafraîchissement.
+const ACTIVE_TAB_KEY = 'mydesk-active-tab';
+
 function initTabs() {
   tabLinks = Array.from(document.querySelectorAll('.tab-link'));
   const activateTab = (link) => {
@@ -1684,6 +1687,11 @@ function initTabs() {
     }
     const targetId = link.dataset.target;
     document.getElementById(targetId).classList.add('active');
+    try {
+      localStorage.setItem(ACTIVE_TAB_KEY, targetId);
+    } catch (error) {
+      // stockage indisponible : on ne retient simplement pas l'onglet
+    }
 
     if (previousActivePanel && previousActivePanel.id === 'snake' && targetId !== 'snake') {
       pauseSnake(true);
@@ -1715,10 +1723,25 @@ function initTabs() {
 
   // ?tab=sport : raccourcis de l'app installée (appui long sur l'icône).
   const ongletDemande = new URLSearchParams(window.location.search).get('tab');
+  let ongletRetenu = null;
+  try {
+    ongletRetenu = localStorage.getItem(ACTIVE_TAB_KEY);
+  } catch (error) {
+    ongletRetenu = null;
+  }
+  const visibleTab = (id) => tabLinks.find((link) => id && link.dataset.target === id && !link.classList.contains('is-hidden'));
   const initiallyActive =
-    tabLinks.find((link) => ongletDemande && link.dataset.target === ongletDemande && !link.classList.contains('is-hidden')) ||
+    visibleTab(ongletDemande) ||
+    visibleTab(ongletRetenu) ||
     tabLinks.find((link) => link.classList.contains('active') && !link.classList.contains('is-hidden')) ||
     tabLinks.find((link) => !link.classList.contains('is-hidden'));
+  // ?tab= ne sert qu'à l'ouverture (raccourcis de l'app) : on le retire de
+  // l'adresse pour qu'un rafraîchissement garde l'onglet choisi ensuite.
+  if (ongletDemande && window.history && window.history.replaceState) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }
   if (initiallyActive) {
     activateTab(initiallyActive);
   }

@@ -1224,6 +1224,61 @@ function renderAnki(force = false) {
     import: renderAnkiImport
   };
   (views[ankiView] || renderAnkiDecks)(main);
+  ankiSaveUi();
+}
+
+// Vue, paquet et filtres retenus sur cet appareil (pas synchronisés) pour
+// retrouver l'écran après un rafraîchissement.
+const ANKI_UI_KEY = 'mydesk-anki-ui';
+let ankiUiRestored = false; // pas d'enregistrement avant la restauration
+
+function ankiSaveUi() {
+  if (!ankiUiRestored) return;
+  try {
+    localStorage.setItem(
+      ANKI_UI_KEY,
+      JSON.stringify({
+        view: ankiView,
+        deckId: ankiDeckId,
+        editNoteId: ankiEditNoteId,
+        browseDeck: ankiBrowseDeck,
+        browseTag: ankiBrowseTag,
+        browseQuery: ankiBrowseQuery,
+        tagsDeck: ankiTagsDeck,
+        statsDeck: ankiStatsDeckId
+      })
+    );
+  } catch (error) {
+    // stockage indisponible : rien à retenir
+  }
+}
+
+function ankiRestoreUi() {
+  let ui = null;
+  try {
+    ui = JSON.parse(localStorage.getItem(ANKI_UI_KEY) || 'null');
+  } catch (error) {
+    ui = null;
+  }
+  if (!ankiIsObject(ui)) return;
+  const deckOk = (id) => (id && ankiGetDeck(id) ? id : '');
+  ankiDeckId = deckOk(ui.deckId) || null;
+  ankiBrowseDeck = deckOk(ui.browseDeck);
+  ankiBrowseTag = typeof ui.browseTag === 'string' ? ui.browseTag : '';
+  ankiBrowseQuery = typeof ui.browseQuery === 'string' ? ui.browseQuery : '';
+  ankiTagsDeck = deckOk(ui.tagsDeck);
+  ankiStatsDeckId = deckOk(ui.statsDeck);
+  let view = ui.view;
+  if (view === 'edit' && !ankiData().notes.some((note) => note.id === ui.editNoteId)) view = 'browse';
+  if (view === 'edit') {
+    ankiEditNoteId = ui.editNoteId;
+    ankiEditReturn = 'browse';
+  }
+  // En pleine révision : on reprend la révision du paquet (carte suivante due).
+  if ((view === 'review' || view === 'done' || view === 'overview') && !ankiDeckId) view = 'decks';
+  if (view === 'add') ankiEditReturn = 'decks';
+  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'stats', 'settings', 'import'];
+  ankiView = known.includes(view) ? view : 'decks';
 }
 
 function ankiGo(view) {
@@ -2874,6 +2929,8 @@ function initAnki() {
     return;
   }
   ensureAnkiData();
+  ankiRestoreUi();
+  ankiUiRestored = true;
   window.addEventListener('keydown', ankiHandleKeydown, true);
   renderAnki();
   const languageSelect = document.getElementById('language-select');
