@@ -3963,6 +3963,18 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .anki-tag-row__name:focus { border-color: var(--primary); background: var(--surface); outline: none; }
 .anki-tag-row__count { white-space: nowrap; }
 
+/* Récupération */
+.anki-restore-link { display: block; margin-top: 1.25rem; }
+.anki-restore__list { display: flex; flex-direction: column; margin-top: 0.75rem; }
+.anki-restore__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding: 0.65rem 0;
+}
+
 /* Import */
 .anki-file {
   display: inline-block;

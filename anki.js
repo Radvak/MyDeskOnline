@@ -32,7 +32,8 @@ const ANKI_TRANSLATIONS = {
       deck: 'le changement de paquet',
       import: "l'import",
       reset: 'la réinitialisation',
-      tag: 'le changement de tag'
+      tag: 'le changement de tag',
+      restore: 'la restauration'
     },
     deckName: 'Paquet',
     colNew: 'Nouvelles',
@@ -115,6 +116,19 @@ const ANKI_TRANSLATIONS = {
     numbers: 'Liste numérotée',
     clearFormat: 'Effacer la mise en forme',
     searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, is:suspended)',
+    restoreTitle: 'Récupérer des cartes',
+    restoreLink: 'Cartes disparues ? Les récupérer depuis l’historique de synchro',
+    restoreHelp: 'Chaque synchro est gardée par GitHub. Choisis une version : les paquets, notes, cartes et révisions qui manquent aujourd’hui sont rajoutés (rien de ce que tu as maintenant n’est supprimé).',
+    restoreSearch: 'Chercher dans l’historique',
+    restoreSearching: 'Recherche… ({done} version(s) lue(s))',
+    restoreNone: 'Aucune version de l’historique ne contient de cartes.',
+    restoreNeedSync: 'La synchronisation doit être activée (onglet Accueil) pour lire l’historique.',
+    restoreError: 'Lecture de l’historique impossible : {error}',
+    restoreItem: '{date} : {notes} note(s), {decks} paquet(s), {reviews} révision(s)',
+    restoreMissing: '{count} note(s) absente(s) aujourd’hui',
+    restoreButton: 'Restaurer',
+    restoreDone: 'Restauré : {notes} note(s), {cards} carte(s), {reviews} révision(s).',
+    restoreNothing: 'Rien à restaurer : tout est déjà là.',
     colQuestion: 'Question',
     colDeck: 'Paquet',
     colDueDate: 'Échéance',
@@ -199,7 +213,8 @@ const ANKI_TRANSLATIONS = {
       deck: 'deck change',
       import: 'import',
       reset: 'reset',
-      tag: 'tag change'
+      tag: 'tag change',
+      restore: 'restore'
     },
     deckName: 'Deck',
     colNew: 'New',
@@ -282,6 +297,19 @@ const ANKI_TRANSLATIONS = {
     numbers: 'Numbered list',
     clearFormat: 'Clear formatting',
     searchPlaceholder: 'Search a word… (or is:due, is:new, is:suspended)',
+    restoreTitle: 'Recover cards',
+    restoreLink: 'Cards gone? Recover them from the sync history',
+    restoreHelp: 'GitHub keeps every sync. Pick a version: decks, notes, cards and reviews missing today are added back (nothing you have now is removed).',
+    restoreSearch: 'Search the history',
+    restoreSearching: 'Searching… ({done} version(s) read)',
+    restoreNone: 'No version in the history contains cards.',
+    restoreNeedSync: 'Sync must be enabled (Home tab) to read the history.',
+    restoreError: 'Could not read the history: {error}',
+    restoreItem: '{date}: {notes} note(s), {decks} deck(s), {reviews} review(s)',
+    restoreMissing: '{count} note(s) missing today',
+    restoreButton: 'Restore',
+    restoreDone: 'Restored: {notes} note(s), {cards} card(s), {reviews} review(s).',
+    restoreNothing: 'Nothing to restore: everything is already here.',
     colQuestion: 'Question',
     colDeck: 'Deck',
     colDueDate: 'Due',
@@ -464,6 +492,12 @@ function ensureAnkiData() {
     data.revlog = data.revlog.filter((log) => cardIds.has(log.c));
   }
   if (typeof FSRS !== 'undefined') ankiReconcileCards();
+}
+
+// Toute suppression volontaire est datée : la synchro distingue ainsi une
+// vraie suppression d'un appareil qui a simplement perdu ses données.
+function ankiMarkDelete() {
+  ankiData().lastDeleteAt = Date.now();
 }
 
 function ankiDefaultDeck() {
@@ -1143,7 +1177,10 @@ function ankiUndo() {
       const index = list.findIndex((item) => item.id === id);
       const copy = copies[id];
       if (copy === null) {
-        if (index !== -1) list.splice(index, 1);
+        if (index !== -1) {
+          list.splice(index, 1);
+          ankiMarkDelete();
+        }
       } else if (index !== -1) {
         list[index] = copy;
       } else {
@@ -1219,6 +1256,7 @@ function renderAnki(force = false) {
     edit: renderAnkiEditor,
     browse: renderAnkiBrowse,
     tags: renderAnkiTags,
+    restore: renderAnkiRestore,
     stats: renderAnkiStats,
     settings: renderAnkiSettings,
     import: renderAnkiImport
@@ -1277,7 +1315,7 @@ function ankiRestoreUi() {
   // En pleine révision : on reprend la révision du paquet (carte suivante due).
   if ((view === 'review' || view === 'done' || view === 'overview') && !ankiDeckId) view = 'decks';
   if (view === 'add') ankiEditReturn = 'decks';
-  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'stats', 'settings', 'import'];
+  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'restore', 'stats', 'settings', 'import'];
   ankiView = known.includes(view) ? view : 'decks';
 }
 
@@ -1302,7 +1340,7 @@ function renderAnkiNav() {
     ['settings', 'anki.navSettings'],
     ['import', 'anki.navImport']
   ];
-  const activeNav = { overview: 'decks', review: 'decks', done: 'decks', edit: 'browse' }[ankiView] || ankiView;
+  const activeNav = { overview: 'decks', review: 'decks', done: 'decks', edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
   items.forEach(([view, key]) => {
     const button = ankiButton(`anki-nav__btn${activeNav === view ? ' active' : ''}`, t(key), () => {
       if (view === 'add') {
@@ -1333,6 +1371,9 @@ function renderAnkiDecks(main) {
     card.appendChild(ankiEl('p', 'anki-muted', t('anki.noDecks')));
     const actions = ankiEl('div', 'anki-actions');
     actions.appendChild(ankiButton('anki-btn', t('anki.navImport'), () => ankiGo('import')));
+    if (typeof isSyncEnabled === 'function' && isSyncEnabled()) {
+      actions.appendChild(ankiButton('anki-btn anki-btn--ghost', t('anki.restoreLink'), () => ankiGo('restore')));
+    }
     actions.appendChild(
       ankiButton('anki-btn anki-btn--ghost', t('anki.navAdd'), () => {
         ankiEditNoteId = null;
@@ -1448,6 +1489,7 @@ function ankiDeleteDeck(deck) {
   );
   data.decks = data.decks.filter((d) => !family.has(d.id));
   data.tags = data.tags.filter((tag) => !family.has(tag.deckId));
+  ankiMarkDelete();
   data.notes = data.notes.filter((note) => !noteIds.has(note.id));
   data.cards = data.cards.filter((card) => !cardIds.has(card.id));
   data.revlog = data.revlog.filter((log) => !cardIds.has(log.c));
@@ -1691,6 +1733,7 @@ function ankiDeleteNote(noteId) {
   const logs = data.revlog.filter((log) => cardIds.has(log.c));
   ankiPushUndo('delete', ankiCapture({ notes: [noteId], cards: Array.from(cardIds), revlog: logs.map((log) => log.id) }));
   data.notes = data.notes.filter((note) => note.id !== noteId);
+  ankiMarkDelete();
   data.cards = data.cards.filter((card) => !cardIds.has(card.id));
   data.revlog = data.revlog.filter((log) => !cardIds.has(log.c));
   saveData();
@@ -2345,6 +2388,137 @@ function renderAnkiTags(main) {
   main.appendChild(card);
 }
 
+/* ── Récupérer depuis l'historique de synchro ──────────────── */
+
+let ankiRestoreState = null; // { versions, searching, done, error }
+
+// Parcourt les versions du Gist (de la plus récente à la plus ancienne) et
+// garde celles qui contiennent des notes, en sautant les versions identiques.
+async function ankiSearchHistory(onProgress) {
+  const gistId = syncSettings.gistId;
+  const commits = await syncRequest(`/gists/${gistId}/commits?per_page=60`);
+  const versions = [];
+  let lastSignature = null;
+  for (let i = 0; i < commits.length && versions.length < 6; i += 1) {
+    const commit = commits[i];
+    onProgress(i + 1);
+    const gist = await syncRequest(`/gists/${gistId}/${commit.version}`);
+    const file = gist.files && gist.files[SYNC_FILE_NAME];
+    if (!file) continue;
+    let content = file.content;
+    if (file.truncated && file.raw_url) content = await (await fetch(file.raw_url, { cache: 'no-store' })).text();
+    let anki = null;
+    try {
+      const payload = JSON.parse(content);
+      anki = payload && payload.data && payload.data.anki;
+    } catch (error) {
+      continue;
+    }
+    if (!ankiIsObject(anki) || !Array.isArray(anki.notes) || !anki.notes.length) continue;
+    const signature = `${anki.notes.length}|${(anki.cards || []).length}|${(anki.revlog || []).length}|${(anki.decks || []).length}`;
+    if (signature === lastSignature) continue;
+    lastSignature = signature;
+    versions.push({ at: commit.committed_at, anki });
+  }
+  return versions;
+}
+
+// Rajoute ce qui manque (par identifiant) sans toucher à l'existant.
+function ankiRestoreVersion(snapshot) {
+  const data = ankiData();
+  const before = {};
+  const added = { notes: 0, cards: 0, revlog: 0 };
+  ANKI_COLLECTIONS.forEach((collection) => {
+    const have = new Set(data[collection].map((item) => item.id));
+    (snapshot[collection] || []).forEach((item) => {
+      if (!item || have.has(item.id)) return;
+      data[collection].push(JSON.parse(JSON.stringify(item)));
+      before[collection] = before[collection] || {};
+      before[collection][item.id] = null;
+      if (collection in added) added[collection] += 1;
+    });
+  });
+  if (!Object.keys(before).length) {
+    ankiStatus(t('anki.restoreNothing'));
+    return;
+  }
+  ensureAnkiData();
+  ankiPushUndo('restore', before);
+  saveData();
+  ankiGo('decks');
+  ankiStatus(t('anki.restoreDone', { notes: added.notes, cards: added.cards, reviews: added.revlog }), 'success');
+}
+
+function renderAnkiRestore(main) {
+  const card = ankiEl('div', 'anki-card anki-restore');
+  card.appendChild(ankiButton('anki-link', `← ${t('anki.navSettings')}`, () => ankiGo('settings')));
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.restoreTitle')));
+  card.appendChild(ankiEl('p', 'anki-muted', t('anki.restoreHelp')));
+  main.appendChild(card);
+  if (typeof isSyncEnabled !== 'function' || !isSyncEnabled() || !syncSettings.gistId) {
+    card.appendChild(ankiEl('p', 'anki-form__message error', t('anki.restoreNeedSync')));
+    return;
+  }
+  const state = ankiRestoreState;
+  if (!state || (!state.searching && !state.versions && !state.error)) {
+    card.appendChild(
+      ankiButton('anki-btn', t('anki.restoreSearch'), async () => {
+        ankiRestoreState = { searching: true, done: 0 };
+        renderAnki(true);
+        try {
+          const versions = await ankiSearchHistory((done) => {
+            ankiRestoreState.done = done;
+            const progress = document.querySelector('.anki-restore__progress');
+            if (progress) progress.textContent = t('anki.restoreSearching', { done });
+          });
+          ankiRestoreState = { versions };
+        } catch (error) {
+          ankiRestoreState = { error: error.message || String(error) };
+        }
+        if (ankiView === 'restore') renderAnki(true);
+      })
+    );
+    return;
+  }
+  if (state.searching) {
+    card.appendChild(ankiEl('p', 'anki-muted anki-restore__progress', t('anki.restoreSearching', { done: state.done || 0 })));
+    return;
+  }
+  if (state.error) {
+    card.appendChild(ankiEl('p', 'anki-form__message error', t('anki.restoreError', { error: state.error })));
+    card.appendChild(ankiButton('anki-btn anki-btn--ghost', t('anki.restoreSearch'), () => {
+      ankiRestoreState = null;
+      renderAnki(true);
+    }));
+    return;
+  }
+  if (!state.versions.length) {
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.restoreNone')));
+    return;
+  }
+  const locale = typeof getCurrentLocale === 'function' ? getCurrentLocale() : 'fr-FR';
+  const haveNotes = new Set(ankiData().notes.map((note) => note.id));
+  const list = ankiEl('div', 'anki-restore__list');
+  state.versions.forEach((version) => {
+    const row = ankiEl('div', 'anki-restore__row');
+    const info = ankiEl('div');
+    const date = new Date(version.at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+    info.appendChild(
+      ankiEl('strong', '', t('anki.restoreItem', {
+        date,
+        notes: version.anki.notes.length,
+        decks: (version.anki.decks || []).length,
+        reviews: (version.anki.revlog || []).length
+      }))
+    );
+    const missing = version.anki.notes.filter((note) => !haveNotes.has(note.id)).length;
+    info.appendChild(ankiEl('span', 'anki-hint', t('anki.restoreMissing', { count: missing })));
+    row.append(info, ankiButton('anki-btn', t('anki.restoreButton'), () => ankiRestoreVersion(version.anki)));
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+}
+
 /* ── Statistiques ──────────────────────────────────────────── */
 
 function renderAnkiStats(main) {
@@ -2531,6 +2705,7 @@ function renderAnkiSettings(main) {
   save.type = 'submit';
   actions.appendChild(save);
   form.appendChild(actions);
+  form.appendChild(ankiButton('anki-link anki-restore-link', t('anki.restoreLink'), () => ankiGo('restore')));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
