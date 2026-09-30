@@ -37,6 +37,8 @@ const ANKI_TRANSLATIONS = {
       restore: 'la restauration'
     },
     deckName: 'Paquet',
+    deckChoose: '— Choisir un paquet —',
+    deckRequired: 'Choisis un paquet pour cette carte.',
     colNew: 'Nouvelles',
     colLearn: 'Apprent.',
     colDue: 'À revoir',
@@ -225,6 +227,8 @@ const ANKI_TRANSLATIONS = {
       restore: 'restore'
     },
     deckName: 'Deck',
+    deckChoose: '— Choose a deck —',
+    deckRequired: 'Choose a deck for this card.',
     colNew: 'New',
     colLearn: 'Learn',
     colDue: 'Due',
@@ -1557,9 +1561,6 @@ function renderAnkiOverview(main) {
     renderAnkiDecks(main);
     return;
   }
-  // Les prochaines notes ajoutées iront dans le paquet ouvert (et pas
-  // dans celui de la note précédente, avec son tag).
-  if (ankiAddDefaults.deckId !== deck.id) ankiAddDefaults = { ...ankiAddDefaults, deckId: deck.id, tagName: '' };
   const queue = ankiQueue(deck.id);
   const card = ankiEl('div', 'anki-card anki-overview');
   card.appendChild(ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo('decks')));
@@ -1578,6 +1579,8 @@ function renderAnkiOverview(main) {
   actions.append(
     ankiButton('anki-btn anki-btn--ghost', t('anki.navAdd'), () => {
       ankiEditNoteId = null;
+      // Ajout depuis un paquet : ce paquet, sans le tag d'un autre.
+      if (ankiAddDefaults.deckId !== deck.id) ankiAddDefaults = { ...ankiAddDefaults, deckId: deck.id, tagName: '' };
       ankiEditReturn = 'overview';
       ankiGo('add');
     }),
@@ -1868,7 +1871,9 @@ function renderAnkiEditor(main) {
   }
   let type = editing ? editing.type : ankiAddDefaults.type;
   let fields = editing ? { ...editing.fields } : {};
-  const deckFallback = ankiGetDeck(ankiAddDefaults.deckId) || ankiGetDeck(ankiDeckId) || ankiSortedDecks()[0];
+  // Aucun paquet imposé : seulement celui de la note qu'on vient d'ajouter
+  // (ou du paquet depuis lequel on a cliqué « Ajouter »).
+  const deckFallback = ankiGetDeck(ankiAddDefaults.deckId);
 
   const form = ankiEl('form', 'anki-card anki-form');
   form.noValidate = true;
@@ -1893,6 +1898,11 @@ function renderAnkiEditor(main) {
   const deckLabel = ankiEl('label', 'anki-inline');
   deckLabel.appendChild(ankiEl('span', '', t('anki.deckName')));
   const deckSelect = ankiEl('select');
+  if (!editing) {
+    const choose = ankiEl('option', '', t('anki.deckChoose'));
+    choose.value = '';
+    deckSelect.appendChild(choose);
+  }
   ankiSortedDecks().forEach((deck) => {
     const option = ankiEl('option', '', deck.name);
     option.value = deck.id;
@@ -1901,12 +1911,12 @@ function renderAnkiEditor(main) {
   const newDeckOption = ankiEl('option', '', t('anki.importNewDeck'));
   newDeckOption.value = '__new__';
   deckSelect.appendChild(newDeckOption);
-  deckSelect.value = editing ? editing.deckId : deckFallback ? deckFallback.id : '__new__';
+  deckSelect.value = editing ? editing.deckId : deckFallback ? deckFallback.id : '';
   deckSelect.addEventListener('change', () => {
     if (deckSelect.value !== '__new__') return;
     const name = ankiCleanDeckName(window.prompt(t('anki.newDeckPrompt')));
     if (!name) {
-      deckSelect.value = deckFallback ? deckFallback.id : '';
+      deckSelect.value = editing ? editing.deckId : deckFallback ? deckFallback.id : '';
       return;
     }
     const option = ankiEl('option', '', name);
@@ -2042,6 +2052,12 @@ function renderAnkiEditor(main) {
       return;
     }
     let deckId = deckSelect.value;
+    if (!deckId) {
+      message.textContent = t('anki.deckRequired');
+      message.className = 'anki-form__message error';
+      deckSelect.focus();
+      return;
+    }
     const createdDecks = [];
     if (deckId.startsWith('__name__') || deckId === '__new__' || !deckId) {
       const known = new Set(data.decks.map((d) => d.id));
