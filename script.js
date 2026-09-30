@@ -2493,7 +2493,29 @@ function renderCalendarEvents() {
   if (conflicts && typeof renderConflictBanner === 'function') {
     renderConflictBanner(conflicts.groups);
   }
+  renderCalendarNowLine();
 }
+
+// Barre rouge à l'heure actuelle sur le jour d'aujourd'hui (mise à jour chaque minute).
+function renderCalendarNowLine() {
+  document.querySelectorAll('.calendar-grid .current-time-line').forEach((node) => node.remove());
+  const now = new Date();
+  const hour = now.getHours();
+  if (hour < CALENDAR_START_HOUR || hour > CALENDAR_END_HOUR) return;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const cell = calendarCellMap.get(`${today.toISOString()}-${hour}`);
+  if (!cell) return;
+  const line = document.createElement('div');
+  line.className = 'current-time-line';
+  line.style.top = `${(now.getMinutes() / 60) * 100}%`;
+  line.title = formatTime(now);
+  cell.appendChild(line);
+}
+
+setInterval(() => {
+  if (calendarCellMap && calendarCellMap.size) renderCalendarNowLine();
+}, 60 * 1000);
 
 function startDurationResize(pointerEvent, occurrence, eventEl, handle) {
   pointerEvent.preventDefault();
