@@ -290,18 +290,22 @@ function syncStripMeta(data) {
 }
 
 function syncMergeData(base, local, remote) {
-  const meta = { b: syncMetaOf(base), l: syncMetaOf(local), r: syncMetaOf(remote) };
+  const meta = { b: syncMetaOf(base), l: syncMetaOf(local), r: syncMetaOf(remote), reassert: [] };
   const merged = syncMerge(syncStripMeta(base), syncStripMeta(local), syncStripMeta(remote), '', meta);
   if (!syncIsPlainObject(merged)) return merged;
   const mergedMeta = { ...meta.l };
   Object.keys(meta.r).forEach((key) => {
     if (!(mergedMeta[key] >= meta.r[key])) mergedMeta[key] = meta.r[key];
   });
+  const now = Date.now();
+  meta.reassert.forEach((key) => {
+    mergedMeta[key] = now;
+  });
   merged[SYNC_META_KEY] = mergedMeta;
   return merged;
 }
 
-function syncMerge(base, local, remote, path, meta = { b: {}, l: {}, r: {} }) {
+function syncMerge(base, local, remote, path, meta = { b: {}, l: {}, r: {}, reassert: [] }) {
   if (syncEqual(local, remote)) return local;
   if (syncIdArrayPair(local, remote)) {
     return syncMergeIdArray(syncIsIdArray(base) ? base : [], local || [], remote || [], path, meta);
@@ -322,23 +326,32 @@ function syncMerge(base, local, remote, path, meta = { b: {}, l: {}, r: {} }) {
   return syncMergeLeaf(base, local, remote, path, meta);
 }
 
-// Un écart avec la base est une vraie modification s'il est daté après la
-// base. Sans aucune date des deux côtés (données d'avant) : on le garde.
+// Un écart avec la base n'est une vraie modification que s'il a été daté
+// par saveData APRÈS la base. Sans date réelle (absente, ou date de départ
+// à 1), ce n'est jamais une modification : c'est un état périmé, et c'est
+// la version du cloud qui l'emporte. (Le 30/09, un appareil dont la
+// dernière synchro datait d'avant l'horodatage a ainsi effacé des cartes.)
 function syncIsFresh(key, side, meta) {
-  const time = side[key] || 0;
-  const baseTime = meta.b[key] || 0;
-  return time > baseTime || (!time && !baseTime);
+  return (side[key] || 0) > Math.max(meta.b[key] || 0, 1);
 }
 
 function syncMergeLeaf(base, local, remote, key, meta) {
   const localChanged = !syncEqual(base, local);
   const remoteChanged = !syncEqual(base, remote);
-  if (!localChanged) return remote;
+  if (!localChanged) {
+    if (syncIsFresh(key, meta.r, meta)) return remote;
+    // Le cloud a changé sans modification datée : écrit par un appareil
+    // périmé. On garde notre version et on la date, pour que les autres
+    // appareils la reprennent (le cloud se répare tout seul).
+    meta.reassert.push(key);
+    return local;
+  }
   const localFresh = syncIsFresh(key, meta.l, meta);
   if (!remoteChanged) return localFresh ? local : remote;
   if (key === 'snake.bestScore') return Math.max(Number(local) || 0, Number(remote) || 0);
   const remoteFresh = syncIsFresh(key, meta.r, meta);
   if (localFresh !== remoteFresh) return localFresh ? local : remote;
+  if (!localFresh) return remote; // aucun des deux n'est une vraie modification : le cloud fait foi
   return (meta.l[key] || 0) >= (meta.r[key] || 0) ? local : remote;
 }
 
