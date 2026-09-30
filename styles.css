@@ -4266,3 +4266,30 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 @media (max-width: 700px) {
   .sport-preset__schedule { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Révisions : fiches « à confirmer » */
+.anki-browse__meta { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.anki-unsure-badge {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.18);
+  white-space: nowrap;
+}
+.anki-unsure-banner {
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.anki-unsure-field { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer; }
+.anki-unsure-field input { width: 1rem; height: 1rem; }
+[data-theme="dark"] .anki-unsure-badge,
+[data-theme="dark"] .anki-unsure-banner { color: #fcd34d; }

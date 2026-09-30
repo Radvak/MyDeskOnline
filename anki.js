@@ -43,6 +43,7 @@ const ANKI_TRANSLATIONS = {
       reset: 'la réinitialisation',
       tag: 'le changement de tag',
       move: 'le déplacement',
+      unsure: 'le marquage « à confirmer »',
       restore: 'la restauration'
     },
     deckName: 'Paquet',
@@ -78,7 +79,7 @@ const ANKI_TRANSLATIONS = {
     deleteNote: '🗑 Supprimer',
     deleteNoteConfirm: 'Supprimer cette note et ses {count} carte(s) ? (Annulable avec Ctrl+Z)',
     endSession: 'Terminer',
-    keyboardHelp: 'Clavier : Espace = réponse, puis 1 À revoir · 2 Difficile · 3 Correct · 4 Facile · E modifier · Ctrl+Z annuler',
+    keyboardHelp: 'Clavier : Espace = réponse, puis 1 À revoir · 2 Difficile · 3 Correct · 4 Facile · E modifier · C à confirmer · Ctrl+Z annuler',
     typeBasic: 'Basique',
     typeReversed: 'Basique + carte inversée',
     typeCloze: 'Texte à trous',
@@ -127,7 +128,14 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Liste à puces',
     numbers: 'Liste numérotée',
     clearFormat: 'Effacer la mise en forme',
-    searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, added:2 = ajoutées depuis hier)',
+    searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, is:aconfirmer, added:2 = ajoutées depuis hier)',
+    unsureField: '⚠ À confirmer : je ne suis pas sûr que l’info soit fiable',
+    unsureBadge: '⚠ À confirmer',
+    unsureReview: '⚠ À confirmer : cette info n’a pas encore été vérifiée.',
+    unsureMark: '⚠ À confirmer',
+    unsureRemove: '✓ Info vérifiée',
+    unsureMarked: 'Fiche marquée « à confirmer ».',
+    unsureCleared: 'Fiche confirmée.',
     selectAll: 'Tout sélectionner',
     selectCard: 'Sélectionner',
     bulkSelected: '{count} note(s) sélectionnée(s)',
@@ -249,6 +257,7 @@ const ANKI_TRANSLATIONS = {
       reset: 'reset',
       tag: 'tag change',
       move: 'the move',
+      unsure: 'the "to check" mark',
       restore: 'restore'
     },
     deckName: 'Deck',
@@ -284,7 +293,7 @@ const ANKI_TRANSLATIONS = {
     deleteNote: '🗑 Delete',
     deleteNoteConfirm: 'Delete this note and its {count} card(s)? (Ctrl+Z to undo)',
     endSession: 'End',
-    keyboardHelp: 'Keyboard: Space = answer, then 1 Again · 2 Hard · 3 Good · 4 Easy · E edit · Ctrl+Z undo',
+    keyboardHelp: 'Keyboard: Space = answer, then 1 Again · 2 Hard · 3 Good · 4 Easy · E edit · C to check · Ctrl+Z undo',
     typeBasic: 'Basic',
     typeReversed: 'Basic + reversed card',
     typeCloze: 'Cloze',
@@ -333,7 +342,14 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Bulleted list',
     numbers: 'Numbered list',
     clearFormat: 'Clear formatting',
-    searchPlaceholder: 'Search a word… (or is:due, is:new, added:2 = added since yesterday)',
+    searchPlaceholder: 'Search a word… (or is:due, is:new, is:unconfirmed, added:2 = added since yesterday)',
+    unsureField: '⚠ To check: I am not sure this information is reliable',
+    unsureBadge: '⚠ To check',
+    unsureReview: '⚠ To check: this information has not been verified yet.',
+    unsureMark: '⚠ To check',
+    unsureRemove: '✓ Verified',
+    unsureMarked: 'Card marked "to check".',
+    unsureCleared: 'Card verified.',
     selectAll: 'Select all',
     selectCard: 'Select',
     bulkSelected: '{count} note(s) selected',
@@ -751,6 +767,13 @@ function ankiFindOrCreateDeck(name) {
 // renomme toutes ses cartes. Les tags Anki d'origine restent dans note.tags.
 
 const ANKI_NO_TAG = '__none__';
+// Fiche « à confirmer » (info pas encore vérifiée) : note.unsure = true.
+// Dans les fichiers exportés, c'est le tag Anki « a_confirmer ».
+const ANKI_UNSURE_TAG = 'a_confirmer';
+
+function ankiIsUnsureTag(tag) {
+  return ['a_confirmer', 'aconfirmer', 'a-confirmer', 'unconfirmed'].includes(ankiNormalize(tag));
+}
 
 const ANKI_PART_PATTERNS = [
   [/^(?:intro|introduction)$/, (m, long) => (long ? 'Introduction' : 'Intro')],
@@ -1713,6 +1736,7 @@ function renderAnkiReview(main) {
   const deckOfNote = ankiGetDeck(note.deckId);
   const where = [deckOfNote ? deckOfNote.name.split('::').join(' › ') : '', ankiTagName(note)].filter(Boolean).join(' · ');
   if (where) wrap.appendChild(ankiEl('p', 'anki-review__where', where));
+  if (note.unsure) wrap.appendChild(ankiEl('p', 'anki-unsure-banner', t('anki.unsureReview')));
   const face = ankiEl('div', 'anki-face');
   face.innerHTML = ankiCurrent.answerShown ? sides.answer : sides.question;
   wrap.appendChild(face);
@@ -1744,6 +1768,7 @@ function renderAnkiReview(main) {
   const tools = ankiEl('div', 'anki-review__tools');
   tools.append(
     ankiButton('anki-link', t('anki.editCard'), () => ankiEditNote(note.id, 'review'), 'E'),
+    ankiButton('anki-link', t(note.unsure ? 'anki.unsureRemove' : 'anki.unsureMark'), () => ankiToggleUnsure(note.id), 'C'),
     ankiButton('anki-link', t('anki.suspendCard'), () => ankiToggleSuspend([card.id], true)),
     ankiButton('anki-link', t('anki.deleteNote'), () => ankiDeleteNote(note.id))
   );
@@ -1802,6 +1827,18 @@ function renderAnkiDone(main) {
   card.appendChild(ankiEl('p', 'anki-muted', t('anki.doneTomorrow', { count: tomorrow })));
   card.appendChild(ankiButton('anki-btn', t('anki.backToDecks'), () => ankiGo('decks')));
   main.appendChild(card);
+}
+
+function ankiToggleUnsure(noteId) {
+  const note = ankiData().notes.find((n) => n.id === noteId);
+  if (!note) return;
+  ankiPushUndo('unsure', ankiCapture({ notes: [noteId] }));
+  if (note.unsure) delete note.unsure;
+  else note.unsure = true;
+  note.updated = Date.now();
+  saveData();
+  renderAnki();
+  ankiStatus(t(note.unsure ? 'anki.unsureMarked' : 'anki.unsureCleared'), 'success');
 }
 
 function ankiToggleSuspend(cardIds, suspend) {
@@ -2057,6 +2094,12 @@ function renderAnkiEditor(main) {
   });
   tagLabel.append(tagInput, tagList, ankiEl('span', 'anki-hint', t('anki.tagHelp')));
   form.appendChild(tagLabel);
+  const unsureLabel = ankiEl('label', 'anki-unsure-field');
+  const unsureInput = ankiEl('input');
+  unsureInput.type = 'checkbox';
+  unsureInput.checked = Boolean(editing && editing.unsure);
+  unsureLabel.append(unsureInput, ankiEl('span', '', t('anki.unsureField')));
+  form.appendChild(unsureLabel);
 
   const message = ankiEl('p', 'anki-form__message');
   message.setAttribute('aria-live', 'polite');
@@ -2140,6 +2183,8 @@ function renderAnkiEditor(main) {
       editing.fields = values;
       editing.deckId = deckId;
       editing.tagId = tag ? tag.id : null;
+      if (unsureInput.checked) editing.unsure = true;
+      else delete editing.unsure;
       editing.updated = Date.now();
       const { added } = ankiSyncNoteCards(editing);
       before.cards = before.cards || {};
@@ -2157,6 +2202,7 @@ function renderAnkiEditor(main) {
 
     const now = Date.now();
     const note = { id: uid(), guid: uid(), deckId, type, fields: values, tags: [], tagId: tag ? tag.id : null, created: now, updated: now };
+    if (unsureInput.checked) note.unsure = true;
     data.notes.push(note);
     const { added } = ankiSyncNoteCards(note, now);
     const before = { notes: { [note.id]: null }, cards: {} };
@@ -2177,6 +2223,7 @@ function renderAnkiEditor(main) {
     fields = {};
     buildFields();
     fillTags();
+    unsureInput.checked = false;
     // Le paquet créé à la volée devient une vraie option.
     if (createdDecks.length) {
       Array.from(deckSelect.options)
@@ -2239,8 +2286,10 @@ function ankiSearchCards(query) {
       const since = ankiAddDays(ankiDayStart(now), -(Math.max(1, parseInt(value, 10) || 1) - 1));
       test = (card, note) => (note.created || card.created || 0) >= since;
     } else if (key === 'is') {
-      test = (card) =>
+      test = (card, note) =>
         ({
+          unconfirmed: Boolean(note.unsure),
+          aconfirmer: Boolean(note.unsure),
           new: card.state === ANKI_STATE.NEW,
           learn: card.state === ANKI_STATE.LEARNING || card.state === ANKI_STATE.RELEARNING,
           review: card.state === ANKI_STATE.REVIEW,
@@ -2416,7 +2465,12 @@ function renderAnkiBrowse(main) {
       const deck = decks.get(note.deckId);
       const questionCell = ankiEl('span', 'anki-browse__q');
       questionCell.appendChild(ankiEl('span', 'anki-browse__qtext', question.length > 140 ? `${question.slice(0, 140)}…` : question));
-      if (tagName) questionCell.appendChild(ankiEl('span', 'anki-part anki-part--inline', tagName));
+      if (tagName || note.unsure) {
+        const meta = ankiEl('span', 'anki-browse__meta');
+        if (tagName) meta.appendChild(ankiEl('span', 'anki-part anki-part--inline', tagName));
+        if (note.unsure) meta.appendChild(ankiEl('span', 'anki-unsure-badge', t('anki.unsureBadge')));
+        questionCell.appendChild(meta);
+      }
       row.append(
         check,
         questionCell,
@@ -3044,7 +3098,7 @@ function ankiBuildExport(notes) {
     const fields = note.fields || {};
     const [first, second] = note.type === 'cloze' ? [fields.text, fields.extra] : [fields.front, fields.back];
     lines.push(
-      [note.guid || note.id, names[note.type] || names.basic, decks.get(note.deckId) || '', first, second, ankiTagForExport(ankiTagName(note))]
+      [note.guid || note.id, names[note.type] || names.basic, decks.get(note.deckId) || '', first, second, [ankiTagForExport(ankiTagName(note)), note.unsure ? ANKI_UNSURE_TAG : ''].filter(Boolean).join(' ')]
         .map(ankiExportField)
         .join('\t')
     );
@@ -3324,7 +3378,8 @@ function ankiParseImport(rawText) {
       deckName: deckCol >= 0 ? row[deckCol] || '' : headers.deck || '',
       fields: values,
       tags: Array.from(new Set(tags)),
-      part: ankiPartFromTags(tags)
+      part: ankiPartFromTags(tags.filter((tag) => !ankiIsUnsureTag(tag))),
+      unsure: tags.some(ankiIsUnsureTag)
     });
   });
   return { notes, media, hasDecks: notes.some((note) => note.deckName) };
@@ -3472,6 +3527,8 @@ function ankiRunImport(parsed, target, duplicates) {
         existing.tagId = tag ? tag.id : null;
       }
       existing.tags = item.tags;
+      if (item.unsure) existing.unsure = true;
+      else delete existing.unsure;
       existing.deckId = deck.id;
       existing.updated = now;
       ankiSyncNoteCards(existing, now + index).added.forEach((id) => {
@@ -3491,6 +3548,7 @@ function ankiRunImport(parsed, target, duplicates) {
       created: now + index,
       updated: now
     };
+    if (item.unsure) note.unsure = true;
     data.notes.push(note);
     byGuid.set(note.guid, note);
     before.notes[note.id] = null;
@@ -3543,6 +3601,12 @@ function ankiHandleKeydown(event) {
   } else if (['1', '2', '3', '4'].includes(event.key) && ankiCurrent.answerShown) {
     event.preventDefault();
     ankiAnswer(Number(event.key));
+  } else if (key === 'c') {
+    const card = ankiCurrentCard();
+    if (card) {
+      event.preventDefault();
+      ankiToggleUnsure(card.noteId);
+    }
   } else if (key === 'e') {
     const card = ankiCurrentCard();
     if (card) {
