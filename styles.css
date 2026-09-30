@@ -3848,6 +3848,28 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
 }
 .anki-bulk[hidden] { display: none; }
+.anki-export__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.anki-export__tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.35rem;
+}
+.anki-export__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.anki-export__item:hover { background: rgba(99, 102, 241, 0.08); }
+.anki-export__item input { flex: none; width: 1rem; height: 1rem; }
+.anki-export__item > span:nth-child(2) { flex: 1; min-width: 0; }
 .anki-bulk .anki-filter { width: auto; min-width: 9rem; }
 .anki-browse__check { display: flex; align-items: center; justify-content: center; cursor: pointer; align-self: stretch; }
 .anki-browse__check input { width: 1rem; height: 1rem; cursor: pointer; }

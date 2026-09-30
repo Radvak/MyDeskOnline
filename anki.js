@@ -20,6 +20,15 @@ const ANKI_TRANSLATIONS = {
     navStats: 'Statistiques',
     navSettings: 'Réglages',
     navImport: 'Importer',
+    navExport: 'Partager',
+    exportTitle: 'Partager des fiches',
+    exportHelp: 'Crée un fichier à envoyer à tes amis (WhatsApp, mail…). Ils l’importent dans MyDesk (Révisions → Importer) ou dans Anki (Fichier → Importer). Tes révisions ne sont pas incluses : ils partent de zéro. Renvoyer le fichier plus tard ajoute seulement les nouvelles fiches.',
+    exportTags: 'Tags à inclure',
+    exportToggleAll: 'Tout cocher / décocher',
+    exportEmpty: 'Aucune fiche dans ce paquet.',
+    exportDownload: 'Télécharger le fichier ({count} fiche(s))',
+    exportShare: 'Partager…',
+    exportDone: 'Fichier créé : {count} fiche(s).',
     undo: '↶ Annuler',
     undoTitle: 'Annuler : {what} (Ctrl+Z)',
     undone: 'Annulé : {what}.',
@@ -217,6 +226,15 @@ const ANKI_TRANSLATIONS = {
     navStats: 'Stats',
     navSettings: 'Settings',
     navImport: 'Import',
+    navExport: 'Share',
+    exportTitle: 'Share cards',
+    exportHelp: 'Creates a file to send to your friends (WhatsApp, email…). They import it in MyDesk (Reviews → Import) or in Anki (File → Import). Your review history is not included: they start from scratch. Sending the file again later only adds the new cards.',
+    exportTags: 'Tags to include',
+    exportToggleAll: 'Tick / untick all',
+    exportEmpty: 'No cards in this deck.',
+    exportDownload: 'Download the file ({count} card(s))',
+    exportShare: 'Share…',
+    exportDone: 'File created: {count} card(s).',
     undo: '↶ Undo',
     undoTitle: 'Undo: {what} (Ctrl+Z)',
     undone: 'Undone: {what}.',
@@ -443,6 +461,7 @@ let ankiBrowseLimit = ANKI_BROWSE_PAGE;
 let ankiBrowseSelected = new Set(); // notes cochées dans « Parcourir »
 let ankiBrowseLastIndex = null;
 let ankiImportState = null;
+let ankiExportDeck = '';
 let ankiStatsDeckId = '';
 let ankiStatusTimer = null;
 let ankiAddDefaults = { type: 'basic', deckId: null, tagName: '' };
@@ -1323,7 +1342,8 @@ function renderAnki(force = false) {
     restore: renderAnkiRestore,
     stats: renderAnkiStats,
     settings: renderAnkiSettings,
-    import: renderAnkiImport
+    import: renderAnkiImport,
+    export: renderAnkiExport
   };
   (views[ankiView] || renderAnkiDecks)(main);
   ankiSaveUi();
@@ -1379,7 +1399,7 @@ function ankiRestoreUi() {
   // En pleine révision : on reprend la révision du paquet (carte suivante due).
   if ((view === 'review' || view === 'done' || view === 'overview') && !ankiDeckId) view = 'decks';
   if (view === 'add') ankiEditReturn = 'decks';
-  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'restore', 'stats', 'settings', 'import'];
+  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'restore', 'stats', 'settings', 'import', 'export'];
   ankiView = known.includes(view) ? view : 'decks';
 }
 
@@ -1402,7 +1422,8 @@ function renderAnkiNav() {
     ['tags', 'anki.navTags'],
     ['stats', 'anki.navStats'],
     ['settings', 'anki.navSettings'],
-    ['import', 'anki.navImport']
+    ['import', 'anki.navImport'],
+    ['export', 'anki.navExport']
   ];
   const activeNav = { overview: 'decks', review: 'decks', done: 'decks', edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
   items.forEach(([view, key]) => {
@@ -1607,6 +1628,10 @@ function renderAnkiOverview(main) {
       if (ankiAddDefaults.deckId !== deck.id) ankiAddDefaults = { ...ankiAddDefaults, deckId: deck.id, tagName: '' };
       ankiEditReturn = 'overview';
       ankiGo('add');
+    }),
+    ankiButton('anki-btn anki-btn--ghost', t('anki.navExport'), () => {
+      ankiExportDeck = deck.id;
+      ankiGo('export');
     }),
     ankiButton('anki-btn anki-btn--ghost', t('anki.navBrowse'), () => {
       ankiBrowseDeck = deck.id;
@@ -2981,6 +3006,187 @@ function renderAnkiSettings(main) {
     message.className = 'anki-form__message success';
   });
   main.appendChild(form);
+}
+
+/* ── Export (partager des fiches) ──────────────────────────── */
+// Fichier texte au format des exports d'Anki (« Notes en texte brut ») :
+// réimportable dans MyDesk comme dans Anki. Sans l'historique de révisions.
+
+const ANKI_EXPORT_TYPES = {
+  fr: { basic: 'Basique', reversed: 'Basique (et carte inversée)', cloze: 'Texte à trous' },
+  en: { basic: 'Basic', reversed: 'Basic (and reversed card)', cloze: 'Cloze' }
+};
+
+// « Intro - Chap 1 » → « Intro::Chap_1 » (un tag Anki n'a pas d'espace ;
+// l'import de MyDesk refait « Intro - Chap 1 »).
+function ankiTagForExport(name) {
+  const clean = ankiCleanTagName(name);
+  if (!clean) return '';
+  const nested = clean
+    .split(/\s+-\s+/)
+    .map((part) => part.trim().replace(/\s+/g, '_'))
+    .filter(Boolean)
+    .join('::');
+  if (ankiPartFromTag(nested) === clean) return nested;
+  return clean.replace(/\s+/g, '_');
+}
+
+function ankiExportField(value) {
+  const text = String(value || '');
+  return /[\t\r\n"]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function ankiBuildExport(notes) {
+  const names = ANKI_EXPORT_TYPES[currentLanguage] || ANKI_EXPORT_TYPES.fr;
+  const decks = new Map(ankiData().decks.map((deck) => [deck.id, deck.name]));
+  const lines = ['#separator:tab', '#html:true', '#guid column:1', '#notetype column:2', '#deck column:3', '#tags column:6'];
+  notes.forEach((note) => {
+    const fields = note.fields || {};
+    const [first, second] = note.type === 'cloze' ? [fields.text, fields.extra] : [fields.front, fields.back];
+    lines.push(
+      [note.guid || note.id, names[note.type] || names.basic, decks.get(note.deckId) || '', first, second, ankiTagForExport(ankiTagName(note))]
+        .map(ankiExportField)
+        .join('\t')
+    );
+  });
+  return `${lines.join('\n')}\n`;
+}
+
+function ankiExportFileName(deck) {
+  const base = String(deck ? deck.name : 'MyDesk')
+    .replace(/::/g, ' - ')
+    .replace(/[\\/:*?"<>|]+/g, '')
+    .trim();
+  return `${base || 'MyDesk'}.txt`;
+}
+
+function renderAnkiExport(main) {
+  const decks = ankiSortedDecks();
+  const card = ankiEl('div', 'anki-card anki-export');
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.exportTitle')));
+  card.appendChild(ankiEl('p', 'anki-muted', t('anki.exportHelp')));
+  main.appendChild(card);
+  if (!decks.length) {
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.noDecks')));
+    return;
+  }
+  if (!ankiGetDeck(ankiExportDeck)) ankiExportDeck = ankiGetDeck(ankiDeckId) ? ankiDeckId : decks[0].id;
+
+  const deckLabel = ankiEl('label', 'anki-field');
+  deckLabel.appendChild(ankiEl('span', 'anki-field__label', t('anki.deckName')));
+  const deckSelect = ankiEl('select');
+  decks.forEach((deck) => {
+    const option = ankiEl('option', '', deck.name);
+    option.value = deck.id;
+    deckSelect.appendChild(option);
+  });
+  deckSelect.value = ankiExportDeck;
+  deckLabel.appendChild(deckSelect);
+  card.appendChild(deckLabel);
+
+  const tagsBox = ankiEl('div', 'anki-field');
+  card.appendChild(tagsBox);
+  const actions = ankiEl('div', 'anki-actions');
+  card.appendChild(actions);
+
+  const draw = () => {
+    const family = ankiDeckFamily(ankiExportDeck);
+    const deckNotes = ankiData().notes.filter((note) => family.has(note.deckId));
+    const groups = new Map(); // nom du tag → notes
+    deckNotes.forEach((note) => {
+      const name = ankiTagName(note);
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name).push(note);
+    });
+    const names = Array.from(groups.keys()).sort(ankiCompareTagNames);
+
+    tagsBox.innerHTML = '';
+    const head = ankiEl('div', 'anki-export__head');
+    head.appendChild(ankiEl('span', 'anki-field__label', t('anki.exportTags')));
+    tagsBox.appendChild(head);
+    const list = ankiEl('div', 'anki-export__tags');
+    const boxes = names.map((name) => {
+      const label = ankiEl('label', 'anki-export__item');
+      const box = ankiEl('input');
+      box.type = 'checkbox';
+      box.checked = true;
+      label.append(box, ankiEl('span', '', name || t('anki.noTag')), ankiEl('span', 'anki-muted', String(groups.get(name).length)));
+      list.appendChild(label);
+      return { box, name };
+    });
+    tagsBox.appendChild(list);
+    if (!names.length) tagsBox.appendChild(ankiEl('p', 'anki-muted', t('anki.exportEmpty')));
+
+    const chosenNotes = () =>
+      boxes
+        .filter((item) => item.box.checked)
+        .flatMap((item) => groups.get(item.name))
+        .sort((a, b) => (a.created || 0) - (b.created || 0));
+
+    actions.innerHTML = '';
+    const download = ankiButton('anki-btn', '', () => {
+      const notes = chosenNotes();
+      if (!notes.length) return;
+      const blob = new Blob([ankiBuildExport(notes)], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = ankiExportFileName(ankiGetDeck(ankiExportDeck));
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      ankiStatus(t('anki.exportDone', { count: notes.length }), 'success');
+    });
+    actions.appendChild(download);
+
+    // Téléphone : envoyer directement le fichier (WhatsApp, Messages, mail…).
+    let share = null;
+    const probe = typeof File === 'function' ? new File(['x'], 'test.txt', { type: 'text/plain' }) : null;
+    if (probe && navigator.canShare && navigator.canShare({ files: [probe] })) {
+      share = ankiButton('anki-btn anki-btn--ghost', '', async () => {
+        const notes = chosenNotes();
+        if (!notes.length) return;
+        const deck = ankiGetDeck(ankiExportDeck);
+        const file = new File([ankiBuildExport(notes)], ankiExportFileName(deck), { type: 'text/plain' });
+        try {
+          await navigator.share({ files: [file], title: deck ? deck.name : 'MyDesk' });
+        } catch (error) {
+          // partage annulé : rien à faire
+        }
+      });
+      actions.appendChild(share);
+    }
+
+    const refresh = () => {
+      const count = chosenNotes().length;
+      download.textContent = t('anki.exportDownload', { count });
+      download.disabled = !count;
+      if (share) {
+        share.textContent = t('anki.exportShare');
+        share.disabled = !count;
+      }
+    };
+    if (boxes.length > 1) {
+      head.appendChild(
+        ankiButton('anki-link', t('anki.exportToggleAll'), () => {
+          const check = !boxes.every((item) => item.box.checked);
+          boxes.forEach((item) => {
+            item.box.checked = check;
+          });
+          refresh();
+        })
+      );
+    }
+    list.addEventListener('change', refresh);
+    refresh();
+  };
+
+  deckSelect.addEventListener('change', () => {
+    ankiExportDeck = deckSelect.value;
+    draw();
+  });
+  draw();
 }
 
 /* ── Import (export texte d'Anki ou fichier simple) ────────── */
