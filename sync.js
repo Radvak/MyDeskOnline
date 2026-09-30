@@ -9,7 +9,11 @@
 
 const SYNC_SETTINGS_KEY = 'mydesk-sync';
 const SYNC_BASE_KEY = 'mydesk-sync-base';
-const SYNC_FILE_NAME = 'mydesk-sync.json';
+// v2 : fusion horodatée. Les onglets encore ouverts avec l'ancien code
+// continuent d'écrire dans l'ancien fichier, que plus personne ne lit :
+// ils ne peuvent plus écraser les données à jour.
+const SYNC_FILE_NAME = 'mydesk-sync-v2.json';
+const SYNC_LEGACY_FILE_NAME = 'mydesk-sync.json';
 const SYNC_API = 'https://api.github.com';
 const SYNC_PUSH_DELAY_MS = 2000;
 const SYNC_POLL_MS = 30000;
@@ -167,7 +171,17 @@ function isSyncEnabled() {
   return Boolean(syncSettings && syncSettings.token);
 }
 
-/* ── Fusion à trois voies ──────────────────────────────────── */
+/* ── Fusion à trois voies, horodatée ───────────────────────── */
+// Chaque modification faite sur un appareil est datée dans data.syncMeta :
+// clé = chemin de la donnée (« calendar.events#<id> » pour un élément de
+// liste, « tabs.visibility.notes » pour une valeur), valeur = date en ms.
+// À la fusion, un écart par rapport à la dernière synchro (base) ne compte
+// comme une modification que s'il est PLUS RÉCENT que ce que la base
+// connaissait. Un appareil resté sur un état ancien ne peut donc plus
+// effacer, ni remettre à l'ancienne, des données modifiées depuis.
+
+const SYNC_META_KEY = 'syncMeta';
+const SYNC_META_MAX_AGE_MS = 180 * 24 * 3600 * 1000;
 
 function syncIsPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -195,62 +209,145 @@ function syncIsIdArray(value) {
   return Array.isArray(value) && value.every((item) => syncIsPlainObject(item) && item.id != null);
 }
 
-// Garde-fou : des révisions sans aucune note ici alors que la dernière synchro
-// et l'autre appareil en ont, sans suppression enregistrée depuis
-// (anki.lastDeleteAt inchangé) = état local perdu, pas une suppression.
-function syncAnkiLooksWiped(base, local, remote) {
-  const count = (value) => (syncIsPlainObject(value) && Array.isArray(value.notes) ? value.notes.length : 0);
-  if (!(count(base) > 0 && count(local) === 0 && count(remote) > 0)) return false;
-  const mark = (value) => (syncIsPlainObject(value) ? value.lastDeleteAt || null : null);
-  return mark(local) === mark(base);
+// Deux valeurs à comparer élément par élément (listes d'objets à id ;
+// une liste absente d'un côté compte comme vide).
+function syncIdArrayPair(a, b) {
+  return (Array.isArray(a) || Array.isArray(b)) && (a === undefined || syncIsIdArray(a)) && (b === undefined || syncIsIdArray(b));
 }
 
-function syncMerge(base, local, remote, path) {
-  if (
-    path === '' &&
-    syncIsPlainObject(base) &&
-    syncIsPlainObject(local) &&
-    syncIsPlainObject(remote) &&
-    syncAnkiLooksWiped(base.anki, local.anki, remote.anki)
-  ) {
-    console.warn('Synchro : révisions vides ici, celles de l’autre appareil sont conservées.');
-    local = { ...local, anki: remote.anki };
-  }
-  if (syncEqual(local, remote)) return local;
-  if (syncEqual(base, local)) return remote;
-  if (syncEqual(base, remote)) return local;
+function syncIndexById(items) {
+  return new Map((items || []).map((item) => [String(item.id), item]));
+}
 
-  // Modifié des deux côtés.
-  if (local === undefined) return remote; // une modification l'emporte sur une suppression
-  if (remote === undefined) return local;
-  if (path === 'snake.bestScore') {
-    return Math.max(Number(local) || 0, Number(remote) || 0);
-  }
-  if (syncIsPlainObject(local) && syncIsPlainObject(remote)) {
-    const baseObject = syncIsPlainObject(base) ? base : {};
-    const result = {};
-    new Set([...Object.keys(local), ...Object.keys(remote)]).forEach((key) => {
-      const merged = syncMerge(baseObject[key], local[key], remote[key], path ? `${path}.${key}` : key);
-      if (merged !== undefined) {
-        result[key] = merged;
-      }
+// Chemins qui diffèrent entre deux états, à la même granularité que la fusion.
+function syncChangedPaths(a, b, path = '', out = []) {
+  if (syncEqual(a, b)) return out;
+  if (syncIdArrayPair(a, b)) {
+    const before = syncIndexById(a);
+    const after = syncIndexById(b);
+    new Set([...before.keys(), ...after.keys()]).forEach((id) => {
+      if (!syncEqual(before.get(id), after.get(id))) out.push(`${path}#${id}`);
     });
-    return result;
+    return out;
   }
-  if (syncIsIdArray(local) && syncIsIdArray(remote)) {
-    return syncMergeIdArray(syncIsIdArray(base) ? base : [], local, remote, path);
+  if (syncIsPlainObject(a) || syncIsPlainObject(b)) {
+    const left = syncIsPlainObject(a) ? a : {};
+    const right = syncIsPlainObject(b) ? b : {};
+    new Set([...Object.keys(left), ...Object.keys(right)]).forEach((key) => {
+      if (!path && key === SYNC_META_KEY) return;
+      syncChangedPaths(left[key], right[key], path ? `${path}.${key}` : key, out);
+    });
+    return out;
   }
-  // Conflit sur une valeur simple : cet appareil l'emporte.
-  return local;
+  out.push(path);
+  return out;
 }
 
-function syncMergeIdArray(base, local, remote, path) {
-  const indexById = (items) => new Map(items.map((item) => [String(item.id), item]));
-  const baseMap = indexById(base);
-  const localMap = indexById(local);
-  const remoteMap = indexById(remote);
+function syncMetaOf(data) {
+  return syncIsPlainObject(data) && syncIsPlainObject(data[SYNC_META_KEY]) ? data[SYNC_META_KEY] : {};
+}
 
-  // Ordre local, avec les nouveaux éléments distants insérés après leur voisin.
+// Date les modifications faites depuis `previousRaw` (dernier état enregistré).
+// Appelé par saveData (modification de l'utilisateur) et par Ctrl+Z.
+function syncRecordChanges(previousRaw) {
+  if (!previousRaw || !syncIsPlainObject(appData)) return;
+  let previous;
+  try {
+    previous = JSON.parse(previousRaw);
+  } catch (error) {
+    return;
+  }
+  const paths = syncChangedPaths(syncExtractData(previous), syncExtractData(appData));
+  if (!paths.length) return;
+  const now = Date.now();
+  const meta = { ...syncMetaOf(appData) };
+  paths.forEach((path) => {
+    meta[path] = now;
+  });
+  // Purge des dates de plus de 6 mois (les dates de départ, à 1, restent).
+  Object.keys(meta).forEach((key) => {
+    if (meta[key] > 1 && now - meta[key] > SYNC_META_MAX_AGE_MS) delete meta[key];
+  });
+  appData[SYNC_META_KEY] = meta;
+}
+
+// Première utilisation : tout ce qui existe reçoit une date minimale. Un
+// élément qui manque ensuite sans suppression datée est un état périmé.
+function syncSeedMeta() {
+  if (!syncIsPlainObject(appData) || syncIsPlainObject(appData[SYNC_META_KEY])) return;
+  const meta = {};
+  syncChangedPaths({}, syncExtractData(appData)).forEach((path) => {
+    meta[path] = 1;
+  });
+  appData[SYNC_META_KEY] = meta;
+}
+
+function syncStripMeta(data) {
+  if (!syncIsPlainObject(data)) return data;
+  const copy = { ...data };
+  delete copy[SYNC_META_KEY];
+  return copy;
+}
+
+function syncMergeData(base, local, remote) {
+  const meta = { b: syncMetaOf(base), l: syncMetaOf(local), r: syncMetaOf(remote) };
+  const merged = syncMerge(syncStripMeta(base), syncStripMeta(local), syncStripMeta(remote), '', meta);
+  if (!syncIsPlainObject(merged)) return merged;
+  const mergedMeta = { ...meta.l };
+  Object.keys(meta.r).forEach((key) => {
+    if (!(mergedMeta[key] >= meta.r[key])) mergedMeta[key] = meta.r[key];
+  });
+  merged[SYNC_META_KEY] = mergedMeta;
+  return merged;
+}
+
+function syncMerge(base, local, remote, path, meta = { b: {}, l: {}, r: {} }) {
+  if (syncEqual(local, remote)) return local;
+  if (syncIdArrayPair(local, remote)) {
+    return syncMergeIdArray(syncIsIdArray(base) ? base : [], local || [], remote || [], path, meta);
+  }
+  if (syncIsPlainObject(local) || syncIsPlainObject(remote)) {
+    if ((local === undefined || syncIsPlainObject(local)) && (remote === undefined || syncIsPlainObject(remote))) {
+      const baseObject = syncIsPlainObject(base) ? base : {};
+      const left = local || {};
+      const right = remote || {};
+      const result = {};
+      new Set([...Object.keys(left), ...Object.keys(right)]).forEach((key) => {
+        const merged = syncMerge(baseObject[key], left[key], right[key], path ? `${path}.${key}` : key, meta);
+        if (merged !== undefined) result[key] = merged;
+      });
+      return result;
+    }
+  }
+  return syncMergeLeaf(base, local, remote, path, meta);
+}
+
+// Un écart avec la base est une vraie modification s'il est daté après la
+// base. Sans aucune date des deux côtés (données d'avant) : on le garde.
+function syncIsFresh(key, side, meta) {
+  const time = side[key] || 0;
+  const baseTime = meta.b[key] || 0;
+  return time > baseTime || (!time && !baseTime);
+}
+
+function syncMergeLeaf(base, local, remote, key, meta) {
+  const localChanged = !syncEqual(base, local);
+  const remoteChanged = !syncEqual(base, remote);
+  if (!localChanged) return remote;
+  const localFresh = syncIsFresh(key, meta.l, meta);
+  if (!remoteChanged) return localFresh ? local : remote;
+  if (key === 'snake.bestScore') return Math.max(Number(local) || 0, Number(remote) || 0);
+  const remoteFresh = syncIsFresh(key, meta.r, meta);
+  if (localFresh !== remoteFresh) return localFresh ? local : remote;
+  return (meta.l[key] || 0) >= (meta.r[key] || 0) ? local : remote;
+}
+
+function syncMergeIdArray(base, local, remote, path, meta) {
+  const baseMap = syncIndexById(base);
+  const localMap = syncIndexById(local);
+  const remoteMap = syncIndexById(remote);
+
+  // Ordre local, avec les éléments seulement distants insérés après leur voisin.
   const order = local.map((item) => String(item.id));
   remote.forEach((item, position) => {
     const id = String(item.id);
@@ -266,13 +363,12 @@ function syncMergeIdArray(base, local, remote, path) {
       order.splice(previousIndex + 1, 0, id);
     }
   });
+  // Éléments connus de la base mais absents des deux côtés : supprimés partout.
 
   const result = [];
   order.forEach((id) => {
-    const merged = syncMerge(baseMap.get(id), localMap.get(id), remoteMap.get(id), `${path}[]`);
-    if (merged !== undefined) {
-      result.push(merged);
-    }
+    const merged = syncMergeLeaf(baseMap.get(id), localMap.get(id), remoteMap.get(id), `${path}#${id}`, meta);
+    if (merged !== undefined) result.push(merged);
   });
   return result;
 }
@@ -343,7 +439,7 @@ async function syncRequest(path, options = {}) {
 async function syncFindOrCreateGist() {
   for (let page = 1; page <= 10; page += 1) {
     const gists = await syncRequest(`/gists?per_page=100&page=${page}`);
-    const found = gists.find((gist) => gist.files && gist.files[SYNC_FILE_NAME]);
+    const found = gists.find((gist) => gist.files && (gist.files[SYNC_FILE_NAME] || gist.files[SYNC_LEGACY_FILE_NAME]));
     if (found) return found.id;
     if (gists.length < 100) break;
   }
@@ -352,7 +448,7 @@ async function syncFindOrCreateGist() {
     body: JSON.stringify({
       description: 'MyDesk Online – données synchronisées (ne pas supprimer)',
       public: false,
-      files: { [SYNC_FILE_NAME]: { content: JSON.stringify({ version: 1, data: null }) } }
+      files: { [SYNC_FILE_NAME]: { content: JSON.stringify({ version: 2, data: null }) } }
     })
   });
   return created.id;
@@ -360,7 +456,8 @@ async function syncFindOrCreateGist() {
 
 async function syncReadRemote() {
   const gist = await syncRequest(`/gists/${syncSettings.gistId}`);
-  const file = gist.files && gist.files[SYNC_FILE_NAME];
+  // Premier passage en v2 : on repart de l'ancien fichier.
+  const file = gist.files && (gist.files[SYNC_FILE_NAME] || gist.files[SYNC_LEGACY_FILE_NAME]);
   if (!file) return null;
   let content = file.content;
   if (file.truncated && file.raw_url) {
@@ -377,7 +474,7 @@ async function syncReadRemote() {
 }
 
 async function syncWriteRemote(data) {
-  const payload = { version: 1, updatedAt: new Date().toISOString(), data };
+  const payload = { version: 2, updatedAt: new Date().toISOString(), data };
   await syncRequest(`/gists/${syncSettings.gistId}`, {
     method: 'PATCH',
     body: JSON.stringify({
@@ -417,7 +514,12 @@ async function syncRun({ manual = false, firstConnect = false } = {}) {
     return;
   }
 
-  syncInFlight = (async () => {
+  // Un seul onglet synchronise à la fois (les autres attendent leur tour).
+  const withLock = (task) =>
+    typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request
+      ? navigator.locks.request('mydesk-sync', task)
+      : task();
+  syncInFlight = withLock(async () => {
     updateSyncStatus('sync.syncing', 'info');
     try {
       if (!syncSettings.gistId) {
@@ -446,7 +548,7 @@ async function syncRun({ manual = false, firstConnect = false } = {}) {
       } else if (firstConnect && !base && window.confirm(t('sync.firstConnectConfirm'))) {
         merged = remote;
       } else {
-        merged = syncMerge(base, local, remote, '');
+        merged = syncMergeData(base, local, remote);
       }
 
       if (!syncEqual(merged, local)) {
@@ -476,7 +578,7 @@ async function syncRun({ manual = false, firstConnect = false } = {}) {
         updateSyncStatus('sync.error', 'error');
       }
     }
-  })();
+  });
 
   try {
     await syncInFlight;
@@ -534,6 +636,7 @@ function renderSyncPanel() {
 
 function initSync() {
   syncSettings = loadSyncSettings();
+  syncSeedMeta();
 
   const tokenInput = document.getElementById('sync-token');
   const connectBtn = document.getElementById('sync-connect');

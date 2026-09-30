@@ -1332,6 +1332,9 @@ function scheduleFileSave() {
 }
 
 function saveData() {
+  if (typeof syncRecordChanges === 'function') {
+    syncRecordChanges(lastPersistedRaw);
+  }
   persistToLocalStorage();
   scheduleFileSave();
   if (typeof recordUndoSnapshot === 'function') {
@@ -4584,6 +4587,9 @@ async function bootstrap() {
   if (typeof registerAnkiTranslations === 'function') {
     registerAnkiTranslations();
   }
+  if (typeof registerRestoreTranslations === 'function') {
+    registerRestoreTranslations();
+  }
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();
   }
@@ -4621,6 +4627,9 @@ async function bootstrap() {
   }
   if (typeof initAnki === 'function') {
     initAnki();
+  }
+  if (typeof initRestore === 'function') {
+    initRestore();
   }
   if (typeof initInstall === 'function') {
     initInstall();

@@ -2403,7 +2403,7 @@ async function ankiSearchHistory(onProgress) {
     const commit = commits[i];
     onProgress(i + 1);
     const gist = await syncRequest(`/gists/${gistId}/${commit.version}`);
-    const file = gist.files && gist.files[SYNC_FILE_NAME];
+    const file = gist.files && (gist.files[SYNC_FILE_NAME] || gist.files[SYNC_LEGACY_FILE_NAME]);
     if (!file) continue;
     let content = file.content;
     if (file.truncated && file.raw_url) content = await (await fetch(file.raw_url, { cache: 'no-store' })).text();

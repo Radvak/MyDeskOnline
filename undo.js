@@ -58,6 +58,7 @@ function undoSnapshot() {
   delete data.snake;
   delete data.menu;
   delete data.anki;
+  delete data.syncMeta;
   delete data.storagePath;
   return JSON.stringify(data);
 }
@@ -92,8 +93,15 @@ function undoRestore(serialized) {
   data.snake = appData.snake;
   data.menu = appData.menu;
   data.anki = appData.anki;
+  data.syncMeta = appData.syncMeta;
   if (typeof syncApplyData === 'function') {
+    const previousRaw = typeof lastPersistedRaw === 'string' ? lastPersistedRaw : null;
     syncApplyData(data); // conserve l'état local, migre, enregistre et redessine
+    // L'annulation est une vraie modification : on la date pour la synchro.
+    if (typeof syncRecordChanges === 'function') {
+      syncRecordChanges(previousRaw);
+      persistToLocalStorage();
+    }
   } else {
     appData = { ...appData, ...data };
     migrateData();
