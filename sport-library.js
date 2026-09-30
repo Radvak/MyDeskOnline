@@ -542,10 +542,12 @@ const SPORT_LADDERS = {
 // Par semaine : ≈ 17 séries de poussée, 10 de tirage, 12 de jambes,
 // abdos en flexion (crunchs) + gainage. [échelle, étape de départ, séries, repos en s]
 const SPORT_PROGRAM_VERSION = 4;
+// Anciens noms (avec la lettre), pour reconnaître et renommer les séances existantes.
+const SPORT_PROGRAM_OLD_NAMES = ['A — Pecs & abdos', 'B — Dos, jambes & gainage', 'C — Pecs & abdos (volume)'];
 const SPORT_PROGRAM = [
   {
     weekday: 1,
-    name: 'A — Pecs & abdos',
+    name: 'Pecs & abdos',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules dans chaque sens, 10 squats lents, 10 pompes faciles (contre un mur).\n' +
       'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
@@ -560,7 +562,7 @@ const SPORT_PROGRAM = [
   },
   {
     weekday: 3,
-    name: 'B — Dos, jambes & gainage',
+    name: 'Dos, jambes & gainage',
     description:
       'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 supermans lents.\n' +
       'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.',
@@ -575,7 +577,7 @@ const SPORT_PROGRAM = [
   },
   {
     weekday: 5,
-    name: 'C — Pecs & abdos (volume)',
+    name: 'Pecs & abdos (volume)',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
       'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.',

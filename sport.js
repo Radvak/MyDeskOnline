@@ -21,15 +21,21 @@ const SPORT_TRANSLATIONS = {
     newSessionName: 'Nouvelle séance',
     emptyList: 'Aucune séance. Créez-en une ou ajoutez des séances préfaites.',
     presetsTitle: 'Séances préfaites',
-    presetsHint: 'Coche les séances que tu veux ajouter. Tu pourras les modifier ensuite (bouton « Modifier »).',
-    presetDay: 'Conseillée le {day}',
+    presetsHint: 'Coche les séances que tu veux ajouter, puis choisis quand les faire. Tu pourras les modifier ensuite.',
     presetPresent: 'Déjà dans tes séances',
     presetSchedule: "Les placer dans l'agenda chaque semaine (jour conseillé, 18:00)",
     presetAdd: 'Ajouter ({count})',
     presetCancel: 'Annuler',
+    presetRepeat: 'Répétition',
+    presetNoCalendar: "Pas dans l'agenda",
+    presetOnce: 'Une seule fois',
+    presetEveryWeek: 'Chaque {day} à {time}',
+    presetEveryMonth: 'Le {day} de chaque mois à {time}',
+    presetEveryDay: 'Tous les jours à {time}',
+    presetOnceOn: 'Le {date} à {time}',
     presetAllPresent: 'Toutes les séances préfaites sont déjà dans ta liste.',
     presetAdded: '{count} séance(s) ajoutée(s).',
-    presetAddedScheduled: "{count} séance(s) ajoutée(s) et placée(s) dans l'agenda.",
+    presetAddedScheduled: "{count} séance(s) ajoutée(s), dont {scheduled} dans l'agenda.",
     noSession: 'Sélectionnez ou créez une séance.',
     notPlanned: "Pas prévue ce jour-là dans l'agenda",
     plannedOn: 'Prévue : {days}',
@@ -113,15 +119,21 @@ const SPORT_TRANSLATIONS = {
     newSessionName: 'New workout',
     emptyList: 'No workouts yet. Create one or add preset workouts.',
     presetsTitle: 'Preset workouts',
-    presetsHint: 'Tick the workouts you want to add. You can edit them afterwards ("Edit" button).',
-    presetDay: 'Suggested on {day}',
+    presetsHint: 'Tick the workouts you want to add, then choose when to do them. You can edit them afterwards.',
     presetPresent: 'Already in your workouts',
     presetSchedule: 'Put them in the calendar every week (suggested day, 18:00)',
     presetAdd: 'Add ({count})',
     presetCancel: 'Cancel',
+    presetRepeat: 'Repeat',
+    presetNoCalendar: 'Not in the calendar',
+    presetOnce: 'Just once',
+    presetEveryWeek: 'Every {day} at {time}',
+    presetEveryMonth: 'On day {day} of every month at {time}',
+    presetEveryDay: 'Every day at {time}',
+    presetOnceOn: 'On {date} at {time}',
     presetAllPresent: 'All preset workouts are already in your list.',
     presetAdded: '{count} workout(s) added.',
-    presetAddedScheduled: '{count} workout(s) added and scheduled in the calendar.',
+    presetAddedScheduled: '{count} workout(s) added, {scheduled} in the calendar.',
     noSession: 'Select or create a workout.',
     notPlanned: 'Not scheduled on this day',
     plannedOn: 'Scheduled: {days}',
@@ -205,15 +217,21 @@ const SPORT_TRANSLATIONS = {
     newSessionName: 'Buổi tập mới',
     emptyList: 'Chưa có buổi tập. Hãy tạo mới hoặc thêm buổi tập mẫu.',
     presetsTitle: 'Buổi tập mẫu',
-    presetsHint: 'Chọn các buổi tập bạn muốn thêm. Bạn có thể chỉnh sửa sau.',
-    presetDay: 'Gợi ý vào {day}',
+    presetsHint: 'Chọn các buổi tập bạn muốn thêm, rồi chọn thời gian. Bạn có thể chỉnh sửa sau.',
     presetPresent: 'Đã có trong danh sách',
     presetSchedule: 'Thêm vào lịch hằng tuần (ngày gợi ý, 18:00)',
     presetAdd: 'Thêm ({count})',
     presetCancel: 'Hủy',
+    presetRepeat: 'Lặp lại',
+    presetNoCalendar: 'Không thêm vào lịch',
+    presetOnce: 'Một lần',
+    presetEveryWeek: 'Mỗi {day} lúc {time}',
+    presetEveryMonth: 'Ngày {day} hằng tháng lúc {time}',
+    presetEveryDay: 'Hằng ngày lúc {time}',
+    presetOnceOn: '{date} lúc {time}',
     presetAllPresent: 'Tất cả buổi tập mẫu đã có trong danh sách.',
     presetAdded: 'Đã thêm {count} buổi tập.',
-    presetAddedScheduled: 'Đã thêm {count} buổi tập vào lịch.',
+    presetAddedScheduled: 'Đã thêm {count} buổi tập, {scheduled} buổi vào lịch.',
     noSession: 'Chọn hoặc tạo một buổi tập.',
     notPlanned: 'Không có lịch vào ngày này',
     plannedOn: 'Lịch: {days}',
@@ -320,6 +338,7 @@ function ensureSportData() {
   if (!Array.isArray(appData.sport.excluded)) appData.sport.excluded = SPORT_DEFAULT_EXCLUDED.slice();
   migrerProgrammeV3();
   migrerProgrammeV4();
+  renommerSeancesPrefaites();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
     session.exercises.forEach(normalizeLadderExercise);
@@ -332,6 +351,26 @@ function ensureSportData() {
   if (!appData.sport.sessions.some((session) => session.id === appData.sport.activeSessionId)) {
     appData.sport.activeSessionId = appData.sport.sessions.length ? appData.sport.sessions[0].id : null;
   }
+}
+
+function sportProgramIndexByName(name) {
+  const index = SPORT_PROGRAM.findIndex((template) => template.name === name);
+  return index !== -1 ? index : SPORT_PROGRAM_OLD_NAMES.indexOf(name);
+}
+
+// Séances préfaites encore au nom d'origine « A — … » : on retire la lettre
+// (séance et créneaux de l'agenda). Un nom changé à la main est gardé.
+function renommerSeancesPrefaites() {
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY) return;
+    const index = SPORT_PROGRAM_OLD_NAMES.indexOf(session.name);
+    if (index === -1) return;
+    const oldName = session.name;
+    session.name = SPORT_PROGRAM[index].name;
+    (appData.calendar && Array.isArray(appData.calendar.events) ? appData.calendar.events : []).forEach((event) => {
+      if (event.sportSessionId === session.id && event.title === oldName) event.title = session.name;
+    });
+  });
 }
 
 function getSportSession(id) {
@@ -417,7 +456,7 @@ function migrerProgrammeV3() {
     if (session.template !== SPORT_TEMPLATE_KEY || !(session.templateVersion >= 2)) return;
     let index = Number.isInteger(session.templateIndex) ? session.templateIndex : null;
     if (index === null) {
-      const parNom = SPORT_PROGRAM.findIndex((t) => t.name === session.name);
+      const parNom = sportProgramIndexByName(session.name);
       index = parNom === -1 ? null : parNom;
     }
     const template = index !== null ? SPORT_PROGRAM[index] : null;
@@ -446,7 +485,7 @@ function migrerProgrammeV4() {
     if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 3) return;
     const index = Number.isInteger(session.templateIndex)
       ? session.templateIndex
-      : SPORT_PROGRAM.findIndex((t) => t.name === session.name);
+      : sportProgramIndexByName(session.name);
     const template = SPORT_PROGRAM[index];
     if (!template) return;
     Object.entries(aRemplacer[index] || {}).forEach(([position, ancienne]) => {
@@ -1387,16 +1426,21 @@ function nextDateForWeekday(weekday, fromDate = new Date()) {
 }
 
 function addSportSessionToCalendar(session, weekday, time, duration) {
-  const type = getOrCreateSportType();
   const [hours, minutes] = (time || '18:00').split(':').map(Number);
   const start = nextDateForWeekday(weekday);
   start.setHours(hours || 0, minutes || 0, 0, 0);
+  addSportSessionEvent(session, start, duration, 'weekly');
+}
+
+// recurrence : 'none' (une fois), 'daily', 'weekly', 'monthly'.
+function addSportSessionEvent(session, start, duration, recurrence) {
+  const type = getOrCreateSportType();
   appData.calendar.events.push({
     id: uid(),
     title: session.name,
     start: toLocalInputValue(start),
-    duration: Math.max(MIN_EVENT_DURATION, duration),
-    recurrence: 'weekly',
+    duration: Math.max(MIN_EVENT_DURATION, Number(duration) || 45),
+    recurrence,
     typeId: type.id,
     color: type.color,
     sportSessionId: session.id
@@ -1424,50 +1468,120 @@ function findPresetSession(index) {
   return appData.sport.sessions.find((session) => session.template === SPORT_TEMPLATE_KEY && session.templateIndex === index) || null;
 }
 
-// Écran « Séances préfaites » : on coche celles qu'on veut ajouter.
+// Écran « Séances préfaites » : on coche celles qu'on veut ajouter et, pour
+// chacune, on choisit si et quand elle va dans l'agenda.
 function renderSportPresets(main) {
   const card = sportEl('div', 'sport-card sport-presets');
   card.appendChild(sportEl('h3', '', t('sport.presetsTitle')));
   card.appendChild(sportEl('p', 'sport-presets__hint', t('sport.presetsHint')));
 
-  const boxes = [];
+  const choices = [];
   const list = sportEl('div', 'sport-presets__list');
   SPORT_PROGRAM.forEach((template, index) => {
     const present = findPresetSession(index);
-    const item = sportEl('label', `sport-preset${present ? ' is-present' : ''}`);
+    const item = sportEl('div', `sport-preset${present ? ' is-present' : ''}`);
+    const head = sportEl('label', 'sport-preset__head');
     const box = sportEl('input');
     box.type = 'checkbox';
-    box.checked = false;
     box.disabled = Boolean(present);
     const body = sportEl('div', 'sport-preset__body');
     const title = sportEl('div', 'sport-preset__title');
     title.appendChild(sportEl('strong', '', template.name));
-    title.appendChild(sportEl('span', 'sport-preset__day', present ? t('sport.presetPresent') : t('sport.presetDay', { day: weekdayName(template.weekday, 'long') })));
+    if (present) title.appendChild(sportEl('span', 'sport-preset__day', t('sport.presetPresent')));
     body.appendChild(title);
     const exercises = buildProgramExercises(template)
       .map((exercise) => `${exercise.name} (${exercise.sets}×)`)
       .join(' · ');
     body.appendChild(sportEl('small', '', exercises));
-    item.append(box, body);
+    head.append(box, body);
+    item.appendChild(head);
+
+    if (!present) {
+      // Réglages d'agenda, visibles une fois la séance cochée.
+      const form = sportEl('div', 'sport-schedule sport-preset__schedule');
+      form.hidden = true;
+      const repeat = document.createElement('select');
+      [
+        ['none', t('sport.presetNoCalendar')],
+        ['once', t('sport.presetOnce')],
+        ['daily', t('calendar.eventModal.recurrence.daily')],
+        ['weekly', t('calendar.eventModal.recurrence.weekly')],
+        ['monthly', t('calendar.eventModal.recurrence.monthly')]
+      ].forEach(([value, text]) => {
+        const option = sportEl('option', '', text);
+        option.value = value;
+        repeat.appendChild(option);
+      });
+      repeat.value = 'weekly';
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.value = toISODateString(nextDateForWeekday(template.weekday));
+      const timeInput = document.createElement('input');
+      timeInput.type = 'time';
+      timeInput.value = '18:00';
+      const durationInput = document.createElement('input');
+      durationInput.type = 'number';
+      durationInput.min = '15';
+      durationInput.step = '5';
+      durationInput.value = '45';
+      const wrap = (label, input) => {
+        const element = sportEl('label');
+        element.append(sportEl('span', '', label), input);
+        return element;
+      };
+      const summary = sportEl('p', 'sport-preset__summary');
+      const fields = [wrap(t('sport.scheduleDay'), dateInput), wrap(t('sport.scheduleTime'), timeInput), wrap(t('sport.scheduleDuration'), durationInput)];
+      const refreshSummary = () => {
+        const off = repeat.value === 'none';
+        fields.forEach((field) => {
+          field.hidden = off;
+        });
+        const date = dateInput.value ? new Date(`${dateInput.value}T12:00`) : null;
+        let text = '';
+        if (!off && date) {
+          if (repeat.value === 'weekly') text = t('sport.presetEveryWeek', { day: weekdayName(date.getDay(), 'long'), time: timeInput.value });
+          else if (repeat.value === 'monthly') text = t('sport.presetEveryMonth', { day: date.getDate(), time: timeInput.value });
+          else if (repeat.value === 'daily') text = t('sport.presetEveryDay', { time: timeInput.value });
+          else text = t('sport.presetOnceOn', { date: date.toLocaleDateString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long' }), time: timeInput.value });
+        }
+        summary.textContent = text;
+        summary.hidden = !text;
+      };
+      [repeat, dateInput, timeInput].forEach((input) => {
+        input.addEventListener('input', refreshSummary);
+        input.addEventListener('change', refreshSummary);
+      });
+      refreshSummary();
+      form.append(wrap(t('sport.presetRepeat'), repeat), ...fields);
+      item.append(form, summary);
+      summary.hidden = true;
+      box.addEventListener('change', () => {
+        form.hidden = !box.checked;
+        if (box.checked) refreshSummary();
+        else summary.hidden = true;
+      });
+      choices.push({ box, index, repeat, dateInput, timeInput, durationInput });
+    }
     list.appendChild(item);
-    if (!present) boxes.push({ box, index });
   });
   card.appendChild(list);
 
-  const scheduleLabel = sportEl('label', 'sport-presets__schedule');
-  const schedule = sportEl('input');
-  schedule.type = 'checkbox';
-  schedule.checked = true;
-  scheduleLabel.append(schedule, sportEl('span', '', t('sport.presetSchedule')));
-  card.appendChild(scheduleLabel);
-
   const actions = sportEl('div', 'sport-presets__actions');
   const add = sportButton('', '', () => {
-    const indexes = boxes.filter((item) => item.box.checked).map((item) => item.index);
-    if (indexes.length) addSportPresets(indexes, schedule.checked);
+    const picked = choices.filter((choice) => choice.box.checked);
+    if (!picked.length) return;
+    addSportPresets(
+      picked.map((choice) => ({
+        index: choice.index,
+        recurrence: choice.repeat.value,
+        date: choice.dateInput.value,
+        time: choice.timeInput.value,
+        duration: Number(choice.durationInput.value) || 45
+      }))
+    );
   });
   const refresh = () => {
-    const count = boxes.filter((item) => item.box.checked).length;
+    const count = choices.filter((choice) => choice.box.checked).length;
     add.textContent = t('sport.presetAdd', { count });
     add.disabled = !count;
   };
@@ -1481,31 +1595,37 @@ function renderSportPresets(main) {
     })
   );
   card.appendChild(actions);
-  if (!boxes.length) card.appendChild(sportEl('p', 'sport-presets__hint', t('sport.presetAllPresent')));
+  if (!choices.length) card.appendChild(sportEl('p', 'sport-presets__hint', t('sport.presetAllPresent')));
   main.appendChild(card);
 }
 
-function addSportPresets(indexes, schedule) {
+function addSportPresets(picked) {
   ensureSportData();
   let first = null;
-  indexes.forEach((index) => {
-    const template = SPORT_PROGRAM[index];
-    if (!template || findPresetSession(index)) return;
+  let scheduled = 0;
+  picked.forEach((choice) => {
+    const template = SPORT_PROGRAM[choice.index];
+    if (!template || findPresetSession(choice.index)) return;
     const session = {
       id: uid(),
       template: SPORT_TEMPLATE_KEY,
-      templateIndex: index,
+      templateIndex: choice.index,
       templateVersion: SPORT_PROGRAM_VERSION,
       name: template.name,
       description: template.description,
       exercises: buildProgramExercises(template)
     };
     appData.sport.sessions.push(session);
-    if (schedule) addSportSessionToCalendar(session, template.weekday, '18:00', 45);
+    if (choice.recurrence !== 'none' && choice.date) {
+      const start = new Date(`${choice.date}T${choice.time || '18:00'}`);
+      if (!Number.isNaN(start.getTime())) {
+        addSportSessionEvent(session, start, choice.duration, choice.recurrence === 'once' ? 'none' : choice.recurrence);
+        scheduled += 1;
+      }
+    }
     if (!first) first = session;
   });
   if (!first) return;
-  // Séances préfaites dans l'ordre A, B, C en tête de liste.
   appData.sport.sessions.sort((a, b) => {
     const ia = a.template === SPORT_TEMPLATE_KEY ? a.templateIndex : 99;
     const ib = b.template === SPORT_TEMPLATE_KEY ? b.templateIndex : 99;
@@ -1515,11 +1635,11 @@ function addSportPresets(indexes, schedule) {
   sportView = 'workout';
   saveData();
   renderSport();
-  if (schedule) {
+  if (scheduled) {
     renderEventTypes();
     renderCalendar();
   }
-  showSportMessage(t(schedule ? 'sport.presetAddedScheduled' : 'sport.presetAdded', { count: indexes.length }));
+  showSportMessage(t(scheduled ? 'sport.presetAddedScheduled' : 'sport.presetAdded', { count: picked.length, scheduled }));
 }
 
 function initSport() {
