@@ -119,12 +119,19 @@ const ANKI_TRANSLATIONS = {
     numbers: 'Liste numérotée',
     clearFormat: 'Effacer la mise en forme',
     searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, added:2 = ajoutées depuis hier)',
-    moveNotes: '⇄ Déplacer ces {count} note(s)…',
-    moveTitle: 'Déplacer {count} note(s) : décoche celles à laisser en place',
-    moveToggleAll: 'Tout cocher / décocher',
-    moveTagHelp: 'Laisse vide pour ne mettre aucun tag.',
-    moveButton: 'Déplacer',
-    moved: '{count} note(s) déplacée(s) vers « {deck} »{tag}.',
+    selectAll: 'Tout sélectionner',
+    selectCard: 'Sélectionner',
+    bulkSelected: '{count} note(s) sélectionnée(s)',
+    bulkDeckKeep: 'Paquet : inchangé',
+    bulkTagKeep: 'Tag : inchangé',
+    bulkNewTag: '＋ Nouveau tag…',
+    bulkNewTagPrompt: 'Nom du nouveau tag :',
+    bulkApply: 'Appliquer',
+    bulkClear: 'Désélectionner',
+    bulkNothing: 'Choisis un paquet ou un tag à appliquer.',
+    bulkDone: '{count} note(s) : {what}.',
+    bulkDeckDone: 'paquet « {deck} »',
+    bulkTagDone: 'tag « {tag} »',
     restoreTitle: 'Récupérer des cartes',
     restoreLink: 'Cartes disparues ? Les récupérer depuis l’historique de synchro',
     restoreHelp: 'Chaque synchro est gardée par GitHub. Choisis une version : les paquets, notes, cartes et révisions qui manquent aujourd’hui sont rajoutés (rien de ce que tu as maintenant n’est supprimé).',
@@ -309,12 +316,19 @@ const ANKI_TRANSLATIONS = {
     numbers: 'Numbered list',
     clearFormat: 'Clear formatting',
     searchPlaceholder: 'Search a word… (or is:due, is:new, added:2 = added since yesterday)',
-    moveNotes: '⇄ Move these {count} note(s)…',
-    moveTitle: 'Move {count} note(s): untick the ones to leave in place',
-    moveToggleAll: 'Tick / untick all',
-    moveTagHelp: 'Leave empty for no tag.',
-    moveButton: 'Move',
-    moved: '{count} note(s) moved to "{deck}"{tag}.',
+    selectAll: 'Select all',
+    selectCard: 'Select',
+    bulkSelected: '{count} note(s) selected',
+    bulkDeckKeep: 'Deck: unchanged',
+    bulkTagKeep: 'Tag: unchanged',
+    bulkNewTag: '＋ New tag…',
+    bulkNewTagPrompt: 'New tag name:',
+    bulkApply: 'Apply',
+    bulkClear: 'Deselect',
+    bulkNothing: 'Choose a deck or a tag to apply.',
+    bulkDone: '{count} note(s): {what}.',
+    bulkDeckDone: 'deck "{deck}"',
+    bulkTagDone: 'tag "{tag}"',
     restoreTitle: 'Recover cards',
     restoreLink: 'Cards gone? Recover them from the sync history',
     restoreHelp: 'GitHub keeps every sync. Pick a version: decks, notes, cards and reviews missing today are added back (nothing you have now is removed).',
@@ -426,6 +440,8 @@ let ankiBrowseDeck = ''; // '' = tous les paquets
 let ankiBrowseTag = ''; // '' = tous les tags, ANKI_NO_TAG = sans tag
 let ankiTagsDeck = '';
 let ankiBrowseLimit = ANKI_BROWSE_PAGE;
+let ankiBrowseSelected = new Set(); // notes cochées dans « Parcourir »
+let ankiBrowseLastIndex = null;
 let ankiImportState = null;
 let ankiStatsDeckId = '';
 let ankiStatusTimer = null;
@@ -875,25 +891,33 @@ function ankiDeleteTag(tagId) {
   renderAnki(true);
 }
 
-// Change le paquet et le tag de plusieurs notes d'un coup (révisions conservées).
+// Change le paquet et/ou le tag de plusieurs notes d'un coup (révisions
+// conservées). deckId null = paquet inchangé ; tagName null = tag inchangé
+// (recréé à l'identique dans le nouveau paquet), '' = sans tag.
 function ankiMoveNotes(noteIds, deckId, tagName) {
-  const deck = ankiGetDeck(deckId);
-  if (!deck || !noteIds.length) return false;
+  const deck = deckId ? ankiGetDeck(deckId) : null;
+  if ((deckId && !deck) || !noteIds.length || (!deck && tagName === null)) return false;
   const tagsBefore = ankiData().tags.map((tag) => tag.id);
   const before = ankiCapture({ notes: noteIds, tags: tagsBefore });
-  const tag = ankiFindOrCreateTag(deck.id, tagName);
-  if (tag && !tagsBefore.includes(tag.id)) before.tags = { ...before.tags, [tag.id]: null };
   const ids = new Set(noteIds);
   const now = Date.now();
   ankiData().notes.forEach((note) => {
     if (!ids.has(note.id)) return;
-    note.deckId = deck.id;
+    const name = tagName === null ? ankiTagName(note) : tagName;
+    if (deck) note.deckId = deck.id;
+    const tag = ankiFindOrCreateTag(note.deckId, name);
     note.tagId = tag ? tag.id : null;
     note.updated = now;
   });
+  ankiData().tags.forEach((tag) => {
+    if (!tagsBefore.includes(tag.id)) before.tags[tag.id] = null;
+  });
   ankiPushUndo('move', before);
   saveData();
-  ankiStatus(t('anki.moved', { count: ids.size, deck: deck.name, tag: tag ? ` · ${tag.name}` : '' }), 'success');
+  const parts = [];
+  if (deck) parts.push(t('anki.bulkDeckDone', { deck: deck.name }));
+  if (tagName !== null) parts.push(tagName ? t('anki.bulkTagDone', { tag: ankiCleanTagName(tagName) }) : t('anki.noTag'));
+  ankiStatus(t('anki.bulkDone', { count: ids.size, what: parts.join(' · ') }), 'success');
   return true;
 }
 
@@ -2244,10 +2268,12 @@ function renderAnkiBrowse(main) {
   const renameSlot = ankiEl('span');
   infoRow.append(info, renameSlot);
   card.appendChild(infoRow);
-  const movePanel = ankiEl('div', 'anki-move');
-  movePanel.hidden = true;
-  card.appendChild(movePanel);
+  const bulkBar = ankiEl('div', 'anki-bulk');
+  bulkBar.hidden = true;
+  card.appendChild(bulkBar);
   const list = ankiEl('div', 'anki-browse');
+  let rowBoxes = [];
+  let updateSelection = () => {};
   card.appendChild(list);
   main.appendChild(card);
 
@@ -2296,20 +2322,66 @@ function renderAnkiBrowse(main) {
         })
       );
     }
-    const noteIds = Array.from(new Set(results.map((c) => c.noteId)));
-    movePanel.hidden = true;
-    if (noteIds.length) {
-      renameSlot.appendChild(ankiButton('anki-link', t('anki.moveNotes', { count: noteIds.length }), () => openMove(noteIds)));
-    }
+    const visibleNotes = new Set(results.map((c) => c.noteId));
+    Array.from(ankiBrowseSelected).forEach((id) => {
+      if (!visibleNotes.has(id)) ankiBrowseSelected.delete(id);
+    });
+    ankiBrowseLastIndex = null;
 
     list.innerHTML = '';
     const head = ankiEl('div', 'anki-browse__row anki-browse__row--head');
+    const headCheck = ankiEl('label', 'anki-browse__check');
+    const headBox = ankiEl('input');
+    headBox.type = 'checkbox';
+    headBox.title = t('anki.selectAll');
+    headBox.setAttribute('aria-label', t('anki.selectAll'));
+    headBox.addEventListener('change', () => {
+      if (headBox.checked) visibleNotes.forEach((id) => ankiBrowseSelected.add(id));
+      else ankiBrowseSelected.clear();
+      updateSelection();
+    });
+    headCheck.appendChild(headBox);
+    head.appendChild(headCheck);
     ['colQuestion', 'colTag', 'colDeck', 'colDueDate', 'colInterval', 'colReviews'].forEach((key) => head.appendChild(ankiEl('span', '', t(`anki.${key}`))));
     list.appendChild(head);
-    results.slice(0, ankiBrowseLimit).forEach((c) => {
+    const shown = results.slice(0, ankiBrowseLimit);
+    rowBoxes = [];
+    shown.forEach((c, index) => {
       const note = notes.get(c.noteId);
       const tagName = ankiTagName(note);
-      const row = ankiButton(`anki-browse__row${c.suspended ? ' suspended' : ''}`, '', () => ankiEditNote(note.id, 'browse'));
+      const row = ankiEl('div', `anki-browse__row${c.suspended ? ' suspended' : ''}`);
+      row.tabIndex = 0;
+      const check = ankiEl('label', 'anki-browse__check');
+      const box = ankiEl('input');
+      box.type = 'checkbox';
+      box.setAttribute('aria-label', t('anki.selectCard'));
+      row.addEventListener('click', (event) => {
+        if (event.target.closest('.anki-browse__check')) return;
+        ankiEditNote(note.id, 'browse');
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.target !== row) return;
+        if (event.key === 'Enter') ankiEditNote(note.id, 'browse');
+        if (event.key === ' ') {
+          event.preventDefault();
+          box.click();
+        }
+      });
+      // Maj+clic : coche ou décoche toute la plage depuis le dernier clic.
+      box.addEventListener('click', (event) => {
+        const checked = box.checked;
+        const range = event.shiftKey && ankiBrowseLastIndex !== null;
+        const from = range ? Math.min(ankiBrowseLastIndex, index) : index;
+        const to = range ? Math.max(ankiBrowseLastIndex, index) : index;
+        for (let i = from; i <= to; i += 1) {
+          if (checked) ankiBrowseSelected.add(shown[i].noteId);
+          else ankiBrowseSelected.delete(shown[i].noteId);
+        }
+        ankiBrowseLastIndex = index;
+        updateSelection();
+      });
+      check.appendChild(box);
+      rowBoxes.push({ box, row, noteId: c.noteId });
       const question = ankiPlainText(ankiCardSides(c, note).question) || '—';
       let dueText;
       if (c.suspended) dueText = t('anki.suspended');
@@ -2321,6 +2393,7 @@ function renderAnkiBrowse(main) {
       questionCell.appendChild(ankiEl('span', 'anki-browse__qtext', question.length > 140 ? `${question.slice(0, 140)}…` : question));
       if (tagName) questionCell.appendChild(ankiEl('span', 'anki-part anki-part--inline', tagName));
       row.append(
+        check,
         questionCell,
         ankiEl('span', 'anki-browse__part', tagName || '—'),
         ankiEl('span', 'anki-browse__deck', deck ? deck.name : ''),
@@ -2338,95 +2411,110 @@ function renderAnkiBrowse(main) {
         })
       );
     }
+    updateSelection = () => {
+      const count = ankiBrowseSelected.size;
+      rowBoxes.forEach((item) => {
+        item.box.checked = ankiBrowseSelected.has(item.noteId);
+        item.row.classList.toggle('is-selected', item.box.checked);
+      });
+      headBox.checked = count > 0 && count === visibleNotes.size;
+      headBox.indeterminate = count > 0 && count < visibleNotes.size;
+      renderBulk();
+    };
+    updateSelection();
   };
 
-  // Déplacer d'un coup les notes affichées vers un autre paquet / tag.
-  const openMove = (noteIds) => {
-    movePanel.innerHTML = '';
-    movePanel.hidden = false;
-    const title = ankiEl('strong');
-    movePanel.appendChild(title);
-    // Une case par note (toutes cochées) : décocher celles à laisser en place.
-    const picks = ankiEl('div', 'anki-move__list');
-    const boxes = noteIds.map((id) => {
-      const note = notes.get(id);
-      const label = ankiEl('label', 'anki-move__item');
-      const box = ankiEl('input');
-      box.type = 'checkbox';
-      box.checked = true;
-      box.value = id;
-      const firstCard = ankiData().cards.find((c) => c.noteId === id);
-      const text = firstCard ? ankiPlainText(ankiCardSides(firstCard, note).question) : '';
-      label.append(box, ankiEl('span', '', text.length > 110 ? `${text.slice(0, 110)}…` : text || '—'));
-      if (ankiTagName(note)) label.appendChild(ankiEl('span', 'anki-part anki-part--inline', ankiTagName(note)));
-      picks.appendChild(label);
-      return box;
-    });
-    const chosen = () => boxes.filter((box) => box.checked).map((box) => box.value);
-    const refreshTitle = () => {
-      title.textContent = t('anki.moveTitle', { count: chosen().length });
-    };
-    picks.addEventListener('change', refreshTitle);
-    refreshTitle();
-    const toggleAll = ankiButton('anki-link', t('anki.moveToggleAll'), () => {
-      const check = !boxes.every((box) => box.checked);
-      boxes.forEach((box) => {
-        box.checked = check;
-      });
-      refreshTitle();
-    });
-    movePanel.append(toggleAll, picks);
-    const row = ankiEl('div', 'anki-move__row');
-    const targetDeck = ankiEl('select', 'anki-filter');
-    targetDeck.setAttribute('aria-label', t('anki.deckName'));
+  // Barre d'actions sur la sélection : changer le paquet et/ou le tag.
+  let bulkBuilt = false;
+  const renderBulk = () => {
+    const count = ankiBrowseSelected.size;
+    bulkBar.hidden = count === 0;
+    if (!count) {
+      bulkBuilt = false;
+      return;
+    }
+    if (bulkBuilt) {
+      bulkBar.querySelector('.anki-bulk__count').textContent = t('anki.bulkSelected', { count });
+      return;
+    }
+    bulkBuilt = true;
+    bulkBar.innerHTML = '';
+    const countEl = ankiEl('strong', 'anki-bulk__count', t('anki.bulkSelected', { count }));
+    const deckSel = ankiEl('select', 'anki-filter');
+    deckSel.setAttribute('aria-label', t('anki.deckName'));
+    const keepDeck = ankiEl('option', '', t('anki.bulkDeckKeep'));
+    keepDeck.value = '';
+    deckSel.appendChild(keepDeck);
     ankiSortedDecks().forEach((deck) => {
       const option = ankiEl('option', '', deck.name);
       option.value = deck.id;
-      targetDeck.appendChild(option);
+      deckSel.appendChild(option);
     });
-    targetDeck.value = ankiBrowseDeck || ankiSortedDecks()[0].id;
-    const targetTag = ankiEl('input', 'anki-input');
-    targetTag.type = 'text';
-    targetTag.placeholder = t('anki.tagPlaceholder');
-    targetTag.setAttribute('aria-label', t('anki.fieldTag'));
-    const tagList = ankiEl('datalist');
-    tagList.id = 'anki-move-tags';
-    targetTag.setAttribute('list', tagList.id);
-    const fillMoveTags = () => {
-      tagList.innerHTML = '';
-      ankiTagsIn(targetDeck.value).forEach((tag) => {
-        const option = ankiEl('option');
-        option.value = tag.name;
-        tagList.appendChild(option);
+    const tagSel = ankiEl('select', 'anki-filter');
+    tagSel.setAttribute('aria-label', t('anki.colTag'));
+    const fillBulkTags = () => {
+      const previous = tagSel.value;
+      tagSel.innerHTML = '';
+      const add = (value, text) => {
+        const option = ankiEl('option', '', text);
+        option.value = value;
+        tagSel.appendChild(option);
+      };
+      add('__keep__', t('anki.bulkTagKeep'));
+      add('__none__', t('anki.noTag'));
+      // Tags du paquet choisi, sinon des paquets des notes sélectionnées.
+      const noteMap = ankiNoteMap();
+      const deckIds = deckSel.value
+        ? [deckSel.value]
+        : Array.from(new Set(Array.from(ankiBrowseSelected).map((id) => (noteMap.get(id) || {}).deckId)));
+      const names = new Map();
+      deckIds.forEach((deckId) => {
+        if (deckId) ankiTagsIn(deckId).forEach((tag) => names.set(ankiNormalize(tag.name), tag.name));
       });
+      Array.from(names.values())
+        .sort(ankiCompareTagNames)
+        .forEach((name) => add(`__tag__${name}`, name));
+      add('__new__', t('anki.bulkNewTag'));
+      const kept = Array.from(tagSel.options).some((option) => option.value === previous);
+      tagSel.value = kept && previous !== '__new__' ? previous : '__keep__';
     };
-    targetDeck.addEventListener('change', fillMoveTags);
-    fillMoveTags();
+    fillBulkTags();
+    deckSel.addEventListener('change', fillBulkTags);
+    tagSel.addEventListener('change', () => {
+      if (tagSel.value !== '__new__') return;
+      const name = ankiCleanTagName(window.prompt(t('anki.bulkNewTagPrompt')) || '');
+      if (!name) {
+        tagSel.value = '__keep__';
+        return;
+      }
+      const option = ankiEl('option', '', name);
+      option.value = `__tag__${name}`;
+      tagSel.insertBefore(option, tagSel.lastChild);
+      tagSel.value = option.value;
+    });
     const apply = () => {
-      if (!ankiMoveNotes(chosen(), targetDeck.value, targetTag.value)) return;
-      ankiBrowseDeck = targetDeck.value;
-      const tag = ankiFindTag(targetDeck.value, targetTag.value);
-      ankiBrowseTag = tag ? tag.id : '';
-      ankiBrowseQuery = '';
+      const deckId = deckSel.value || null;
+      let tagName = null;
+      if (tagSel.value === '__none__') tagName = '';
+      else if (tagSel.value.startsWith('__tag__')) tagName = tagSel.value.slice(7);
+      if (!deckId && tagName === null) {
+        ankiStatus(t('anki.bulkNothing'), 'error');
+        return;
+      }
+      if (!ankiMoveNotes(Array.from(ankiBrowseSelected), deckId, tagName)) return;
+      ankiBrowseSelected.clear();
       renderAnki(true);
     };
-    targetTag.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        apply();
-      }
-    });
-    row.append(
-      targetDeck,
-      targetTag,
-      tagList,
-      ankiButton('anki-btn', t('anki.moveButton'), apply),
-      ankiButton('anki-btn anki-btn--ghost', t('anki.cancel'), () => {
-        movePanel.hidden = true;
+    bulkBar.append(
+      countEl,
+      deckSel,
+      tagSel,
+      ankiButton('anki-btn', t('anki.bulkApply'), apply),
+      ankiButton('anki-link', t('anki.bulkClear'), () => {
+        ankiBrowseSelected.clear();
+        updateSelection();
       })
     );
-    movePanel.append(row, ankiEl('p', 'anki-hint', t('anki.moveTagHelp')));
-    targetTag.focus();
   };
 
   deckSelect.addEventListener('change', () => {
