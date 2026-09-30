@@ -33,6 +33,7 @@ const ANKI_TRANSLATIONS = {
       import: "l'import",
       reset: 'la réinitialisation',
       tag: 'le changement de tag',
+      move: 'le déplacement',
       restore: 'la restauration'
     },
     deckName: 'Paquet',
@@ -115,7 +116,12 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Liste à puces',
     numbers: 'Liste numérotée',
     clearFormat: 'Effacer la mise en forme',
-    searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, is:suspended)',
+    searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, added:2 = ajoutées depuis hier)',
+    moveNotes: '⇄ Déplacer ces {count} note(s)…',
+    moveTitle: 'Déplacer les {count} note(s) affichée(s)',
+    moveTagHelp: 'Laisse vide pour ne mettre aucun tag.',
+    moveButton: 'Déplacer',
+    moved: '{count} note(s) déplacée(s) vers « {deck} »{tag}.',
     restoreTitle: 'Récupérer des cartes',
     restoreLink: 'Cartes disparues ? Les récupérer depuis l’historique de synchro',
     restoreHelp: 'Chaque synchro est gardée par GitHub. Choisis une version : les paquets, notes, cartes et révisions qui manquent aujourd’hui sont rajoutés (rien de ce que tu as maintenant n’est supprimé).',
@@ -214,6 +220,7 @@ const ANKI_TRANSLATIONS = {
       import: 'import',
       reset: 'reset',
       tag: 'tag change',
+      move: 'the move',
       restore: 'restore'
     },
     deckName: 'Deck',
@@ -296,7 +303,12 @@ const ANKI_TRANSLATIONS = {
     bullets: 'Bulleted list',
     numbers: 'Numbered list',
     clearFormat: 'Clear formatting',
-    searchPlaceholder: 'Search a word… (or is:due, is:new, is:suspended)',
+    searchPlaceholder: 'Search a word… (or is:due, is:new, added:2 = added since yesterday)',
+    moveNotes: '⇄ Move these {count} note(s)…',
+    moveTitle: 'Move the {count} note(s) shown',
+    moveTagHelp: 'Leave empty for no tag.',
+    moveButton: 'Move',
+    moved: '{count} note(s) moved to "{deck}"{tag}.',
     restoreTitle: 'Recover cards',
     restoreLink: 'Cards gone? Recover them from the sync history',
     restoreHelp: 'GitHub keeps every sync. Pick a version: decks, notes, cards and reviews missing today are added back (nothing you have now is removed).',
@@ -855,6 +867,28 @@ function ankiDeleteTag(tagId) {
   if (ankiBrowseTag === tag.id) ankiBrowseTag = '';
   saveData();
   renderAnki(true);
+}
+
+// Change le paquet et le tag de plusieurs notes d'un coup (révisions conservées).
+function ankiMoveNotes(noteIds, deckId, tagName) {
+  const deck = ankiGetDeck(deckId);
+  if (!deck || !noteIds.length) return false;
+  const tagsBefore = ankiData().tags.map((tag) => tag.id);
+  const before = ankiCapture({ notes: noteIds, tags: tagsBefore });
+  const tag = ankiFindOrCreateTag(deck.id, tagName);
+  if (tag && !tagsBefore.includes(tag.id)) before.tags = { ...before.tags, [tag.id]: null };
+  const ids = new Set(noteIds);
+  const now = Date.now();
+  ankiData().notes.forEach((note) => {
+    if (!ids.has(note.id)) return;
+    note.deckId = deck.id;
+    note.tagId = tag ? tag.id : null;
+    note.updated = now;
+  });
+  ankiPushUndo('move', before);
+  saveData();
+  ankiStatus(t('anki.moved', { count: ids.size, deck: deck.name, tag: tag ? ` · ${tag.name}` : '' }), 'success');
+  return true;
 }
 
 /* ── File d'attente du jour ────────────────────────────────── */
@@ -1521,6 +1555,9 @@ function renderAnkiOverview(main) {
     renderAnkiDecks(main);
     return;
   }
+  // Les prochaines notes ajoutées iront dans le paquet ouvert (et pas
+  // dans celui de la note précédente, avec son tag).
+  if (ankiAddDefaults.deckId !== deck.id) ankiAddDefaults = { ...ankiAddDefaults, deckId: deck.id, tagName: '' };
   const queue = ankiQueue(deck.id);
   const card = ankiEl('div', 'anki-card anki-overview');
   card.appendChild(ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo('decks')));
@@ -1539,7 +1576,6 @@ function renderAnkiOverview(main) {
   actions.append(
     ankiButton('anki-btn anki-btn--ghost', t('anki.navAdd'), () => {
       ankiEditNoteId = null;
-      ankiAddDefaults.deckId = deck.id;
       ankiEditReturn = 'overview';
       ankiGo('add');
     }),
@@ -1952,7 +1988,12 @@ function renderAnkiEditor(main) {
     });
   };
   fillTags();
-  deckSelect.addEventListener('change', fillTags);
+  deckSelect.addEventListener('change', () => {
+    fillTags();
+    // Tag d'un autre paquet : on ne le recrée pas en douce dans celui-ci.
+    const deckId = deckSelect.value.startsWith('__') ? null : deckSelect.value;
+    if (tagInput.value && !(deckId && ankiFindTag(deckId, tagInput.value))) tagInput.value = '';
+  });
   tagLabel.append(tagInput, tagList, ankiEl('span', 'anki-hint', t('anki.tagHelp')));
   form.appendChild(tagLabel);
 
@@ -2126,6 +2167,10 @@ function ankiSearchCards(query) {
       };
     } else if (key === 'tag') {
       test = (card, note) => ankiNormalize(ankiTagName(note)).includes(v.replace(/\*$/, ''));
+    } else if (key === 'added') {
+      // Comme Anki : added:1 = aujourd'hui, added:2 = depuis hier…
+      const since = ankiAddDays(ankiDayStart(now), -(Math.max(1, parseInt(value, 10) || 1) - 1));
+      test = (card, note) => (note.created || card.created || 0) >= since;
     } else if (key === 'is') {
       test = (card) =>
         ({
@@ -2181,6 +2226,9 @@ function renderAnkiBrowse(main) {
   const renameSlot = ankiEl('span');
   infoRow.append(info, renameSlot);
   card.appendChild(infoRow);
+  const movePanel = ankiEl('div', 'anki-move');
+  movePanel.hidden = true;
+  card.appendChild(movePanel);
   const list = ankiEl('div', 'anki-browse');
   card.appendChild(list);
   main.appendChild(card);
@@ -2230,6 +2278,11 @@ function renderAnkiBrowse(main) {
         })
       );
     }
+    const noteIds = Array.from(new Set(results.map((c) => c.noteId)));
+    movePanel.hidden = true;
+    if (noteIds.length) {
+      renameSlot.appendChild(ankiButton('anki-link', t('anki.moveNotes', { count: noteIds.length }), () => openMove(noteIds)));
+    }
 
     list.innerHTML = '';
     const head = ankiEl('div', 'anki-browse__row anki-browse__row--head');
@@ -2267,6 +2320,64 @@ function renderAnkiBrowse(main) {
         })
       );
     }
+  };
+
+  // Déplacer d'un coup les notes affichées vers un autre paquet / tag.
+  const openMove = (noteIds) => {
+    movePanel.innerHTML = '';
+    movePanel.hidden = false;
+    movePanel.appendChild(ankiEl('strong', '', t('anki.moveTitle', { count: noteIds.length })));
+    const row = ankiEl('div', 'anki-move__row');
+    const targetDeck = ankiEl('select', 'anki-filter');
+    targetDeck.setAttribute('aria-label', t('anki.deckName'));
+    ankiSortedDecks().forEach((deck) => {
+      const option = ankiEl('option', '', deck.name);
+      option.value = deck.id;
+      targetDeck.appendChild(option);
+    });
+    targetDeck.value = ankiBrowseDeck || ankiSortedDecks()[0].id;
+    const targetTag = ankiEl('input', 'anki-input');
+    targetTag.type = 'text';
+    targetTag.placeholder = t('anki.tagPlaceholder');
+    targetTag.setAttribute('aria-label', t('anki.fieldTag'));
+    const tagList = ankiEl('datalist');
+    tagList.id = 'anki-move-tags';
+    targetTag.setAttribute('list', tagList.id);
+    const fillMoveTags = () => {
+      tagList.innerHTML = '';
+      ankiTagsIn(targetDeck.value).forEach((tag) => {
+        const option = ankiEl('option');
+        option.value = tag.name;
+        tagList.appendChild(option);
+      });
+    };
+    targetDeck.addEventListener('change', fillMoveTags);
+    fillMoveTags();
+    const apply = () => {
+      if (!ankiMoveNotes(noteIds, targetDeck.value, targetTag.value)) return;
+      ankiBrowseDeck = targetDeck.value;
+      const tag = ankiFindTag(targetDeck.value, targetTag.value);
+      ankiBrowseTag = tag ? tag.id : '';
+      ankiBrowseQuery = '';
+      renderAnki(true);
+    };
+    targetTag.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        apply();
+      }
+    });
+    row.append(
+      targetDeck,
+      targetTag,
+      tagList,
+      ankiButton('anki-btn', t('anki.moveButton'), apply),
+      ankiButton('anki-btn anki-btn--ghost', t('anki.cancel'), () => {
+        movePanel.hidden = true;
+      })
+    );
+    movePanel.append(row, ankiEl('p', 'anki-hint', t('anki.moveTagHelp')));
+    targetTag.focus();
   };
 
   deckSelect.addEventListener('change', () => {

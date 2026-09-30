@@ -3830,6 +3830,26 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .anki-browse__qtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .anki-browse__part { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .anki-browse__info { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.anki-browse__info > span { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.anki-move {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt, rgba(99, 102, 241, 0.06));
+}
+.anki-move[hidden] { display: none; }
+.anki-move__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .anki-move__row { grid-template-columns: 1fr 1fr; }
+}
 
 .anki-filters {
   display: grid;
