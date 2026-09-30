@@ -2411,6 +2411,8 @@ function renderCalendarEvents() {
   const weekEvents = appData.calendar.events
     .flatMap((event) => getOccurrencesForWeek(event))
     .sort((a, b) => a.start - b.start);
+  // Chevauchements : côte à côte, ou « le vrai » en grand et les autres grisés.
+  const conflicts = typeof computeConflictLayout === 'function' ? computeConflictLayout(weekEvents) : null;
 
   // 4) Dessiner chaque occurrence dans la cellule de départ
   weekEvents.forEach((occ) => {
@@ -2463,6 +2465,10 @@ function renderCalendarEvents() {
     eventEl.style.top = `${topPx}px`;
     eventEl.style.height = `${(visibleDuration / 60) * calendarHourHeight}px`;
 
+    if (conflicts) {
+      applyConflictPlacement(eventEl, conflicts.layout.get(occ), displayTitle);
+    }
+
     // Actions
     eventEl.querySelector('.delete-event').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2484,6 +2490,9 @@ function renderCalendarEvents() {
 
     cell.appendChild(eventEl);
   });
+  if (conflicts && typeof renderConflictBanner === 'function') {
+    renderConflictBanner(conflicts.groups);
+  }
 }
 
 function startDurationResize(pointerEvent, occurrence, eventEl, handle) {
@@ -2914,6 +2923,9 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     saveData();
     modal.hidden = true;
     renderCalendar();
+    if (typeof askCalendarConflictsOn === 'function' && datetimeInput.value) {
+      askCalendarConflictsOn(new Date(datetimeInput.value));
+    }
   };
 }
 
@@ -4589,6 +4601,9 @@ async function bootstrap() {
   }
   if (typeof registerRestoreTranslations === 'function') {
     registerRestoreTranslations();
+  }
+  if (typeof registerConflictTranslations === 'function') {
+    registerConflictTranslations();
   }
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();

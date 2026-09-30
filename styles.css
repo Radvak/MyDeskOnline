@@ -4100,3 +4100,85 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 }
 
 .restore-item__now { width: 100%; color: var(--muted); font-size: 0.82rem; }
+
+/* ═══ Agenda : chevauchements (calendar-conflicts.js) ═══════ */
+.calendar-conflicts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  font-weight: 600;
+}
+
+.calendar-conflicts[hidden] { display: none; }
+[data-theme="dark"] .calendar-conflicts { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+
+.calendar-conflicts button {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.calendar-grid .event.has-conflict { outline: 2px dashed #f59e0b; outline-offset: -2px; }
+
+.calendar-grid .event.is-dimmed {
+  background: #94a3b8;
+  filter: grayscale(1);
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.calendar-grid .event.is-dimmed .title,
+.calendar-grid .event.is-dimmed .time-range { text-decoration: line-through; }
+.calendar-grid .event.is-dimmed .delete-event { display: none; }
+
+.conflict-badge {
+  flex-shrink: 0;
+  border: none;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 999px;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.conflict-content { width: min(420px, 100%); gap: 0.6rem; }
+.conflict-content h3 { margin: 0; }
+.conflict-subtitle { margin: 0; color: var(--muted); }
+
+.conflict-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border: 2px solid var(--border);
+  border-left: 8px solid var(--event-color, var(--event));
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.conflict-option:hover,
+.conflict-option:focus-visible { border-color: var(--event-color, var(--primary)); }
+.conflict-option.is-current { box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.25); }
+.conflict-option span { color: var(--muted); font-size: 0.85rem; }
+
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
