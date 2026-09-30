@@ -4240,3 +4240,25 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   gap: 0.5rem;
   margin-top: 0.25rem;
 }
+
+/* Sport : séances préfaites */
+.sport-presets__hint { color: var(--muted); margin: 0.25rem 0 0.75rem; }
+.sport-presets__list { display: flex; flex-direction: column; gap: 0.5rem; }
+.sport-preset {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.sport-preset:hover { background: rgba(99, 102, 241, 0.06); }
+.sport-preset.is-present { opacity: 0.6; cursor: default; }
+.sport-preset input { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15rem; }
+.sport-preset__body { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.sport-preset__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.sport-preset__day { color: var(--muted); font-size: 0.85rem; }
+.sport-preset__body small { color: var(--muted); line-height: 1.4; }
+.sport-presets__schedule { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; cursor: pointer; }
+.sport-presets__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }

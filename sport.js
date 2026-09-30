@@ -16,10 +16,20 @@ const SPORT_TRANSLATIONS = {
   fr: {
     sessionsTitle: 'Séances',
     addSession: 'Nouvelle séance',
-    loadProgram: 'Programme recommandé',
+    loadProgram: 'Séances préfaites',
     guide: '📖 Guide & exercices',
     newSessionName: 'Nouvelle séance',
-    emptyList: 'Aucune séance. Créez-en une ou chargez le programme recommandé.',
+    emptyList: 'Aucune séance. Créez-en une ou ajoutez des séances préfaites.',
+    presetsTitle: 'Séances préfaites',
+    presetsHint: 'Coche les séances que tu veux ajouter. Tu pourras les modifier ensuite (bouton « Modifier »).',
+    presetDay: 'Conseillée le {day}',
+    presetPresent: 'Déjà dans tes séances',
+    presetSchedule: "Les placer dans l'agenda chaque semaine (jour conseillé, 18:00)",
+    presetAdd: 'Ajouter ({count})',
+    presetCancel: 'Annuler',
+    presetAllPresent: 'Toutes les séances préfaites sont déjà dans ta liste.',
+    presetAdded: '{count} séance(s) ajoutée(s).',
+    presetAddedScheduled: "{count} séance(s) ajoutée(s) et placée(s) dans l'agenda.",
     noSession: 'Sélectionnez ou créez une séance.',
     notPlanned: "Pas prévue ce jour-là dans l'agenda",
     plannedOn: 'Prévue : {days}',
@@ -79,12 +89,6 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Jour suivant',
     today: "Aujourd'hui",
     pickSession: "Aucune séance n'est liée à ce créneau. Choisissez-en une :",
-    loadConfirm: "Charger le programme recommandé ?\n\n3 séances au poids du corps (débutant, accent pecs et abdos, équilibrées avec le dos), placées lundi, mercredi et vendredi à 18:00 dans l'agenda. Vous pourrez les déplacer ensuite.",
-    updateConfirm: 'Mettre à jour le programme recommandé vers la nouvelle version ?\n\nLes exercices des séances A, B et C seront remplacés (plus équilibrés, avec progression automatique). Vos créneaux dans l’agenda sont conservés.',
-    upToDate: 'Programme déjà en place : séances et créneaux de l’agenda sont bons.',
-    repaired: 'Programme vérifié et corrigé : {count} créneau(x) ajouté(s) dans l’agenda.',
-    loaded: "Programme chargé : 3 séances ajoutées à l'agenda.",
-    updated: 'Programme mis à jour.',
     guideTitle: 'Guide pour progresser seul',
     libraryTitle: 'Bibliothèque d’exercices',
     back: '← Retour à la séance',
@@ -104,10 +108,20 @@ const SPORT_TRANSLATIONS = {
   en: {
     sessionsTitle: 'Workouts',
     addSession: 'New workout',
-    loadProgram: 'Recommended program',
+    loadProgram: 'Preset workouts',
     guide: '📖 Guide & exercises',
     newSessionName: 'New workout',
-    emptyList: 'No workouts yet. Create one or load the recommended program.',
+    emptyList: 'No workouts yet. Create one or add preset workouts.',
+    presetsTitle: 'Preset workouts',
+    presetsHint: 'Tick the workouts you want to add. You can edit them afterwards ("Edit" button).',
+    presetDay: 'Suggested on {day}',
+    presetPresent: 'Already in your workouts',
+    presetSchedule: 'Put them in the calendar every week (suggested day, 18:00)',
+    presetAdd: 'Add ({count})',
+    presetCancel: 'Cancel',
+    presetAllPresent: 'All preset workouts are already in your list.',
+    presetAdded: '{count} workout(s) added.',
+    presetAddedScheduled: '{count} workout(s) added and scheduled in the calendar.',
     noSession: 'Select or create a workout.',
     notPlanned: 'Not scheduled on this day',
     plannedOn: 'Scheduled: {days}',
@@ -167,12 +181,6 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Next day',
     today: 'Today',
     pickSession: 'No workout is linked to this slot. Pick one:',
-    loadConfirm: 'Load the recommended program?\n\n3 bodyweight workouts (beginner, chest and abs focus, balanced with back work), scheduled Monday, Wednesday and Friday at 18:00.',
-    updateConfirm: 'Update the recommended program to the new version?\n\nExercises of workouts A, B and C will be replaced. Your calendar slots are kept.',
-    upToDate: 'Program already in place: workouts and calendar slots are fine.',
-    repaired: 'Program checked and fixed: {count} slot(s) added to the calendar.',
-    loaded: 'Program loaded: 3 workouts added to the calendar.',
-    updated: 'Program updated.',
     guideTitle: 'Guide to progress on your own',
     libraryTitle: 'Exercise library',
     back: '← Back to workout',
@@ -192,10 +200,20 @@ const SPORT_TRANSLATIONS = {
   vi: {
     sessionsTitle: 'Buổi tập',
     addSession: 'Buổi tập mới',
-    loadProgram: 'Chương trình đề xuất',
+    loadProgram: 'Buổi tập mẫu',
     guide: '📖 Hướng dẫn & bài tập',
     newSessionName: 'Buổi tập mới',
-    emptyList: 'Chưa có buổi tập. Hãy tạo mới hoặc tải chương trình đề xuất.',
+    emptyList: 'Chưa có buổi tập. Hãy tạo mới hoặc thêm buổi tập mẫu.',
+    presetsTitle: 'Buổi tập mẫu',
+    presetsHint: 'Chọn các buổi tập bạn muốn thêm. Bạn có thể chỉnh sửa sau.',
+    presetDay: 'Gợi ý vào {day}',
+    presetPresent: 'Đã có trong danh sách',
+    presetSchedule: 'Thêm vào lịch hằng tuần (ngày gợi ý, 18:00)',
+    presetAdd: 'Thêm ({count})',
+    presetCancel: 'Hủy',
+    presetAllPresent: 'Tất cả buổi tập mẫu đã có trong danh sách.',
+    presetAdded: 'Đã thêm {count} buổi tập.',
+    presetAddedScheduled: 'Đã thêm {count} buổi tập vào lịch.',
     noSession: 'Chọn hoặc tạo một buổi tập.',
     notPlanned: 'Không có lịch vào ngày này',
     plannedOn: 'Lịch: {days}',
@@ -255,12 +273,6 @@ const SPORT_TRANSLATIONS = {
     nextDay: 'Ngày sau',
     today: 'Hôm nay',
     pickSession: 'Chưa có buổi tập nào gắn với lịch này. Hãy chọn:',
-    loadConfirm: 'Tải chương trình đề xuất?\n\n3 buổi tập với trọng lượng cơ thể, vào thứ Hai, Tư, Sáu lúc 18:00.',
-    updateConfirm: 'Cập nhật chương trình đề xuất lên phiên bản mới?\n\nCác bài tập của buổi A, B, C sẽ được thay thế. Lịch vẫn được giữ.',
-    upToDate: 'Chương trình đã sẵn sàng: buổi tập và lịch đều đúng.',
-    repaired: 'Đã kiểm tra và sửa chương trình: thêm {count} lịch.',
-    loaded: 'Đã tải chương trình: thêm 3 buổi tập vào lịch.',
-    updated: 'Đã cập nhật chương trình.',
     guideTitle: 'Hướng dẫn tự tập',
     libraryTitle: 'Thư viện bài tập',
     back: '← Quay lại buổi tập',
@@ -283,7 +295,7 @@ const SPORT_TAB_TRANSLATIONS = { fr: 'Sport', en: 'Sport', vi: 'Thể thao' };
 
 let sportSelectedDate = null;
 let sportPickerEvent = null;
-let sportView = 'workout'; // 'workout' | 'edit'
+let sportView = 'workout'; // 'workout' | 'edit' | 'presets'
 let sportOpenHelp = null; // id de l'exercice dont la fiche est ouverte
 let sportTimer = null;
 
@@ -809,6 +821,10 @@ function renderSportMain() {
 
   if (sportPickerEvent) {
     renderSportPicker(main);
+    return;
+  }
+  if (sportView === 'presets') {
+    renderSportPresets(main);
     return;
   }
 
@@ -1403,100 +1419,107 @@ function buildProgramExercises(template) {
   });
 }
 
-// Associe chaque séance du programme à une séance existante (si elle existe).
-function matchProgramSessions() {
-  const existing = appData.sport.sessions.filter((session) => session.template === SPORT_TEMPLATE_KEY);
-  const used = new Set();
-  const take = (session) => {
-    if (session) used.add(session.id);
-    return session || null;
-  };
-  const byIndex = SPORT_PROGRAM.map((template, index) =>
-    take(existing.find((session) => session.templateIndex === index && !used.has(session.id)))
-  );
-  return byIndex.map((found, index) => {
-    if (found) return found;
-    const template = SPORT_PROGRAM[index];
-    return (
-      take(existing.find((session) => !used.has(session.id) && session.templateIndex === undefined && session.name === template.name)) ||
-      take(existing.find((session) => !used.has(session.id) && session.templateIndex === undefined))
-    );
-  });
+// Séance préfaite déjà présente dans la liste (par son numéro dans SPORT_PROGRAM).
+function findPresetSession(index) {
+  return appData.sport.sessions.find((session) => session.template === SPORT_TEMPLATE_KEY && session.templateIndex === index) || null;
 }
 
-// Charge, met à jour ou répare le programme recommandé :
-// 3 séances bien nommées + un créneau hebdomadaire chacune au bon jour.
-function loadSportProgram() {
-  ensureSportData();
-  const matches = matchProgramSessions();
-  const isNew = matches.every((session) => !session);
-  const isOutdated = matches.some((session) => session && !(session.templateVersion >= SPORT_PROGRAM_VERSION));
-  if (isNew && !window.confirm(t('sport.loadConfirm'))) return;
-  if (!isNew && isOutdated && !window.confirm(t('sport.updateConfirm'))) return;
+// Écran « Séances préfaites » : on coche celles qu'on veut ajouter.
+function renderSportPresets(main) {
+  const card = sportEl('div', 'sport-card sport-presets');
+  card.appendChild(sportEl('h3', '', t('sport.presetsTitle')));
+  card.appendChild(sportEl('p', 'sport-presets__hint', t('sport.presetsHint')));
 
-  const type = getOrCreateSportType();
-  let addedSlots = 0;
-  let fixed = 0;
+  const boxes = [];
+  const list = sportEl('div', 'sport-presets__list');
   SPORT_PROGRAM.forEach((template, index) => {
-    let session = matches[index];
-    if (!session) {
-      session = { id: uid(), template: SPORT_TEMPLATE_KEY, exercises: buildProgramExercises(template) };
-      appData.sport.sessions.push(session);
-      fixed += 1;
-    } else if (!(session.templateVersion >= SPORT_PROGRAM_VERSION)) {
-      session.exercises = buildProgramExercises(template);
-      fixed += 1;
-    }
-    if (session.name !== template.name) fixed += 1;
-    session.name = template.name;
-    session.templateIndex = index;
-    session.templateVersion = SPORT_PROGRAM_VERSION;
-    if (!session.description) session.description = template.description;
-    if (isOutdated || isNew) session.description = template.description;
-
-    // Créneaux : titre et type corrects, et au moins un créneau hebdo au bon jour.
-    const linked = appData.calendar.events.filter((event) => event.sportSessionId === session.id);
-    linked.forEach((event) => {
-      if (event.title !== template.name || event.typeId !== type.id) fixed += 1;
-      event.title = template.name;
-      event.typeId = type.id;
-      event.color = type.color;
-    });
-    const hasSlot = linked.some(
-      (event) => event.recurrence === 'weekly' && new Date(event.start).getDay() === template.weekday && !event.until
-    );
-    if (!hasSlot) {
-      addSportSessionToCalendar(session, template.weekday, '18:00', 45);
-      addedSlots += 1;
-    }
+    const present = findPresetSession(index);
+    const item = sportEl('label', `sport-preset${present ? ' is-present' : ''}`);
+    const box = sportEl('input');
+    box.type = 'checkbox';
+    box.checked = false;
+    box.disabled = Boolean(present);
+    const body = sportEl('div', 'sport-preset__body');
+    const title = sportEl('div', 'sport-preset__title');
+    title.appendChild(sportEl('strong', '', template.name));
+    title.appendChild(sportEl('span', 'sport-preset__day', present ? t('sport.presetPresent') : t('sport.presetDay', { day: weekdayName(template.weekday, 'long') })));
+    body.appendChild(title);
+    const exercises = buildProgramExercises(template)
+      .map((exercise) => `${exercise.name} (${exercise.sets}×)`)
+      .join(' · ');
+    body.appendChild(sportEl('small', '', exercises));
+    item.append(box, body);
+    list.appendChild(item);
+    if (!present) boxes.push({ box, index });
   });
+  card.appendChild(list);
 
-  // Garde les séances du programme dans l'ordre A, B, C en tête de liste.
+  const scheduleLabel = sportEl('label', 'sport-presets__schedule');
+  const schedule = sportEl('input');
+  schedule.type = 'checkbox';
+  schedule.checked = true;
+  scheduleLabel.append(schedule, sportEl('span', '', t('sport.presetSchedule')));
+  card.appendChild(scheduleLabel);
+
+  const actions = sportEl('div', 'sport-presets__actions');
+  const add = sportButton('', '', () => {
+    const indexes = boxes.filter((item) => item.box.checked).map((item) => item.index);
+    if (indexes.length) addSportPresets(indexes, schedule.checked);
+  });
+  const refresh = () => {
+    const count = boxes.filter((item) => item.box.checked).length;
+    add.textContent = t('sport.presetAdd', { count });
+    add.disabled = !count;
+  };
+  list.addEventListener('change', refresh);
+  refresh();
+  actions.append(
+    add,
+    sportButton('btn-secondary', t('sport.presetCancel'), () => {
+      sportView = 'workout';
+      renderSport();
+    })
+  );
+  card.appendChild(actions);
+  if (!boxes.length) card.appendChild(sportEl('p', 'sport-presets__hint', t('sport.presetAllPresent')));
+  main.appendChild(card);
+}
+
+function addSportPresets(indexes, schedule) {
+  ensureSportData();
+  let first = null;
+  indexes.forEach((index) => {
+    const template = SPORT_PROGRAM[index];
+    if (!template || findPresetSession(index)) return;
+    const session = {
+      id: uid(),
+      template: SPORT_TEMPLATE_KEY,
+      templateIndex: index,
+      templateVersion: SPORT_PROGRAM_VERSION,
+      name: template.name,
+      description: template.description,
+      exercises: buildProgramExercises(template)
+    };
+    appData.sport.sessions.push(session);
+    if (schedule) addSportSessionToCalendar(session, template.weekday, '18:00', 45);
+    if (!first) first = session;
+  });
+  if (!first) return;
+  // Séances préfaites dans l'ordre A, B, C en tête de liste.
   appData.sport.sessions.sort((a, b) => {
     const ia = a.template === SPORT_TEMPLATE_KEY ? a.templateIndex : 99;
     const ib = b.template === SPORT_TEMPLATE_KEY ? b.templateIndex : 99;
     return ia - ib;
   });
-
-  if (!appData.sport.sessions.some((session) => session.id === appData.sport.activeSessionId)) {
-    appData.sport.activeSessionId = appData.sport.sessions[0].id;
-  }
-  selectSessionForDate(sportSelectedDate || new Date());
+  appData.sport.activeSessionId = first.id;
   sportView = 'workout';
   saveData();
   renderSport();
-  renderEventTypes();
-  renderCalendar();
-
-  if (isNew) {
-    showSportMessage(t('sport.loaded'));
-  } else if (isOutdated) {
-    showSportMessage(t('sport.updated'));
-  } else if (addedSlots || fixed) {
-    showSportMessage(t('sport.repaired', { count: addedSlots }));
-  } else {
-    showSportMessage(t('sport.upToDate'));
+  if (schedule) {
+    renderEventTypes();
+    renderCalendar();
   }
+  showSportMessage(t(schedule ? 'sport.presetAddedScheduled' : 'sport.presetAdded', { count: indexes.length }));
 }
 
 function initSport() {
@@ -1515,7 +1538,11 @@ function initSport() {
       input.select();
     }
   });
-  document.getElementById('sport-load-program').addEventListener('click', loadSportProgram);
+  document.getElementById('sport-load-program').addEventListener('click', () => {
+    sportPickerEvent = null;
+    sportView = 'presets';
+    renderSport();
+  });
   selectSessionForDate(new Date());
   renderSport();
 
