@@ -118,7 +118,8 @@ const ANKI_TRANSLATIONS = {
     clearFormat: 'Effacer la mise en forme',
     searchPlaceholder: 'Rechercher un mot… (ou is:due, is:new, added:2 = ajoutées depuis hier)',
     moveNotes: '⇄ Déplacer ces {count} note(s)…',
-    moveTitle: 'Déplacer les {count} note(s) affichée(s)',
+    moveTitle: 'Déplacer {count} note(s) : décoche celles à laisser en place',
+    moveToggleAll: 'Tout cocher / décocher',
     moveTagHelp: 'Laisse vide pour ne mettre aucun tag.',
     moveButton: 'Déplacer',
     moved: '{count} note(s) déplacée(s) vers « {deck} »{tag}.',
@@ -305,7 +306,8 @@ const ANKI_TRANSLATIONS = {
     clearFormat: 'Clear formatting',
     searchPlaceholder: 'Search a word… (or is:due, is:new, added:2 = added since yesterday)',
     moveNotes: '⇄ Move these {count} note(s)…',
-    moveTitle: 'Move the {count} note(s) shown',
+    moveTitle: 'Move {count} note(s): untick the ones to leave in place',
+    moveToggleAll: 'Tick / untick all',
     moveTagHelp: 'Leave empty for no tag.',
     moveButton: 'Move',
     moved: '{count} note(s) moved to "{deck}"{tag}.',
@@ -2326,7 +2328,38 @@ function renderAnkiBrowse(main) {
   const openMove = (noteIds) => {
     movePanel.innerHTML = '';
     movePanel.hidden = false;
-    movePanel.appendChild(ankiEl('strong', '', t('anki.moveTitle', { count: noteIds.length })));
+    const title = ankiEl('strong');
+    movePanel.appendChild(title);
+    // Une case par note (toutes cochées) : décocher celles à laisser en place.
+    const picks = ankiEl('div', 'anki-move__list');
+    const boxes = noteIds.map((id) => {
+      const note = notes.get(id);
+      const label = ankiEl('label', 'anki-move__item');
+      const box = ankiEl('input');
+      box.type = 'checkbox';
+      box.checked = true;
+      box.value = id;
+      const firstCard = ankiData().cards.find((c) => c.noteId === id);
+      const text = firstCard ? ankiPlainText(ankiCardSides(firstCard, note).question) : '';
+      label.append(box, ankiEl('span', '', text.length > 110 ? `${text.slice(0, 110)}…` : text || '—'));
+      if (ankiTagName(note)) label.appendChild(ankiEl('span', 'anki-part anki-part--inline', ankiTagName(note)));
+      picks.appendChild(label);
+      return box;
+    });
+    const chosen = () => boxes.filter((box) => box.checked).map((box) => box.value);
+    const refreshTitle = () => {
+      title.textContent = t('anki.moveTitle', { count: chosen().length });
+    };
+    picks.addEventListener('change', refreshTitle);
+    refreshTitle();
+    const toggleAll = ankiButton('anki-link', t('anki.moveToggleAll'), () => {
+      const check = !boxes.every((box) => box.checked);
+      boxes.forEach((box) => {
+        box.checked = check;
+      });
+      refreshTitle();
+    });
+    movePanel.append(toggleAll, picks);
     const row = ankiEl('div', 'anki-move__row');
     const targetDeck = ankiEl('select', 'anki-filter');
     targetDeck.setAttribute('aria-label', t('anki.deckName'));
@@ -2354,7 +2387,7 @@ function renderAnkiBrowse(main) {
     targetDeck.addEventListener('change', fillMoveTags);
     fillMoveTags();
     const apply = () => {
-      if (!ankiMoveNotes(noteIds, targetDeck.value, targetTag.value)) return;
+      if (!ankiMoveNotes(chosen(), targetDeck.value, targetTag.value)) return;
       ankiBrowseDeck = targetDeck.value;
       const tag = ankiFindTag(targetDeck.value, targetTag.value);
       ankiBrowseTag = tag ? tag.id : '';

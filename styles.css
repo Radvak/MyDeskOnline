@@ -3840,6 +3840,27 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   background: var(--surface-alt, rgba(99, 102, 241, 0.06));
 }
 .anki-move[hidden] { display: none; }
+.anki-move > .anki-link { margin-left: 0.75rem; }
+.anki-move__list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.anki-move__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.anki-move__item:hover { background: rgba(99, 102, 241, 0.08); }
+.anki-move__item input { flex: none; }
+.anki-move__item > span:nth-child(2) { flex: 1; min-width: 0; }
 .anki-move__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
