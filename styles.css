@@ -4005,3 +4005,98 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   .anki-btn--danger { margin-left: 0; }
   .anki-review .anki-hint { display: none; }
 }
+
+/* ═══ Historique / restaurer (restore.js) ═══════════════════ */
+.restore-content {
+  width: min(640px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  gap: 0.6rem;
+}
+
+.restore-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.restore-head h3 { margin: 0; }
+.restore-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.restore-error { margin: 0; color: #dc2626; }
+.restore-version { margin: 0; font-weight: 700; }
+
+.restore-link {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.restore-list,
+.restore-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.restore-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+}
+
+.restore-row__info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+}
+
+.restore-row__lines { color: var(--muted); font-size: 0.82rem; }
+
+.restore-badge,
+.restore-tag {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.restore-badge { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+.restore-tag--absent { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+.restore-tag--changed { background: rgba(217, 119, 6, 0.16); color: #b45309; }
+
+.restore-items h4 {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.restore-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.restore-item input { margin-top: 0.25rem; }
+
+.restore-item__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.restore-item__now { width: 100%; color: var(--muted); font-size: 0.82rem; }

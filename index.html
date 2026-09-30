@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=19">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
   <header class="app-header">
@@ -102,6 +102,7 @@
           <p id="sync-info"></p>
           <div class="storage-buttons">
             <button id="sync-now" data-i18n="sync.syncNow">Synchroniser maintenant</button>
+            <button id="sync-history" class="btn-secondary" data-i18n="restore.open">🕘 Historique / restaurer</button>
             <button id="sync-disconnect" class="btn-secondary" data-i18n="sync.disconnect">Déconnecter</button>
           </div>
         </div>
@@ -633,18 +634,19 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=19" defer></script>
-  <script src="ical.js?v=19" defer></script>
-  <script src="print.js?v=19" defer></script>
-  <script src="undo.js?v=19" defer></script>
-  <script src="sport-library.js?v=19" defer></script>
-  <script src="sport.js?v=19" defer></script>
-  <script src="menu-engine.js?v=19" defer></script>
-  <script src="menu.js?v=19" defer></script>
-  <script src="install.js?v=19" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=19" defer></script>
-  <script src="anki.js?v=19" defer></script>
-  <script src="script.js?v=19" defer></script>
+  <script src="sync.js?v=20" defer></script>
+  <script src="restore.js?v=20" defer></script>
+  <script src="ical.js?v=20" defer></script>
+  <script src="print.js?v=20" defer></script>
+  <script src="undo.js?v=20" defer></script>
+  <script src="sport-library.js?v=20" defer></script>
+  <script src="sport.js?v=20" defer></script>
+  <script src="menu-engine.js?v=20" defer></script>
+  <script src="menu.js?v=20" defer></script>
+  <script src="install.js?v=20" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=20" defer></script>
+  <script src="anki.js?v=20" defer></script>
+  <script src="script.js?v=20" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
