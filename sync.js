@@ -195,7 +195,27 @@ function syncIsIdArray(value) {
   return Array.isArray(value) && value.every((item) => syncIsPlainObject(item) && item.id != null);
 }
 
+// Garde-fou : des révisions sans aucune note ici alors que la dernière synchro
+// et l'autre appareil en ont, sans suppression enregistrée depuis
+// (anki.lastDeleteAt inchangé) = état local perdu, pas une suppression.
+function syncAnkiLooksWiped(base, local, remote) {
+  const count = (value) => (syncIsPlainObject(value) && Array.isArray(value.notes) ? value.notes.length : 0);
+  if (!(count(base) > 0 && count(local) === 0 && count(remote) > 0)) return false;
+  const mark = (value) => (syncIsPlainObject(value) ? value.lastDeleteAt || null : null);
+  return mark(local) === mark(base);
+}
+
 function syncMerge(base, local, remote, path) {
+  if (
+    path === '' &&
+    syncIsPlainObject(base) &&
+    syncIsPlainObject(local) &&
+    syncIsPlainObject(remote) &&
+    syncAnkiLooksWiped(base.anki, local.anki, remote.anki)
+  ) {
+    console.warn('Synchro : révisions vides ici, celles de l’autre appareil sont conservées.');
+    local = { ...local, anki: remote.anki };
+  }
   if (syncEqual(local, remote)) return local;
   if (syncEqual(base, local)) return remote;
   if (syncEqual(base, remote)) return local;
@@ -415,6 +435,9 @@ async function syncRun({ manual = false, firstConnect = false } = {}) {
         remote = await syncReadRemote();
       }
 
+      // Données enregistrées par un autre onglet : on les reprend d'abord,
+      // pour que « local » corresponde bien à la base partagée.
+      if (typeof adoptDataFromOtherTab === 'function') adoptDataFromOtherTab();
       const base = loadSyncBase();
       const local = syncExtractData(appData);
       let merged;

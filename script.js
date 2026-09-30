@@ -1211,8 +1211,13 @@ async function ensurePermission(handle) {
   return permission === 'granted';
 }
 
+// Dernier contenu lu ou écrit par CET onglet : sert à voir si un autre
+// onglet (ou la fenêtre de l'app installée) a enregistré entre-temps.
+let lastPersistedRaw = null;
+
 function loadFromLocalStorage() {
   const raw = localStorage.getItem(DATA_KEY);
+  lastPersistedRaw = raw;
   if (!raw) {
     return cloneDefault();
   }
@@ -1274,8 +1279,37 @@ async function loadFromFileSystem() {
 }
 
 function persistToLocalStorage() {
-  localStorage.setItem(DATA_KEY, JSON.stringify(appData));
+  const raw = JSON.stringify(appData);
+  localStorage.setItem(DATA_KEY, raw);
+  lastPersistedRaw = raw;
 }
+
+// Un autre onglet a enregistré des données plus récentes : on les reprend.
+// Sans ça, un onglet resté ouvert avec un état périmé pouvait, en se
+// synchronisant, faire passer pour « supprimé » tout ce qu'il n'avait pas.
+function adoptDataFromOtherTab() {
+  let raw = null;
+  try {
+    raw = localStorage.getItem(DATA_KEY);
+  } catch (error) {
+    return false;
+  }
+  if (!raw || raw === lastPersistedRaw) return false;
+  appData = loadFromLocalStorage();
+  migrateData();
+  renderAllViews();
+  if (typeof resetUndoBaseline === 'function') {
+    resetUndoBaseline();
+  }
+  return true;
+}
+
+window.addEventListener('storage', (event) => {
+  if (event.key === DATA_KEY) adoptDataFromOtherTab();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && appData) adoptDataFromOtherTab();
+});
 
 function scheduleFileSave() {
   if (!folderHandle) return;
