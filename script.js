@@ -2496,6 +2496,13 @@ function renderCalendarEvents() {
       e.stopPropagation();
       openEventModal({ event: occ.sourceEvent, occurrenceStart: occ.start });
     });
+    // Clic droit sur un évènement : le modifier (et non en créer un dans la case).
+    eventEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (moveState && moveState.active) return;
+      openEventModal({ event: occ.sourceEvent, occurrenceStart: occ.start });
+    });
     if (typeof attachSportClick === 'function') {
       attachSportClick(eventEl, occ);
     }
