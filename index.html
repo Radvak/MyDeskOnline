@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
   <header class="app-header">
@@ -105,6 +105,7 @@
             <button id="sync-history" class="btn-secondary" data-i18n="restore.open">🕘 Historique / restaurer</button>
             <button id="sync-disconnect" class="btn-secondary" data-i18n="sync.disconnect">Déconnecter</button>
           </div>
+          <div id="sync-feed" class="sync-feed"></div>
         </div>
         <p class="storage-status" id="sync-status"></p>
       </div>
@@ -540,6 +541,11 @@
           <input type="text" id="event-title" required>
         </label>
         <label>
+          <span data-i18n="calendar.eventModal.locationLabel">Lieu</span>
+          <input type="text" id="event-location" list="event-location-list" autocomplete="off" placeholder="ex. Amphi B, salle 204…" data-i18n-placeholder="calendar.eventModal.locationPlaceholder">
+          <datalist id="event-location-list"></datalist>
+        </label>
+        <label>
           <span data-i18n="calendar.eventModal.datetimeLabel">Date et heure</span>
           <input type="datetime-local" id="event-datetime" required>
         </label>
@@ -635,20 +641,21 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=31" defer></script>
-  <script src="restore.js?v=31" defer></script>
-  <script src="calendar-conflicts.js?v=31" defer></script>
-  <script src="ical.js?v=31" defer></script>
-  <script src="print.js?v=31" defer></script>
-  <script src="undo.js?v=31" defer></script>
-  <script src="sport-library.js?v=31" defer></script>
-  <script src="sport.js?v=31" defer></script>
-  <script src="menu-engine.js?v=31" defer></script>
-  <script src="menu.js?v=31" defer></script>
-  <script src="install.js?v=31" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=31" defer></script>
-  <script src="anki.js?v=31" defer></script>
-  <script src="script.js?v=31" defer></script>
+  <script src="sync.js?v=32" defer></script>
+  <script src="calendar-feed.js?v=32" defer></script>
+  <script src="restore.js?v=32" defer></script>
+  <script src="calendar-conflicts.js?v=32" defer></script>
+  <script src="ical.js?v=32" defer></script>
+  <script src="print.js?v=32" defer></script>
+  <script src="undo.js?v=32" defer></script>
+  <script src="sport-library.js?v=32" defer></script>
+  <script src="sport.js?v=32" defer></script>
+  <script src="menu-engine.js?v=32" defer></script>
+  <script src="menu.js?v=32" defer></script>
+  <script src="install.js?v=32" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=32" defer></script>
+  <script src="anki.js?v=32" defer></script>
+  <script src="script.js?v=32" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

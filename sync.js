@@ -120,7 +120,8 @@ let lastSyncStatus = null;
 function registerSyncTranslations() {
   Object.keys(SYNC_TRANSLATIONS).forEach((language) => {
     if (translations[language]) {
-      translations[language].sync = SYNC_TRANSLATIONS[language];
+      const feed = typeof CALENDAR_FEED_TRANSLATIONS !== 'undefined' ? CALENDAR_FEED_TRANSLATIONS[language] || CALENDAR_FEED_TRANSLATIONS.fr : {};
+      translations[language].sync = { ...SYNC_TRANSLATIONS[language], ...feed };
     }
   });
 }
@@ -469,6 +470,14 @@ async function syncFindOrCreateGist() {
 
 async function syncReadRemote() {
   const gist = await syncRequest(`/gists/${syncSettings.gistId}`);
+  // Pour le lien de l'agenda publié (calendar-feed.js).
+  const owner = gist.owner && gist.owner.login ? gist.owner.login : null;
+  const feedOnRemote = Boolean(gist.files && typeof FEED_FILE_NAME !== 'undefined' && gist.files[FEED_FILE_NAME]);
+  if (owner !== syncSettings.gistOwner || feedOnRemote !== Boolean(syncSettings.feedOnRemote)) {
+    syncSettings.gistOwner = owner;
+    syncSettings.feedOnRemote = feedOnRemote;
+    saveSyncSettings();
+  }
   // Premier passage en v2 : on repart de l'ancien fichier.
   const file = gist.files && (gist.files[SYNC_FILE_NAME] || gist.files[SYNC_LEGACY_FILE_NAME]);
   if (!file) return null;
@@ -486,13 +495,17 @@ async function syncReadRemote() {
   return payload && syncIsPlainObject(payload.data) ? payload.data : null;
 }
 
-async function syncWriteRemote(data) {
-  const payload = { version: 2, updatedAt: new Date().toISOString(), data };
+// data null : seuls les fichiers annexes (agenda .ics) sont envoyés.
+async function syncWriteRemote(data, extraFiles = {}) {
+  const files = { ...extraFiles };
+  if (data) {
+    const payload = { version: 2, updatedAt: new Date().toISOString(), data };
+    files[SYNC_FILE_NAME] = { content: JSON.stringify(payload, null, 2) };
+  }
+  if (!Object.keys(files).length) return;
   await syncRequest(`/gists/${syncSettings.gistId}`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      files: { [SYNC_FILE_NAME]: { content: JSON.stringify(payload, null, 2) } }
-    })
+    body: JSON.stringify({ files })
   });
 }
 
@@ -500,6 +513,7 @@ async function syncWriteRemote(data) {
 
 function syncUserIsEditing() {
   if (document.querySelector('.modal:not([hidden])')) return true;
+  if (typeof calendarIsDragging === 'function' && calendarIsDragging()) return true;
   const element = document.activeElement;
   if (!element || element === document.body) return false;
   if (element.closest && element.closest('#sync-panel')) return false;
@@ -573,8 +587,15 @@ async function syncRun({ manual = false, firstConnect = false } = {}) {
         syncApplyData(merged);
         merged = syncExtractData(appData);
       }
-      if (!remote || !syncEqual(merged, remote)) {
-        await syncWriteRemote(merged);
+      const dataChanged = !remote || !syncEqual(merged, remote);
+      const feed = typeof feedPendingFiles === 'function' ? feedPendingFiles(merged) : { files: {}, hash: null };
+      const feedChanged = Object.keys(feed.files).length > 0;
+      if (dataChanged || feedChanged) {
+        await syncWriteRemote(dataChanged ? merged : null, feed.files);
+      }
+      if (feedChanged) {
+        syncSettings.feedHash = feed.hash;
+        syncSettings.feedOnRemote = Boolean(feed.hash);
       }
       saveSyncBase(merged);
       syncSettings.lastSyncAt = new Date().toISOString();
@@ -645,6 +666,7 @@ function renderSyncPanel() {
       : t('sync.never');
     info.textContent = `${t('sync.connected')} ${t('sync.lastSync', { time })}`;
   }
+  if (enabled && typeof renderFeedPanel === 'function') renderFeedPanel();
 }
 
 function initSync() {

@@ -497,6 +497,21 @@ main {
   z-index: 2; /* passe au-dessus des cellules suivantes */
 }
 
+.calendar-grid .event {
+  cursor: grab;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.calendar-grid .event.is-moving {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 6;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+}
+
 .calendar-grid .event:hover {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
 }
@@ -516,6 +531,14 @@ main {
   overflow: hidden;
   hyphens: auto;
   -webkit-hyphens: auto;
+}
+
+.calendar-grid .event .event-location {
+  font-size: 0.72rem;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-grid .event .time-range {
@@ -4293,3 +4316,18 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .anki-unsure-field input { width: 1rem; height: 1rem; }
 [data-theme="dark"] .anki-unsure-badge,
 [data-theme="dark"] .anki-unsure-banner { color: #fcd34d; }
+
+/* Synchro : agenda publié pour le téléphone */
+.sync-feed { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.sync-feed h4 { margin: 0 0 0.5rem; }
+.sync-feed__toggle { display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; }
+.sync-feed__toggle input { margin-top: 0.2rem; flex: none; }
+.sync-feed__row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.sync-feed__row input { flex: 1 1 260px; min-width: 0; font-size: 0.8rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.sync-feed__subscribe { display: inline-flex; align-items: center; text-decoration: none; }
+.sync-feed__how { margin-top: 0.6rem; font-size: 0.88rem; }
+.sync-feed__how summary { cursor: pointer; font-weight: 600; }
+.sync-feed__how p { margin: 0.4rem 0 0; }
+.sync-feed__muted { color: var(--muted); font-size: 0.88rem; margin: 0.5rem 0 0; }
+.sync-feed__warning { color: #b45309; font-size: 0.82rem; margin: 0.6rem 0 0; }
+[data-theme="dark"] .sync-feed__warning { color: #fbbf24; }

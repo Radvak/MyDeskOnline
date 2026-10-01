@@ -191,6 +191,8 @@ const translations = {
         createTitle: 'Nouvel évènement',
         editTitle: "Modifier l'évènement",
         titleLabel: 'Titre',
+        locationLabel: 'Lieu',
+        locationPlaceholder: 'ex. Amphi B, salle 204… (lieux déjà utilisés proposés)',
         datetimeLabel: 'Date et heure',
         durationLabel: 'Durée (minutes)',
         endTimeLabel: 'Heure de fin',
@@ -450,6 +452,8 @@ const translations = {
         createTitle: 'New event',
         editTitle: 'Edit event',
         titleLabel: 'Title',
+        locationLabel: 'Location',
+        locationPlaceholder: 'e.g. Room 204… (places already used are suggested)',
         datetimeLabel: 'Date & time',
         durationLabel: 'Duration (minutes)',
         endTimeLabel: 'End time',
@@ -709,6 +713,8 @@ const translations = {
         createTitle: 'Sự kiện mới',
         editTitle: 'Chỉnh sửa sự kiện',
         titleLabel: 'Tiêu đề',
+        locationLabel: 'Địa điểm',
+        locationPlaceholder: 'vd. Phòng 204…',
         datetimeLabel: 'Ngày & giờ',
         durationLabel: 'Thời lượng (phút)',
         endTimeLabel: 'Giờ kết thúc',
@@ -2446,13 +2452,18 @@ function renderCalendarEvents() {
         <button class="delete-event">✕</button>
       </div>
       <div class="time-range"></div>
+      <div class="event-location"></div>
       <div class="resize-handle bottom"></div>
     `;
     // textContent : un titre (ex. importé d'un .ics) ne peut pas injecter de HTML.
     eventEl.querySelector('.title').textContent = displayTitle;
     eventEl.querySelector('.time-range').textContent = timeLabel;
+    const place = (occ.sourceEvent.location || '').trim();
+    const placeEl = eventEl.querySelector('.event-location');
+    if (place) placeEl.textContent = `📍 ${place}`;
+    else placeEl.remove();
     eventEl.querySelector('.delete-event').title = t('calendar.eventDeleteTitle');
-    eventEl.title = `${displayTitle}\n${timeLabel}`;
+    eventEl.title = `${displayTitle}\n${timeLabel}${place ? `\n📍 ${place}` : ''}`;
 
     // Position verticale dans la cellule + hauteur (le débordement est permis)
     const startMinutes = startDate.getMinutes();
@@ -2479,6 +2490,7 @@ function renderCalendarEvents() {
 
     const topHandle = eventEl.querySelector('.resize-handle.top');
     topHandle.addEventListener('pointerdown', (e) => startStartResize(e, occ, eventEl, topHandle));
+    eventEl.addEventListener('pointerdown', (e) => startEventMove(e, occ, eventEl));
 
     eventEl.addEventListener('dblclick', (e) => {
       e.stopPropagation();
@@ -2516,6 +2528,159 @@ function renderCalendarNowLine() {
 setInterval(() => {
   if (calendarCellMap && calendarCellMap.size) renderCalendarNowLine();
 }, 60 * 1000);
+
+/* ── Déplacer un évènement en le glissant ─────────────────────
+   Souris : on attrape l'évènement et on le glisse (au-delà de quelques
+   pixels). Tactile : appui long, puis on glisse (sinon la page défile).
+   On lâche : nouveau jour / nouvelle heure, par pas de 15 min. Pour une
+   série, seule l'occurrence déplacée change (comme le redimensionnement). */
+
+const EVENT_MOVE_THRESHOLD_PX = 6;
+const EVENT_MOVE_LONG_PRESS_MS = 350;
+let moveState = null;
+let calendarClickSuppressedUntil = 0;
+
+function calendarIsDragging() {
+  return Boolean(resizeState || (moveState && moveState.active));
+}
+
+function startEventMove(pointerEvent, occurrence, eventEl) {
+  if (pointerEvent.button !== 0 || resizeState || moveState) return;
+  if (pointerEvent.target.closest('.resize-handle, .delete-event, .conflict-badge')) return;
+  const rect = eventEl.getBoundingClientRect();
+  moveState = {
+    pointerId: pointerEvent.pointerId,
+    occurrence,
+    eventEl,
+    startX: pointerEvent.clientX,
+    startY: pointerEvent.clientY,
+    grabMinutes: Math.max(0, ((pointerEvent.clientY - rect.top) / calendarHourHeight) * 60),
+    touch: pointerEvent.pointerType !== 'mouse',
+    active: false,
+    timer: null,
+    newStart: null
+  };
+  if (moveState.touch) {
+    moveState.timer = setTimeout(() => activateEventMove(), EVENT_MOVE_LONG_PRESS_MS);
+  }
+  document.addEventListener('pointermove', onEventMove);
+  document.addEventListener('pointerup', endEventMove);
+  document.addEventListener('pointercancel', cancelEventMove);
+}
+
+function activateEventMove() {
+  if (!moveState || moveState.active) return;
+  moveState.active = true;
+  const { eventEl } = moveState;
+  eventEl.classList.add('is-moving');
+  eventEl.style.left = '4px';
+  eventEl.style.right = '4px';
+  eventEl.style.width = 'auto';
+  if (moveState.touch && navigator.vibrate) navigator.vibrate(15);
+}
+
+function onEventMove(pointerEvent) {
+  if (!moveState || pointerEvent.pointerId !== moveState.pointerId) return;
+  const distance = Math.hypot(pointerEvent.clientX - moveState.startX, pointerEvent.clientY - moveState.startY);
+  if (!moveState.active) {
+    if (distance < EVENT_MOVE_THRESHOLD_PX) return;
+    if (moveState.touch) {
+      // Le doigt a bougé avant l'appui long : c'est un défilement.
+      cleanupEventMove();
+      return;
+    }
+    activateEventMove();
+  }
+  pointerEvent.preventDefault();
+
+  // Défilement automatique près des bords de l'écran.
+  if (pointerEvent.clientY < 40) window.scrollBy(0, -12);
+  else if (pointerEvent.clientY > window.innerHeight - 40) window.scrollBy(0, 12);
+
+  const target = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+  const cell = target && target.closest('.calendar-grid .hour-cell');
+  if (!cell) return;
+  const cellRect = cell.getBoundingClientRect();
+  const hour = Number(cell.dataset.hour);
+  let minutes = hour * 60 + ((pointerEvent.clientY - cellRect.top) / cellRect.height) * 60 - moveState.grabMinutes;
+  minutes = Math.round(minutes / EVENT_DURATION_STEP) * EVENT_DURATION_STEP;
+  minutes = Math.max(CALENDAR_START_HOUR * 60, Math.min(CALENDAR_END_MINUTE - EVENT_DURATION_STEP, minutes));
+
+  const newStart = new Date(cell.dataset.date);
+  newStart.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  moveState.newStart = newStart;
+
+  // Aperçu : l'évènement suit dans la bonne case, à la bonne hauteur.
+  const targetCell = calendarCellMap.get(`${cell.dataset.date}-${Math.floor(minutes / 60)}`);
+  const { eventEl, occurrence } = moveState;
+  if (targetCell && eventEl.parentElement !== targetCell) targetCell.appendChild(eventEl);
+  eventEl.style.top = `${((minutes % 60) / 60) * calendarHourHeight}px`;
+  const timeRange = eventEl.querySelector('.time-range');
+  if (timeRange) {
+    const end = new Date(newStart.getTime() + occurrence.duration * 60000);
+    timeRange.textContent = `${formatTime(newStart)} – ${formatTime(end)}`;
+  }
+}
+
+function endEventMove(pointerEvent) {
+  if (!moveState || pointerEvent.pointerId !== moveState.pointerId) return;
+  const { active, newStart, occurrence } = moveState;
+  cleanupEventMove();
+  if (!active) return;
+  calendarClickSuppressedUntil = Date.now() + 400;
+  if (newStart && newStart.getTime() !== new Date(occurrence.start).getTime()) {
+    const event = occurrence.sourceEvent;
+    if (isRecurringEvent(event)) {
+      updateSingleOccurrence(event, occurrence.start, { start: toLocalInputValue(newStart) });
+    } else {
+      event.start = toLocalInputValue(newStart);
+    }
+    saveData();
+  }
+  renderCalendar();
+}
+
+function cancelEventMove(pointerEvent) {
+  if (!moveState || (pointerEvent && pointerEvent.pointerId !== moveState.pointerId)) return;
+  const wasActive = moveState.active;
+  cleanupEventMove();
+  if (wasActive) renderCalendar();
+}
+
+function cleanupEventMove() {
+  if (!moveState) return;
+  clearTimeout(moveState.timer);
+  moveState.eventEl.classList.remove('is-moving');
+  moveState = null;
+  document.removeEventListener('pointermove', onEventMove);
+  document.removeEventListener('pointerup', endEventMove);
+  document.removeEventListener('pointercancel', cancelEventMove);
+}
+
+// Après un glisser, le « clic » de fin ne doit pas ouvrir la séance de sport, etc.
+document.addEventListener(
+  'click',
+  (clickEvent) => {
+    if (Date.now() < calendarClickSuppressedUntil && clickEvent.target.closest('.calendar-grid')) {
+      clickEvent.stopImmediatePropagation();
+      clickEvent.preventDefault();
+    }
+  },
+  true
+);
+
+// Tactile : une fois l'appui long validé, le doigt déplace l'évènement au lieu de faire défiler la page.
+document.addEventListener(
+  'touchmove',
+  (touchEvent) => {
+    if (moveState && moveState.active) touchEvent.preventDefault();
+  },
+  { passive: false }
+);
+
+document.addEventListener('keydown', (keyEvent) => {
+  if (keyEvent.key === 'Escape' && moveState) cancelEventMove();
+});
 
 function startDurationResize(pointerEvent, occurrence, eventEl, handle) {
   pointerEvent.preventDefault();
@@ -2718,6 +2883,7 @@ function updateSingleOccurrence(event, occurrenceStart, changes) {
   const single = {
     id: uid(),
     title: event.title,
+    location: event.location,
     start: toLocalInputValue(new Date(occurrenceStart)),
     duration: event.duration,
     typeId: event.typeId,
@@ -2784,10 +2950,30 @@ function requestDeleteOccurrence(occurrence) {
   modal.hidden = false;
 }
 
+function fillEventLocationList() {
+  const list = document.getElementById('event-location-list');
+  if (!list) return;
+  const counts = new Map();
+  appData.calendar.events.forEach((event) => {
+    const place = (event.location || '').trim();
+    if (place) counts.set(place, (counts.get(place) || 0) + 1);
+  });
+  list.innerHTML = '';
+  Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 50)
+    .forEach(([place]) => {
+      const option = document.createElement('option');
+      option.value = place;
+      list.appendChild(option);
+    });
+}
+
 function openEventModal({ start, event: existingEvent = null, occurrenceStart = null }) {
   const modal = document.getElementById('event-modal');
   const form = document.getElementById('event-form');
   const titleInput = document.getElementById('event-title');
+  const locationInput = document.getElementById('event-location');
   const datetimeInput = document.getElementById('event-datetime');
   const durationInput = document.getElementById('event-duration');
   const endTimeInput = document.getElementById('event-end-time');
@@ -2808,10 +2994,12 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     .slice(0, 16);
 
   updateEventTypeSelect(existingEvent && existingEvent.typeId ? existingEvent.typeId : '');
+  fillEventLocationList();
 
   if (existingEvent) {
     modalTitle.textContent = t('calendar.eventModal.editTitle');
     titleInput.value = existingEvent.title || '';
+    locationInput.value = existingEvent.location || '';
     datetimeInput.value = localized;
     durationInput.value = existingEvent.duration || 60;
     recurrenceInput.value = existingEvent.recurrence || 'none';
@@ -2823,6 +3011,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
   } else {
     modalTitle.textContent = t('calendar.eventModal.createTitle');
     titleInput.value = '';
+    locationInput.value = '';
     datetimeInput.value = localized;
     durationInput.value = 60;
     recurrenceInput.value = 'none';
@@ -2919,6 +3108,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
       if (targetEvent) {
         const changes = {
           title: title || t('calendar.newEventTitle'),
+          location: locationInput.value.trim(),
           duration,
           typeId,
           color
@@ -2934,6 +3124,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
       const newEvent = {
         id: uid(),
         title: title || t('calendar.newEventTitle'),
+        location: locationInput.value.trim(),
         start: datetimeValue,
         duration,
         recurrence,
