@@ -358,6 +358,7 @@ function icsBuildEvents(parsed) {
   const results = [];
   const pushEvent = (key, props, wallStart, durationMinutes) => {
     const title = props.SUMMARY ? icsUnescape(props.SUMMARY.value).trim() : '';
+    const location = props.LOCATION ? icsUnescape(props.LOCATION.value).trim() : '';
     if (wallStart.allDay) {
       // Évènement sur la journée : un bloc par jour, en haut de la grille.
       const days = Math.min(ICS_MAX_ALL_DAY_SPAN, Math.max(1, Math.round(durationMinutes / 1440)));
@@ -366,6 +367,7 @@ function icsBuildEvents(parsed) {
         results.push({
           icsKey: days > 1 ? `${key}~${i}` : key,
           title,
+          location,
           start: icsToLocalInput(new Date(day.y, day.m, day.d, CALENDAR_START_HOUR, 0)),
           duration: 60,
           recurrence: 'none'
@@ -375,7 +377,7 @@ function icsBuildEvents(parsed) {
     }
     const start = icsToLocalDate(wallStart, wallStart.tzid, wallStart.utc);
     const duration = Math.max(MIN_EVENT_DURATION, Math.round(durationMinutes / EVENT_DURATION_STEP) * EVENT_DURATION_STEP);
-    results.push({ icsKey: key, title, start: icsToLocalInput(start), duration, recurrence: 'none' });
+    results.push({ icsKey: key, title, location, start: icsToLocalInput(start), duration, recurrence: 'none' });
   };
 
   masters.forEach((event, eventUid) => {
@@ -449,6 +451,7 @@ function importIcsText(text, fileName) {
   built.forEach((item) => {
     const fields = {
       title: item.title || t('calendar.eventDefaultTitle'),
+      location: item.location || '',
       start: item.start,
       duration: item.duration,
       recurrence: item.recurrence
