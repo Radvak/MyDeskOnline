@@ -239,17 +239,6 @@ const translations = {
       lastMapAlert: 'Impossible de supprimer la dernière carte.',
       deleteConfirm: 'Supprimer la carte "{name}" ?'
     },
-    todo: {
-      addBlock: 'Ajouter un bloc',
-      newBlock: 'Nouveau bloc',
-      empty: 'Ajoutez un bloc pour commencer votre liste de tâches.',
-      deleteBlockConfirm: 'Supprimer ce bloc et toutes ses tâches ?',
-      deleteBlock: 'Supprimer',
-      addTask: 'Ajouter une tâche',
-      newTask: 'Nouvelle tâche',
-      defaultItemName: 'Tâche {index}',
-      defaultBlockName: 'Bloc {index}'
-    },
     notes: {
       title: 'Notes',
       addPage: 'Nouvelle page',
@@ -500,17 +489,6 @@ const translations = {
       lastMapAlert: 'The last map cannot be deleted.',
       deleteConfirm: 'Delete the map "{name}"?'
     },
-    todo: {
-      addBlock: 'Add block',
-      newBlock: 'New block',
-      empty: 'Add a block to start your task list.',
-      deleteBlockConfirm: 'Delete this block and all of its tasks?',
-      deleteBlock: 'Delete',
-      addTask: 'Add task',
-      newTask: 'New task',
-      defaultItemName: 'Task {index}',
-      defaultBlockName: 'Block {index}'
-    },
     notes: {
       title: 'Notes',
       addPage: 'New page',
@@ -760,17 +738,6 @@ const translations = {
       renamePrompt: 'Tên sơ đồ',
       lastMapAlert: 'Không thể xóa sơ đồ cuối cùng.',
       deleteConfirm: 'Xóa sơ đồ "{name}"?'
-    },
-    todo: {
-      addBlock: 'Thêm khối',
-      newBlock: 'Khối mới',
-      empty: 'Thêm một khối để bắt đầu danh sách công việc.',
-      deleteBlockConfirm: 'Xóa khối này và toàn bộ công việc bên trong?',
-      deleteBlock: 'Xóa',
-      addTask: 'Thêm công việc',
-      newTask: 'Công việc mới',
-      defaultItemName: 'Công việc {index}',
-      defaultBlockName: 'Khối {index}'
     },
     notes: {
       title: 'Ghi chú',
@@ -1515,6 +1482,8 @@ function migrateData() {
   appData.todo.blocks = appData.todo.blocks.map((block, index) => {
     const items = Array.isArray(block && block.items)
       ? block.items.map((item, itemIndex) => ({
+          // On garde les champs ajoutés par todo.js (échéance, important…).
+          ...item,
           id: item && item.id ? item.id : uid(),
           text: item && item.text ? item.text : t('todo.defaultItemName', { index: itemIndex + 1 }),
           done: Boolean(item && item.done)
@@ -1522,6 +1491,7 @@ function migrateData() {
       : [];
 
     return {
+      ...block,
       id: block && block.id ? block.id : uid(),
       title: block && block.title ? block.title : t('todo.defaultBlockName', { index: index + 1 }),
       items
@@ -4111,127 +4081,6 @@ function initGantt() {
   renderGantt();
 }
 
-function initTodo() {
-  document.getElementById('add-block').addEventListener('click', () => {
-    const block = {
-      id: uid(),
-      title: t('todo.newBlock'),
-      items: []
-    };
-    appData.todo.blocks.push(block);
-    saveData();
-    renderTodo();
-  });
-  renderTodo();
-}
-
-function renderTodo() {
-  const container = document.getElementById('todo-blocks');
-  if (!container) return;
-  container.innerHTML = '';
-  if (appData.todo.blocks.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-    empty.textContent = t('todo.empty');
-    container.appendChild(empty);
-    return;
-  }
-
-  appData.todo.blocks.forEach((block) => {
-    const blockEl = document.createElement('div');
-    blockEl.className = 'todo-block';
-
-    const header = document.createElement('header');
-    const titleInput = document.createElement('input');
-    titleInput.type = 'text';
-    titleInput.value = block.title;
-    titleInput.addEventListener('input', () => {
-      block.title = titleInput.value;
-      saveData();
-    });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = t('todo.deleteBlock');
-    deleteBtn.addEventListener('click', () => {
-      if (!confirm(t('todo.deleteBlockConfirm'))) return;
-      appData.todo.blocks = appData.todo.blocks.filter((b) => b.id !== block.id);
-      saveData();
-      renderTodo();
-    });
-
-    header.appendChild(titleInput);
-    header.appendChild(deleteBtn);
-
-    const itemsContainer = document.createElement('div');
-    itemsContainer.className = 'todo-items';
-
-    block.items.forEach((item) => {
-      const itemEl = createTodoItemElement(block, item);
-      itemsContainer.appendChild(itemEl);
-    });
-
-    const addItemBtn = document.createElement('button');
-    addItemBtn.textContent = t('todo.addTask');
-    addItemBtn.addEventListener('click', () => {
-      const newItem = {
-        id: uid(),
-        text: t('todo.newTask'),
-        done: false
-      };
-      block.items.push(newItem);
-      saveData();
-      renderTodo();
-    });
-
-    blockEl.appendChild(header);
-    blockEl.appendChild(itemsContainer);
-    blockEl.appendChild(addItemBtn);
-    container.appendChild(blockEl);
-  });
-}
-
-function createTodoItemElement(block, item) {
-  const itemEl = document.createElement('div');
-  itemEl.className = 'todo-item';
-  if (item.done) {
-    itemEl.classList.add('completed');
-  }
-
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.checked = item.done;
-  checkbox.addEventListener('change', () => {
-    item.done = checkbox.checked;
-    if (item.done) {
-      itemEl.classList.add('completed');
-    } else {
-      itemEl.classList.remove('completed');
-    }
-    saveData();
-  });
-
-  const textInput = document.createElement('input');
-  textInput.type = 'text';
-  textInput.value = item.text;
-  textInput.addEventListener('input', () => {
-    item.text = textInput.value;
-    saveData();
-  });
-
-  const removeBtn = document.createElement('button');
-  removeBtn.textContent = '✕';
-  removeBtn.addEventListener('click', () => {
-    block.items = block.items.filter((i) => i.id !== item.id);
-    saveData();
-    renderTodo();
-  });
-
-  itemEl.appendChild(checkbox);
-  itemEl.appendChild(textInput);
-  itemEl.appendChild(removeBtn);
-  return itemEl;
-}
-
 function getNotesEditorElement() {
   return document.getElementById('notes-editor');
 }
@@ -5004,6 +4853,9 @@ async function bootstrap() {
   }
   if (typeof registerPatchNotesTranslations === 'function') {
     registerPatchNotesTranslations();
+  }
+  if (typeof registerTodoTranslations === 'function') {
+    registerTodoTranslations();
   }
   await initData();
   initAppearance();

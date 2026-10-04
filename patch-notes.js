@@ -9,7 +9,7 @@
 
 const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 
-// area : app | sync | calendar | anki | sport | news | menu
+// area : app | sync | calendar | anki | sport | news | todo | menu
 const PATCH_NOTES = [
   {
     date: '2026-10-04',
@@ -22,6 +22,8 @@ const PATCH_NOTES = [
       { area: 'news', text: 'Justice & droit enrichi : Dalloz Actu Étudiant, Libération, RFI, jurisprudence du Conseil d’État, CNIL, Jus Politicum et la Revue des droits et libertés fondamentaux. Son résumé quotidien s’affiche aussi le soir.' },
       { area: 'calendar', text: 'Objectifs de révision (ex. 4 h par semaine) dans la colonne de droite : on attrape un objectif et on le dépose dans l’agenda pour planifier une séance, avec la progression de la semaine.' },
       { area: 'calendar', text: 'Cliquer-glisser vers le bas sur un jour crée un évènement sur la plage choisie et ouvre directement ses détails.' },
+      { area: 'todo', text: 'To Do List repensée : listes en cartes colorées avec progression, ajout rapide au clavier (Entrée pour enchaîner, « demain », « vendredi », « 12/10 » pour l’échéance, « ! » pour important), échéances colorées (en retard, aujourd’hui), étoile « importante », tâches faites rangées dans « Terminées ».' },
+      { area: 'todo', text: 'To Do List : vues Toutes / Aujourd’hui / Importantes, recherche, résumé de ce qui reste à faire, glisser une tâche pour la déplacer (même vers une autre liste), suppression annulable.' },
       { area: 'app', text: 'Ordre des onglets au choix : glisser un onglet dans la barre (appui long sur téléphone) ou flèches ▲▼ dans Paramètres. L’ordre est synchronisé avec le profil.' },
       { area: 'app', text: 'Nouvel onglet Patch-Notes : toutes les mises à jour depuis le début du fork.' }
     ]
@@ -78,7 +80,7 @@ const PATCH_NOTES = [
   }
 ];
 
-const PATCH_NOTES_AREAS = ['app', 'sync', 'calendar', 'anki', 'sport', 'news', 'menu'];
+const PATCH_NOTES_AREAS = ['app', 'sync', 'calendar', 'anki', 'sport', 'news', 'todo', 'menu'];
 
 const PATCH_NOTES_TRANSLATIONS = {
   fr: {
@@ -91,7 +93,7 @@ const PATCH_NOTES_TRANSLATIONS = {
     isNew: 'Nouveau',
     newBadge: 'Nouveautés depuis ta dernière visite',
     empty: 'Aucune mise à jour pour ce filtre.',
-    areas: { app: 'Application', sync: 'Synchro', calendar: 'Agenda', anki: 'Révisions', sport: 'Sport', news: 'Actualité', menu: 'Menu' }
+    areas: { app: 'Application', sync: 'Synchro', calendar: 'Agenda', anki: 'Révisions', sport: 'Sport', news: 'Actualité', todo: 'To Do', menu: 'Menu' }
   },
   en: {
     tab: 'Patch Notes',
@@ -103,7 +105,7 @@ const PATCH_NOTES_TRANSLATIONS = {
     isNew: 'New',
     newBadge: 'New since your last visit',
     empty: 'No updates for this filter.',
-    areas: { app: 'App', sync: 'Sync', calendar: 'Calendar', anki: 'Flashcards', sport: 'Sport', news: 'News', menu: 'Menu' }
+    areas: { app: 'App', sync: 'Sync', calendar: 'Calendar', anki: 'Flashcards', sport: 'Sport', news: 'News', todo: 'To-Do', menu: 'Menu' }
   },
   vi: {
     tab: 'Ghi chú cập nhật',
@@ -115,7 +117,7 @@ const PATCH_NOTES_TRANSLATIONS = {
     isNew: 'Mới',
     newBadge: 'Mới kể từ lần ghé trước',
     empty: 'Không có cập nhật cho bộ lọc này.',
-    areas: { app: 'Ứng dụng', sync: 'Đồng bộ', calendar: 'Lịch', anki: 'Ôn tập', sport: 'Thể thao', news: 'Tin tức', menu: 'Thực đơn' }
+    areas: { app: 'Ứng dụng', sync: 'Đồng bộ', calendar: 'Lịch', anki: 'Ôn tập', sport: 'Thể thao', news: 'Tin tức', todo: 'Việc cần làm', menu: 'Thực đơn' }
   }
 };
 
