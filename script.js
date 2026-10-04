@@ -55,7 +55,8 @@ const defaultData = {
       news: true,
       gantt: true,
       snake: true,
-      trackirigo: true
+      trackirigo: true,
+      patchnotes: true
     },
     order: []
   }
@@ -73,7 +74,8 @@ const OPTIONAL_TABS = [
   { id: 'news', labelKey: 'tabs.news' },
   { id: 'gantt', labelKey: 'tabs.gantt' },
   { id: 'snake', labelKey: 'tabs.snake' },
-  { id: 'trackirigo', labelKey: 'tabs.track' }
+  { id: 'trackirigo', labelKey: 'tabs.track' },
+  { id: 'patchnotes', labelKey: 'tabs.patchnotes' }
 ];
 
 const DAILY_HISTORY_DAYS = 14;
@@ -1096,6 +1098,10 @@ function setLanguage(language) {
   renderTabVisibilitySettings();
   if (typeof renderNews === 'function') {
     renderNews();
+  }
+  if (typeof renderPatchNotes === 'function') {
+    renderPatchNotes();
+    patchNotesUpdateDot();
   }
   refreshStorageStatus();
   refreshVersionIndicator();
@@ -4996,6 +5002,9 @@ async function bootstrap() {
   if (typeof registerTabOrderTranslations === 'function') {
     registerTabOrderTranslations();
   }
+  if (typeof registerPatchNotesTranslations === 'function') {
+    registerPatchNotesTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -5036,6 +5045,9 @@ async function bootstrap() {
   }
   if (typeof initNews === 'function') {
     initNews();
+  }
+  if (typeof initPatchNotes === 'function') {
+    initPatchNotes();
   }
   if (typeof initRestore === 'function') {
     initRestore();

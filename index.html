@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=40">
 </head>
 <body>
   <header class="app-header">
@@ -51,6 +51,7 @@
       <button class="tab-link" data-target="gantt" data-i18n="tabs.gantt">GANTT</button>
       <button class="tab-link" data-target="snake" data-i18n="tabs.snake">Snake</button>
       <button class="tab-link" data-target="trackirigo" data-i18n="tabs.track">Track'Irigo</button>
+      <button class="tab-link" data-target="patchnotes" data-i18n="tabs.patchnotes">Patch-Notes</button>
       <button class="tab-link tab-link--icon" data-target="settings" data-i18n-aria-label="tabs.settingsAria">
         <img src="settings_icon.png" alt="" aria-hidden="true" />
       </button>
@@ -449,6 +450,10 @@
       </div>
     </section>
 
+    <section id="patchnotes" class="tab-panel">
+      <div class="patchnotes-app" id="patchnotes-app"></div>
+    </section>
+
     <section id="news" class="tab-panel">
       <div class="news-app" id="news-app"></div>
     </section>
@@ -651,24 +656,25 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=39" defer></script>
-  <script src="calendar-feed.js?v=39" defer></script>
-  <script src="restore.js?v=39" defer></script>
-  <script src="calendar-conflicts.js?v=39" defer></script>
-  <script src="calendar-goals.js?v=39" defer></script>
-  <script src="ical.js?v=39" defer></script>
-  <script src="print.js?v=39" defer></script>
-  <script src="undo.js?v=39" defer></script>
-  <script src="sport-library.js?v=39" defer></script>
-  <script src="sport.js?v=39" defer></script>
-  <script src="menu-engine.js?v=39" defer></script>
-  <script src="menu.js?v=39" defer></script>
-  <script src="install.js?v=39" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=39" defer></script>
-  <script src="anki.js?v=39" defer></script>
-  <script src="news.js?v=39" defer></script>
-  <script src="tab-order.js?v=39" defer></script>
-  <script src="script.js?v=39" defer></script>
+  <script src="sync.js?v=40" defer></script>
+  <script src="calendar-feed.js?v=40" defer></script>
+  <script src="restore.js?v=40" defer></script>
+  <script src="calendar-conflicts.js?v=40" defer></script>
+  <script src="calendar-goals.js?v=40" defer></script>
+  <script src="ical.js?v=40" defer></script>
+  <script src="print.js?v=40" defer></script>
+  <script src="undo.js?v=40" defer></script>
+  <script src="sport-library.js?v=40" defer></script>
+  <script src="sport.js?v=40" defer></script>
+  <script src="menu-engine.js?v=40" defer></script>
+  <script src="menu.js?v=40" defer></script>
+  <script src="install.js?v=40" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=40" defer></script>
+  <script src="anki.js?v=40" defer></script>
+  <script src="news.js?v=40" defer></script>
+  <script src="tab-order.js?v=40" defer></script>
+  <script src="patch-notes.js?v=40" defer></script>
+  <script src="script.js?v=40" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
