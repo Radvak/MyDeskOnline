@@ -36,7 +36,7 @@ const BRIEFING_MIN_WINDOW_H = 8;
 const BRIEFING_MAX_ITEMS = 60;
 const BRIEFING_MAX_PROMPT_CHARS = 18000; // ≈ 6 000 jetons : sous la limite de 8 000 de l'offre gratuite
 const MODELS_ENDPOINT = 'https://models.github.ai/inference/chat/completions';
-const MODELS = ['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'openai/gpt-4o-mini'];
+const MODELS = ['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'openai/gpt-4o', 'openai/gpt-4o-mini'];
 // L'actu juridique est plus lente : un seul briefing par jour, sur 24 h.
 const DAILY_THEMES = ['juridique'];
 
@@ -228,39 +228,81 @@ const extractJson = (text) => {
   return JSON.parse(text.slice(start, end + 1));
 };
 
+const MODELS_HEADERS = (token) => ({
+  Accept: 'application/vnd.github+json',
+  Authorization: `Bearer ${token}`,
+  'Content-Type': 'application/json',
+  'X-GitHub-Api-Version': '2022-11-28'
+});
+
+// Erreurs gardées dans state.json (public) et affichées sur la page du
+// passage dans Actions, pour comprendre un échec sans lire tout le journal.
+const briefingErrors = [];
+const reportError = (message) => {
+  briefingErrors.push(message.slice(0, 400));
+  console.log(`::warning title=Briefing::${message.replace(/\s+/g, ' ').slice(0, 400)}`);
+};
+
+// Modèles disponibles : on lit le catalogue (les modèles changent) et on
+// garde ceux de la liste de préférence, sinon les premiers proposés.
+let modelList = null;
+const availableModels = async (token) => {
+  if (modelList) return modelList;
+  try {
+    const response = await fetch('https://models.github.ai/catalog/models', { headers: MODELS_HEADERS(token) });
+    if (!response.ok) throw new Error(`catalogue : HTTP ${response.status}`);
+    const catalog = await response.json();
+    const ids = (Array.isArray(catalog) ? catalog : catalog.data || []).map((model) => model.id).filter(Boolean);
+    const preferred = MODELS.filter((id) => ids.includes(id));
+    const others = ids.filter((id) => id.startsWith('openai/gpt') && !preferred.includes(id));
+    modelList = [...preferred, ...others].slice(0, 4);
+    console.log(`Modèles retenus : ${modelList.join(', ')}`);
+  } catch (error) {
+    reportError(`Catalogue des modèles illisible (${error.message}), liste par défaut.`);
+    modelList = MODELS.slice(0, 4);
+  }
+  if (!modelList.length) modelList = MODELS.slice(0, 4);
+  return modelList;
+};
+
+const requestModel = async (token, model, prompt, tuned) => {
+  const body = {
+    model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: prompt }
+    ]
+  };
+  // Certains modèles refusent ces réglages : on réessaie sans.
+  if (tuned) body.temperature = 0.2;
+  const response = await fetch(MODELS_ENDPOINT, { method: 'POST', headers: MODELS_HEADERS(token), body: JSON.stringify(body) });
+  const text = await response.text();
+  if (!response.ok) {
+    const error = new Error(`${model} : HTTP ${response.status} ${text.slice(0, 300)}`);
+    error.status = response.status;
+    throw error;
+  }
+  const content = JSON.parse(text).choices?.[0]?.message?.content || '';
+  return extractJson(content);
+};
+
 const callModel = async (prompt) => {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error('GITHUB_TOKEN absent');
   let lastError = null;
-  for (const model of MODELS) {
-    try {
-      const response = await fetch(MODELS_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/vnd.github+json',
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'X-GitHub-Api-Version': '2022-11-28'
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0.2,
-          max_tokens: 2500,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: prompt }
-          ]
-        })
-      });
-      const body = await response.text();
-      if (!response.ok) throw new Error(`${model} : HTTP ${response.status} ${body.slice(0, 300)}`);
-      const content = JSON.parse(body).choices?.[0]?.message?.content || '';
-      return { model, data: extractJson(content) };
-    } catch (error) {
-      lastError = error;
-      console.warn(`  modèle indisponible : ${error.message}`);
+  for (const model of await availableModels(token)) {
+    for (const tuned of [true, false]) {
+      try {
+        return { model, data: await requestModel(token, model, prompt, tuned) };
+      } catch (error) {
+        lastError = error;
+        reportError(error.message);
+        // 400 : peut-être un réglage refusé, on réessaie sans ; sinon modèle suivant.
+        if (error.status !== 400) break;
+      }
     }
+    // Quota dépassé ou droits manquants : inutile d'essayer d'autres modèles.
+    if (lastError && (lastError.status === 401 || lastError.status === 403 || lastError.status === 429)) break;
   }
   throw lastError || new Error('aucun modèle');
 };
@@ -345,7 +387,7 @@ const makeBriefing = async (days, allItems, now, due) => {
       briefing.themes[theme] = { points: cleanPoints(data, items.slice(0, used)), count: used };
       success += 1;
     } catch (error) {
-      console.error(`Briefing ${theme} impossible : ${error.message}`);
+      reportError(`Briefing ${theme} impossible : ${error.message}`);
       briefing.themes[theme] = { points: [], count: used, error: true };
     }
   }
@@ -444,6 +486,7 @@ const main = async () => {
     sources: SOURCES.map(({ name, theme, home }) => ({ name, theme, home }))
   };
   await writeFile(path.join(OUT_DIR, 'index.json'), JSON.stringify(index));
+  if (due) state.lastBriefing = { at: now.toISOString(), slot: due.slot, errors: briefingErrors };
   await writeFile(path.join(OUT_DIR, 'state.json'), JSON.stringify(state, null, 1));
 };
 
