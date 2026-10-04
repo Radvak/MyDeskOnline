@@ -4412,3 +4412,321 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .goal-form input[type="color"] { padding: 0.15rem; height: 2.2rem; }
 .goal-form__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
 .goal-form__remove { margin-left: auto; color: #dc2626; }
+
+/* ── Actualité ─────────────────────────────────────────── */
+.news-app {
+  --news-monde: #2563eb;
+  --news-france: #7c3aed;
+  --news-juridique: #b45309;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: var(--text);
+}
+
+[data-theme="dark"] .news-app {
+  --news-monde: #60a5fa;
+  --news-france: #a78bfa;
+  --news-juridique: #fbbf24;
+}
+
+.news-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.news-daynav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.news-daynav__label {
+  margin: 0;
+  font-size: 1.25rem;
+  min-width: 0;
+}
+
+.news-daynav__btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+}
+
+.news-daynav__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.news-toolbar__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.news-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.news-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.news-chip.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.news-chip--monde.is-active { background: var(--news-monde); border-color: var(--news-monde); }
+.news-chip--france.is-active { background: var(--news-france); border-color: var(--news-france); }
+.news-chip--juridique.is-active { background: var(--news-juridique); border-color: var(--news-juridique); }
+[data-theme="dark"] .news-chip--monde.is-active,
+[data-theme="dark"] .news-chip--france.is-active,
+[data-theme="dark"] .news-chip--juridique.is-active { color: #0f172a; }
+
+.news-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.news-status:empty { display: none; }
+.news-status.is-error { color: #b91c1c; }
+[data-theme="dark"] .news-status.is-error { color: #fca5a5; }
+
+.news-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .news-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+}
+
+.news-briefing,
+.news-headlines {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-base);
+  padding: 1rem 1.1rem;
+  min-width: 0;
+}
+
+.news-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.news-section__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.news-section__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.news-slots {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.news-slot {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.news-slot.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.news-theme {
+  border-left: 3px solid var(--news-monde);
+  padding-left: 0.85rem;
+  margin-top: 1rem;
+}
+
+.news-theme--france { border-left-color: var(--news-france); }
+.news-theme--juridique { border-left-color: var(--news-juridique); }
+
+.news-theme__title {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--news-monde);
+}
+
+.news-theme--france .news-theme__title { color: var(--news-france); }
+.news-theme--juridique .news-theme__title { color: var(--news-juridique); }
+
+.news-points {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.news-point p { margin: 0; }
+
+.news-point__title {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.news-point__summary {
+  margin-top: 0.2rem !important;
+  line-height: 1.5;
+}
+
+.news-point__context {
+  margin-top: 0.3rem !important;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.news-point__context strong { color: var(--text); font-weight: 600; }
+
+.news-point__sources {
+  margin-top: 0.25rem !important;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.news-point__source,
+.news-item__title {
+  color: inherit;
+}
+
+.news-point__source { text-decoration: underline; text-underline-offset: 2px; }
+
+.news-note {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.news-empty {
+  margin: 0.25rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.news-item {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.news-item:first-child { border-top: 0; padding-top: 0.2rem; }
+
+.news-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.news-item__source { font-weight: 600; }
+
+.news-item__theme {
+  color: var(--news-monde);
+}
+
+.news-item--france .news-item__theme { color: var(--news-france); }
+.news-item--juridique .news-item__theme { color: var(--news-juridique); }
+
+.news-item__new {
+  background: #dc2626;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.news-item__title {
+  display: block;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.news-item__title:hover { text-decoration: underline; }
+
+.news-item__summary {
+  margin: 0.2rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.news-item__summary.is-open {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+
+.news-more {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .news-daynav__label { font-size: 1.05rem; }
+  .news-briefing,
+  .news-headlines { padding: 0.85rem; }
+}

@@ -52,6 +52,7 @@ const defaultData = {
       sport: true,
       menutool: true,
       anki: true,
+      news: true,
       gantt: true,
       snake: true,
       trackirigo: true
@@ -68,6 +69,7 @@ const OPTIONAL_TABS = [
   { id: 'sport', labelKey: 'tabs.sport' },
   { id: 'menutool', labelKey: 'tabs.menutool' },
   { id: 'anki', labelKey: 'tabs.anki' },
+  { id: 'news', labelKey: 'tabs.news' },
   { id: 'gantt', labelKey: 'tabs.gantt' },
   { id: 'snake', labelKey: 'tabs.snake' },
   { id: 'trackirigo', labelKey: 'tabs.track' }
@@ -1091,6 +1093,9 @@ function setLanguage(language) {
   renderDailyChallenges();
   renderTodo();
   renderTabVisibilitySettings();
+  if (typeof renderNews === 'function') {
+    renderNews();
+  }
   refreshStorageStatus();
   refreshVersionIndicator();
   syncLinkButton();
@@ -4938,6 +4943,9 @@ async function bootstrap() {
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();
   }
+  if (typeof registerNewsTranslations === 'function') {
+    registerNewsTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -4972,6 +4980,9 @@ async function bootstrap() {
   }
   if (typeof initAnki === 'function') {
     initAnki();
+  }
+  if (typeof initNews === 'function') {
+    initNews();
   }
   if (typeof initRestore === 'function') {
     initRestore();
