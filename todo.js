@@ -47,6 +47,12 @@ const TODO_TRANSLATIONS = {
     overdue: 'En retard · {date}',
     setDue: 'Échéance',
     clearDue: 'Retirer l’échéance',
+    quickToday: 'Aujourd’hui',
+    quickTomorrow: 'Demain',
+    quickWeekend: 'Ce week-end',
+    quickNextWeek: 'Semaine prochaine',
+    previousMonth: 'Mois précédent',
+    nextMonth: 'Mois suivant',
     important: 'Important',
     notImportant: 'Retirer « important »',
     remove: 'Supprimer la tâche',
@@ -106,6 +112,12 @@ const TODO_TRANSLATIONS = {
     overdue: 'Overdue · {date}',
     setDue: 'Due date',
     clearDue: 'Remove due date',
+    quickToday: 'Today',
+    quickTomorrow: 'Tomorrow',
+    quickWeekend: 'This weekend',
+    quickNextWeek: 'Next week',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
     important: 'Important',
     notImportant: 'Unmark important',
     remove: 'Delete task',
@@ -151,6 +163,12 @@ const TODO_TRANSLATIONS = {
     overdue: 'Quá hạn · {date}',
     setDue: 'Hạn chót',
     clearDue: 'Bỏ hạn chót',
+    quickToday: 'Hôm nay',
+    quickTomorrow: 'Ngày mai',
+    quickWeekend: 'Cuối tuần này',
+    quickNextWeek: 'Tuần sau',
+    previousMonth: 'Tháng trước',
+    nextMonth: 'Tháng sau',
     important: 'Quan trọng',
     notImportant: 'Bỏ đánh dấu quan trọng',
     remove: 'Xoá việc',
@@ -431,35 +449,142 @@ function todoClearDone(block) {
   }
 }
 
+let todoPicker = null;
+
+function todoClosePicker() {
+  if (!todoPicker) return;
+  todoPicker.element.remove();
+  document.removeEventListener('pointerdown', todoPicker.outside, true);
+  document.removeEventListener('keydown', todoPicker.key, true);
+  window.removeEventListener('resize', todoPicker.close);
+  todoPicker = null;
+}
+
+// Petit calendrier : raccourcis (aujourd'hui, demain, week-end, semaine
+// prochaine), grille du mois, et « Retirer l'échéance ».
 function todoPickDate(anchor, current, onPick) {
-  const input = document.createElement('input');
-  input.type = 'date';
-  input.className = 'td-date-input';
-  input.value = current || '';
-  const rect = anchor.getBoundingClientRect();
-  input.style.left = `${Math.max(8, rect.left)}px`;
-  input.style.top = `${rect.bottom + 4}px`;
-  document.body.appendChild(input);
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    input.remove();
+  todoClosePicker();
+  const today = todoToday();
+  const shift = (days) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() + days);
+    return date;
   };
-  input.addEventListener('change', () => {
-    onPick(input.value || null);
-    finish();
+  const weekday = today.getDay(); // 0 = dimanche
+  const quick = [
+    ['todo.quickToday', today],
+    ['todo.quickTomorrow', shift(1)],
+    ['todo.quickWeekend', shift(weekday === 6 || weekday === 0 ? 0 : 6 - weekday)],
+    ['todo.quickNextWeek', shift(((8 - weekday) % 7) || 7)]
+  ];
+  const selected = current ? parseDateOnly(current) : null;
+  let month = new Date((selected || today).getFullYear(), (selected || today).getMonth(), 1);
+
+  const element = todoEl('div', 'td-picker');
+  element.setAttribute('role', 'dialog');
+  element.setAttribute('aria-label', t('todo.setDue'));
+  const color = getComputedStyle(anchor).getPropertyValue('--td-color').trim();
+  if (color) element.style.setProperty('--td-color', color);
+
+  const pick = (value) => {
+    todoClosePicker();
+    onPick(value);
+  };
+
+  const quickList = todoEl('div', 'td-picker__quick');
+  // Pas deux raccourcis pour la même date (ex. le dimanche, « ce week-end » = aujourd'hui).
+  const seenDates = new Set();
+  quick.forEach(([key, date]) => {
+    if (seenDates.has(todoIso(date))) return;
+    seenDates.add(todoIso(date));
+    const button = todoButton('td-picker__shortcut');
+    button.append(todoEl('span', null, t(key)));
+    button.append(
+      todoEl('span', 'td-picker__hint', date.toLocaleDateString(getCurrentLocale(), { weekday: 'short', day: 'numeric' }))
+    );
+    if (selected && todoIso(selected) === todoIso(date)) button.classList.add('is-selected');
+    button.addEventListener('click', () => pick(todoIso(date)));
+    quickList.append(button);
   });
-  input.addEventListener('blur', () => setTimeout(finish, 200));
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') finish();
-  });
-  input.focus();
-  try {
-    if (typeof input.showPicker === 'function') input.showPicker();
-  } catch (error) {
-    // navigateur sans showPicker : le champ date visible fait l'affaire
+  element.append(quickList);
+
+  const calendar = todoEl('div', 'td-picker__calendar');
+  element.append(calendar);
+
+  const drawMonth = () => {
+    calendar.innerHTML = '';
+    const head = todoEl('div', 'td-picker__head');
+    const previous = todoButton('td-picker__nav', '‹', t('todo.previousMonth'));
+    previous.addEventListener('click', () => {
+      month = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+      drawMonth();
+    });
+    const next = todoButton('td-picker__nav', '›', t('todo.nextMonth'));
+    next.addEventListener('click', () => {
+      month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+      drawMonth();
+    });
+    const label = month.toLocaleDateString(getCurrentLocale(), { month: 'long', year: 'numeric' });
+    head.append(previous, todoEl('span', 'td-picker__month', label.charAt(0).toUpperCase() + label.slice(1)), next);
+    calendar.append(head);
+
+    const grid = todoEl('div', 'td-picker__grid');
+    // Initiales des jours, en commençant le lundi.
+    for (let index = 0; index < 7; index += 1) {
+      const date = new Date(2024, 0, 1 + index); // 1er janvier 2024 = lundi
+      grid.append(todoEl('span', 'td-picker__dow', date.toLocaleDateString(getCurrentLocale(), { weekday: 'narrow' })));
+    }
+    const offset = (month.getDay() + 6) % 7;
+    for (let index = 0; index < offset; index += 1) grid.append(todoEl('span'));
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(month.getFullYear(), month.getMonth(), day);
+      const button = todoButton('td-picker__day', String(day));
+      const iso = todoIso(date);
+      if (iso === todoIso(today)) button.classList.add('is-today');
+      if (selected && iso === todoIso(selected)) button.classList.add('is-selected');
+      if (date < today) button.classList.add('is-past');
+      button.title = date.toLocaleDateString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
+      button.addEventListener('click', () => pick(iso));
+      grid.append(button);
+    }
+    calendar.append(grid);
+  };
+  drawMonth();
+
+  if (current) {
+    const clear = todoButton('td-picker__clear', t('todo.clearDue'));
+    clear.addEventListener('click', () => pick(null));
+    element.append(clear);
   }
+
+  document.body.appendChild(element);
+  // Placé sous le bouton, sans sortir de l'écran.
+  const rect = anchor.getBoundingClientRect();
+  const width = element.offsetWidth;
+  const height = element.offsetHeight;
+  let left = Math.min(rect.left, window.innerWidth - width - 8);
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  left = Math.max(8, left);
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+
+  const outside = (event) => {
+    if (!element.contains(event.target) && event.target !== anchor) todoClosePicker();
+  };
+  const key = (event) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      todoClosePicker();
+    }
+  };
+  document.addEventListener('pointerdown', outside, true);
+  document.addEventListener('keydown', key, true);
+  window.addEventListener('resize', todoClosePicker);
+  todoPicker = { element, outside, key, close: todoClosePicker };
+  const first = element.querySelector('.td-picker__shortcut');
+  if (first) first.focus();
 }
 
 /* ── Filtres ───────────────────────────────────────────────── */
@@ -540,6 +665,11 @@ function renderTodoToolbar(container) {
   container.append(bar);
 }
 
+function todoAutoGrow(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
 function renderTodoItem(block, item) {
   const row = todoEl('li', 'td-task');
   row.dataset.itemId = item.id;
@@ -560,14 +690,23 @@ function renderTodoItem(block, item) {
   check.addEventListener('change', () => todoToggleDone(block, item));
   row.append(check);
 
+  if (item.important && !item.done) {
+    const flag = todoEl('span', 'td-flag', '★');
+    flag.title = t('todo.important');
+    row.append(flag);
+  }
+
   const body = todoEl('div', 'td-task__body');
-  const text = todoEl('input', 'td-task__text');
-  text.type = 'text';
+  const text = todoEl('textarea', 'td-task__text');
+  text.rows = 1;
   text.value = item.text;
   text.placeholder = t('todo.taskPlaceholder');
   text.readOnly = item.done;
   text.addEventListener('input', () => {
+    // Une tâche tient sur une ligne logique : un retour à la ligne collé devient un espace.
+    if (/\n/.test(text.value)) text.value = text.value.replace(/\s*\n+\s*/g, ' ');
     item.text = text.value;
+    todoAutoGrow(text);
     saveData();
   });
   text.addEventListener('keydown', (event) => {
@@ -796,6 +935,7 @@ function renderTodo() {
     shown += 1;
   });
   if (!shown) container.append(todoEl('p', 'td-no-match', t('todo.noMatch')));
+  container.querySelectorAll('.td-task__text').forEach(todoAutoGrow);
   todoApplyFocus();
 }
 

@@ -5025,7 +5025,7 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   font-weight: 700;
 }
 
-.td-search {
+#todo .td-search {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -5075,7 +5075,7 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   gap: 0.4rem;
 }
 
-.td-list__title {
+#todo .td-list__title {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -5088,7 +5088,8 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   border-radius: 6px;
 }
 
-.td-list__title:focus { outline: 2px solid var(--td-color); outline-offset: 0; }
+#todo .td-list__title:hover { background: rgba(127, 127, 127, 0.08); }
+#todo .td-list__title:focus { outline: none; background: rgba(127, 127, 127, 0.1); box-shadow: inset 0 -2px 0 var(--td-color); }
 
 .td-list__count {
   font-size: 0.8rem;
@@ -5157,6 +5158,7 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 }
 
 .td-task {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 0.35rem;
@@ -5207,17 +5209,23 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
   align-items: flex-start;
 }
 
-.td-task__text {
+#todo .td-task__text {
+  display: block;
   width: 100%;
   border: 0;
   background: transparent;
   color: var(--text);
   font: inherit;
+  line-height: 1.4;
   padding: 0.2rem 0.25rem;
   border-radius: 6px;
+  resize: none;
+  overflow: hidden;
+  min-height: 0;
+  overflow-wrap: anywhere;
 }
 
-.td-task__text:focus { outline: none; background: rgba(127, 127, 127, 0.08); }
+#todo .td-task__text:focus { outline: none; background: rgba(127, 127, 127, 0.1); }
 .td-task.is-important .td-task__text { font-weight: 600; }
 .td-task.is-done .td-task__text { text-decoration: line-through; color: var(--muted); }
 
@@ -5235,24 +5243,36 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
 [data-theme="dark"] .td-due.is-today { color: #fbbf24; }
 
 .td-task__actions {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
   display: flex;
   align-items: center;
-  flex: none;
+  gap: 0.1rem;
+  padding: 0.1rem;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s ease;
 }
+
+.td-task:hover .td-task__actions,
+.td-task:focus-within .td-task__actions { pointer-events: auto; }
 
 .td-task:hover .td-task__actions,
 .td-task:focus-within .td-task__actions { opacity: 1; }
 
 .td-task__star.is-on { color: #f59e0b; }
-.td-task.is-important .td-task__actions { opacity: 1; }
-.td-task.is-important .td-task__date,
-.td-task.is-important .td-task__remove { opacity: 0; }
-.td-task.is-important:hover .td-task__date,
-.td-task.is-important:hover .td-task__remove,
-.td-task.is-important:focus-within .td-task__date,
-.td-task.is-important:focus-within .td-task__remove { opacity: 1; }
+
+/* Étoile d'une tâche importante, toujours visible à côté de l'échéance. */
+.td-flag {
+  color: #f59e0b;
+  font-size: 0.8rem;
+  margin: 0.3rem 0.1rem 0 0;
+  flex: none;
+}
 
 .td-add {
   display: flex;
@@ -5273,7 +5293,7 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
   font-size: 1.1rem;
 }
 
-.td-add__input {
+#todo .td-add__input {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -5283,7 +5303,7 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
   padding: 0.25rem 0;
 }
 
-.td-add__input:focus { outline: none; }
+#todo .td-add__input:focus { outline: none; }
 
 .td-empty-list {
   margin: 0.1rem 0.4rem;
@@ -5299,17 +5319,6 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
 
 .td-tasks--done .td-task { padding-left: 1rem; }
 
-.td-date-input {
-  position: fixed;
-  z-index: 1000;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 0.3rem 0.5rem;
-  font: inherit;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
-}
 
 .td-empty {
   max-width: 420px;
@@ -5334,13 +5343,103 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
 .td-empty__hint { margin: 0.3rem 0 1rem; color: var(--muted); }
 .td-no-match { color: var(--muted); }
 
-/* Écran tactile : actions toujours visibles. */
+/* Écran tactile : actions dans la ligne, toujours visibles. */
 @media (hover: none) {
-  .td-task__actions,
-  .td-task__handle { opacity: 0.75; }
-  .td-task.is-important .td-task__date,
-  .td-task.is-important .td-task__remove { opacity: 1; }
+  .td-task__actions {
+    position: static;
+    opacity: 0.8;
+    pointer-events: auto;
+    background: none;
+    box-shadow: none;
+  }
+  .td-task__handle { opacity: 0.6; }
 }
+
+/* Calendrier de l'échéance */
+.td-picker {
+  --td-color: var(--primary);
+  position: fixed;
+  z-index: 1000;
+  width: 17rem;
+  max-width: calc(100vw - 16px);
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.td-picker__quick {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.td-picker__shortcut {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  color: var(--text);
+  text-align: left;
+}
+
+.td-picker__shortcut.is-selected { color: var(--td-color); font-weight: 600; }
+.td-picker__hint { color: var(--muted); font-size: 0.8rem; }
+
+.td-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.1rem;
+}
+
+.td-picker__month { font-weight: 600; font-size: 0.9rem; }
+.td-picker__nav { font-size: 1.1rem; padding: 0.1rem 0.55rem; }
+
+.td-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.td-picker__dow {
+  font-size: 0.7rem;
+  color: var(--muted);
+  padding: 0.2rem 0;
+  text-transform: uppercase;
+}
+
+.td-picker__day {
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-picker__day.is-past { color: var(--muted); opacity: 0.6; }
+.td-picker__day.is-today { box-shadow: inset 0 0 0 1.5px var(--td-color); font-weight: 700; }
+.td-picker__day.is-selected,
+.td-picker__day.is-selected:hover { background: var(--td-color); color: #fff; opacity: 1; }
+
+.td-picker__clear {
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  padding: 0.45rem;
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+[data-theme="dark"] .td-picker__clear { color: #f87171; }
 
 @media (max-width: 700px) {
   .td-toolbar__right { width: 100%; }
