@@ -183,6 +183,31 @@ const MenuEngine = (() => {
     };
   }
 
+  /* ── Repas (app.py : parts_par_repas & co) ──────────────── */
+
+  // Une part = ce qu'annonce la recette ; un repas = une portion d'homme de
+  // 20 ans / 75 kg (base.kcal_par_portion). Les parts restent l'unité interne.
+  function partsParRepas(r) {
+    const servingsBase = Number(r && r.servings_base);
+    const portions = Number(r && r.portions_reelles);
+    if (!servingsBase || !portions) return null;
+    return servingsBase / portions;
+  }
+
+  function repasDepuisParts(parts, ppr) {
+    if (parts === null || parts === undefined) return null;
+    return Math.floor((ppr ? parts / ppr : parts) * 2 + 0.5) / 2;
+  }
+
+  function partsDepuisRepas(repas, ppr) {
+    return ppr ? arrondi(repas * ppr, 2) : repas;
+  }
+
+  function repasParDefaut(r, ppr) {
+    const servingsBase = (r && r.servings_base) || 1;
+    return ppr ? Math.max(0.5, Math.floor((servingsBase / ppr) * 2 + 0.5) / 2) : servingsBase;
+  }
+
   /* ── Mise à l'échelle ────────────────────────────────────── */
 
   function facteurEchelle(partsDemandees, servingsBase) {
@@ -785,7 +810,7 @@ const MenuEngine = (() => {
           const a = annotations[r.url] || {};
           return { ...r, note: a.note || 0, commentaire: a.commentaire || '' };
         });
-      return ok({ ...base.menus, recettes });
+      return ok({ ...base.menus, recettes, kcal_par_portion: base.menus.kcal_par_portion || base.kcal_par_portion });
     },
 
     '/menus/non-reconnus': () => {
@@ -844,7 +869,7 @@ const MenuEngine = (() => {
       const parDate = {};
       etat().journal.forEach((j) => {
         if (!dateOuNone(j.date)) return;
-        (parDate[j.date] = parDate[j.date] || []).push({ url: j.url, nom: j.nom, parts: j.parts });
+        (parDate[j.date] = parDate[j.date] || []).push({ url: j.url, nom: j.nom, parts: j.parts, repas: j.repas ?? null });
       });
       const jours = [];
       for (let i = 0; i < nbJours; i += 1) {
@@ -870,7 +895,7 @@ const MenuEngine = (() => {
           cree_le: l.cree_le,
           statut: l.statut || 'a_acheter',
           achetee_le: l.achetee_le || null,
-          recettes: (l.recettes || []).map((r) => ({ url: r.url, nom: r.nom, parts: r.parts }))
+          recettes: (l.recettes || []).map((r) => ({ url: r.url, nom: r.nom, parts: r.parts, repas: r.repas ?? null }))
         }))
       });
     },
@@ -884,13 +909,21 @@ const MenuEngine = (() => {
         }
         const servingsBase = r.servings_base || 1;
         const poids = r.poids || {};
-        const [parts, limitants, appoints] = Object.keys(poids).length ? partsRealisables(poids, servingsBase) : [0, {}, []];
+        const ppr = partsParRepas(r);
+        // Plafond = repas prévus par la liste, pas la recette écrite (app.py).
+        const repasPrevus = nombreOuNone(plat.repas);
+        const partsPrevues = repasPrevus ? partsDepuisRepas(repasPrevus, ppr) : servingsBase;
+        const poidsPrevus = Object.fromEntries(Object.entries(poids).map(([c, g]) => [c, (g * partsPrevues) / servingsBase]));
+        const [parts, limitants, appoints] = Object.keys(poids).length ? partsRealisables(poidsPrevus, partsPrevues) : [0, {}, []];
         return {
           ...sansId,
           nom: r.nom || plat.nom,
           image_url: r.image_url || null,
           temps_total: r.temps_total || null,
           servings_base: servingsBase,
+          parts_par_repas: ppr,
+          repas_recette: repasDepuisParts(servingsBase, ppr),
+          repas_en_stock: repasDepuisParts(parts, ppr),
           parts_en_stock: parts,
           limitants: Object.keys(limitants).sort((x, y) => limitants[x] - limitants[y]).slice(0, 3),
           appoints_a_verifier: appoints
@@ -922,6 +955,7 @@ const MenuEngine = (() => {
           nb_ingredients_couverts: Object.keys(couverts).length,
           nb_ingredients_non_reconnus: r.nb_non_reconnus || 0,
           parts_realisables: partsMax,
+          repas_realisables: repasDepuisParts(partsMax, partsParRepas(r)),
           entierement_realisable: !Object.keys(manquants).length,
           limitants: Object.keys(limitants).sort((x, y) => limitants[x] - limitants[y]).slice(0, 3),
           appoints_a_verifier: appoints,
@@ -1031,7 +1065,8 @@ const MenuEngine = (() => {
       return ok({ ok: true, nb_supprimees: nb, nb_restantes: restantes });
     },
 
-    '/listes/creer': () => {
+    '/listes/creer': (body) => {
+      const repasVoulus = body && body.repas && typeof body.repas === 'object' ? body.repas : {};
       const selection = selectionSemaine().recettes.map((r) => r.url).filter(Boolean);
       if (!selection.length) return erreur('Aucun menu sélectionné : clique 🛒 sur les menus à préparer.');
       const recettes = [];
@@ -1042,7 +1077,11 @@ const MenuEngine = (() => {
           introuvables += 1;
           return;
         }
-        recettes.push({ url, nom: r.nom || url, parts: r.servings_base || 1 });
+        const ppr = partsParRepas(r);
+        let repas = nombreOuNone(repasVoulus[url]);
+        if (!repas || repas <= 0) repas = repasParDefaut(r, ppr);
+        repas = Math.floor(repas * 2 + 0.5) / 2;
+        recettes.push({ url, nom: r.nom || url, parts: partsDepuisRepas(repas, ppr), repas });
       });
       if (!recettes.length) return erreur("Aucun des menus sélectionnés n'existe dans les recettes actuelles.");
       const maintenant = new Date();
@@ -1060,8 +1099,8 @@ const MenuEngine = (() => {
       e.listes.push(liste);
       recettes.forEach((r) => {
         const existant = e.plats.find((p) => p.url === r.url);
-        if (existant) Object.assign(existant, { liste_id: liste.id, liste_nom: liste.nom });
-        else e.plats.push({ id: r.url, url: r.url, nom: r.nom, liste_id: liste.id, liste_nom: liste.nom, ajoute_le: liste.cree_le });
+        if (existant) Object.assign(existant, { liste_id: liste.id, liste_nom: liste.nom, repas: r.repas });
+        else e.plats.push({ id: r.url, url: r.url, nom: r.nom, liste_id: liste.id, liste_nom: liste.nom, ajoute_le: liste.cree_le, repas: r.repas });
       });
       e.selection = { recettes: [], horodatage: maintenant.toISOString() };
       sauver();
@@ -1073,13 +1112,21 @@ const MenuEngine = (() => {
       if (!url) return erreur('Plat manquant.');
       const r = recette(url);
       if (!r) return erreur('Recette introuvable.', 404);
-      const parts = nombreOuNone(body.parts) || r.servings_base || 1;
+      const ppr = partsParRepas(r);
+      let repas = nombreOuNone(body.repas);
+      let parts;
+      if (repas && repas > 0) {
+        parts = partsDepuisRepas(repas, ppr);
+      } else {
+        parts = nombreOuNone(body.parts) || r.servings_base || 1;
+        repas = repasDepuisParts(parts, ppr);
+      }
       const [besoins] = besoinsRecetteAParts(r, parts);
       const rapport = consommerStock(besoins);
       const e = etat();
       e.plats = e.plats.filter((p) => p.url !== url);
       const maintenant = new Date();
-      e.journal.push({ id: uid(), date: isoDate(maintenant), url, nom: r.nom || url, parts, cuisine_le: isoSecondes(maintenant) });
+      e.journal.push({ id: uid(), date: isoDate(maintenant), url, nom: r.nom || url, parts, repas, cuisine_le: isoSecondes(maintenant) });
       sauver();
       const consommes = {};
       const manquants = {};
@@ -1087,7 +1134,7 @@ const MenuEngine = (() => {
         if (d.consomme_g > 0) consommes[c] = d;
         if (d.manquant_g > 0) manquants[c] = d.manquant_g;
       });
-      return ok({ ok: true, nom: r.nom, parts, consommes, manquants });
+      return ok({ ok: true, nom: r.nom, parts, repas, consommes, manquants });
     },
 
     '/placard/vide': (body) => {
