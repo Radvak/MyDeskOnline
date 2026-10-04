@@ -4,6 +4,7 @@
    branche « news » du dépôt :
      index.json            jours disponibles, heure de mise à jour
      days/AAAA-MM-JJ.json  articles (titre, chapô, lien) et briefings
+     weeks/AAAA-MM-JJ.json résumé de la semaine (date du lundi)
    Le briefing est rédigé par IA à partir des titres et chapôs ; les
    articles renvoient vers le site de la source.
    Rien n'est synchronisé : seul un cache local (dernier jour lu, heure
@@ -14,6 +15,7 @@ const NEWS_DATA_URL = 'https://raw.githubusercontent.com/Radvak/MyDeskOnline/new
 const NEWS_CACHE_KEY = 'mydesk-news-cache';
 const NEWS_SEEN_KEY = 'mydesk-news-seen';
 const NEWS_THEME_KEY = 'mydesk-news-theme';
+const NEWS_MODE_KEY = 'mydesk-news-mode';
 const NEWS_REFRESH_MS = 15 * 60 * 1000;
 const NEWS_HEADLINES_STEP = 40;
 const NEWS_THEME_ORDER = ['monde', 'france', 'juridique'];
@@ -48,7 +50,18 @@ const NEWS_TRANSLATIONS = {
     headlinesEmpty: 'Aucun article pour ce jour.',
     showMore: 'Afficher plus ({count})',
     isNew: 'Nouveau',
-    sources: 'Sources : {list}'
+    sources: 'Sources : {list}',
+    modeDay: 'Jour',
+    modeWeek: 'Semaine',
+    modeAria: 'Affichage',
+    weekLabel: 'Semaine du {from} au {to}',
+    previousWeek: 'Semaine précédente',
+    nextWeek: 'Semaine suivante',
+    weekTitle: 'L’essentiel de la semaine',
+    weekUpdated: 'Mis à jour le {date} à {time}',
+    weekNone: 'Pas encore de résumé pour cette semaine. Il est rédigé chaque soir.',
+    weekNote: 'Les faits les plus importants de la semaine, résumés par IA à partir des briefings de chaque jour. En cas de doute, ouvre la source.',
+    fromOtherSlot: 'Résumé du {slot}'
   },
   en: {
     tab: 'News',
@@ -79,7 +92,18 @@ const NEWS_TRANSLATIONS = {
     headlinesEmpty: 'No articles for this day.',
     showMore: 'Show more ({count})',
     isNew: 'New',
-    sources: 'Sources: {list}'
+    sources: 'Sources: {list}',
+    modeDay: 'Day',
+    modeWeek: 'Week',
+    modeAria: 'View',
+    weekLabel: 'Week of {from} to {to}',
+    previousWeek: 'Previous week',
+    nextWeek: 'Next week',
+    weekTitle: 'Week in review',
+    weekUpdated: 'Updated on {date} at {time}',
+    weekNone: 'No summary for this week yet. It is written every evening.',
+    weekNote: 'The most important stories of the week, summarised by AI (in French) from the daily briefings. When in doubt, open the source.',
+    fromOtherSlot: '{slot} summary'
   },
   vi: {
     tab: 'Tin tức',
@@ -110,7 +134,18 @@ const NEWS_TRANSLATIONS = {
     headlinesEmpty: 'Không có bài nào cho ngày này.',
     showMore: 'Xem thêm ({count})',
     isNew: 'Mới',
-    sources: 'Nguồn: {list}'
+    sources: 'Nguồn: {list}',
+    modeDay: 'Ngày',
+    modeWeek: 'Tuần',
+    modeAria: 'Chế độ xem',
+    weekLabel: 'Tuần từ {from} đến {to}',
+    previousWeek: 'Tuần trước',
+    nextWeek: 'Tuần sau',
+    weekTitle: 'Điểm chính trong tuần',
+    weekUpdated: 'Cập nhật ngày {date} lúc {time}',
+    weekNone: 'Chưa có bản tóm tắt cho tuần này. Bản tóm tắt được viết mỗi tối.',
+    weekNote: 'Những sự kiện quan trọng nhất trong tuần, do AI tóm tắt (bằng tiếng Pháp) từ các bản tin hằng ngày. Nếu nghi ngờ, hãy mở nguồn.',
+    fromOtherSlot: 'Bản tóm tắt {slot}'
   }
 };
 
@@ -128,6 +163,9 @@ const newsState = {
   date: null, // jour affiché
   slot: null, // briefing affiché (matin / soir)
   theme: 'all',
+  mode: 'day', // day | week
+  week: null, // lundi de la semaine affichée
+  weeks: {}, // lundi → résumé de la semaine
   status: 'idle', // idle | loading | ok | offline | error | pending
   loadedAt: 0,
   headlinesShown: NEWS_HEADLINES_STEP,
@@ -157,7 +195,9 @@ function newsSaveCache() {
   if (!newsState.index) return;
   const latest = newsState.index.days[0];
   const day = latest && newsState.days[latest];
-  newsWriteLocal(NEWS_CACHE_KEY, JSON.stringify({ index: newsState.index, day: day || null }));
+  const latestWeek = newsWeekList()[0];
+  const week = latestWeek && newsState.weeks[latestWeek];
+  newsWriteLocal(NEWS_CACHE_KEY, JSON.stringify({ index: newsState.index, day: day || null, week: week || null }));
 }
 
 function newsLoadCache() {
@@ -168,6 +208,7 @@ function newsLoadCache() {
     if (!cache || !cache.index || !Array.isArray(cache.index.days)) return false;
     newsState.index = cache.index;
     if (cache.day && cache.day.date) newsState.days[cache.day.date] = cache.day;
+    if (cache.week && cache.week.week) newsState.weeks[cache.week.week] = cache.week;
     return true;
   } catch (error) {
     return false;
@@ -196,6 +237,18 @@ async function newsLoadDay(date) {
   return day;
 }
 
+async function newsLoadWeek(monday) {
+  if (newsState.weeks[monday] && newsState.weeks[monday].fresh) return newsState.weeks[monday];
+  const week = await newsFetchJson(`weeks/${monday}.json`);
+  week.fresh = true;
+  newsState.weeks[monday] = week;
+  return week;
+}
+
+function newsWeekList() {
+  return newsState.index && Array.isArray(newsState.index.weeks) ? newsState.index.weeks : [];
+}
+
 async function newsRefresh() {
   if (newsState.status === 'loading') return;
   newsState.status = 'loading';
@@ -209,9 +262,18 @@ async function newsRefresh() {
       Object.values(newsState.days).forEach((day) => {
         day.fresh = false;
       });
+      Object.values(newsState.weeks).forEach((week) => {
+        week.fresh = false;
+      });
     }
     if (!newsState.date || !index.days.includes(newsState.date)) newsState.date = index.days[0] || null;
-    if (newsState.date) await newsLoadDay(newsState.date);
+    const weeks = newsWeekList();
+    if (!newsState.week || !weeks.includes(newsState.week)) newsState.week = weeks[0] || null;
+    if (newsState.mode === 'week') {
+      if (newsState.week) await newsLoadWeek(newsState.week);
+    } else if (newsState.date) {
+      await newsLoadDay(newsState.date);
+    }
     newsState.status = 'ok';
     newsState.loadedAt = Date.now();
     newsSaveCache();
@@ -239,6 +301,29 @@ async function newsShowDay(date) {
     }
   }
   renderNews();
+}
+
+async function newsShowWeek(monday) {
+  newsState.week = monday;
+  if (monday && (!newsState.weeks[monday] || !newsState.weeks[monday].fresh)) {
+    newsState.status = 'loading';
+    renderNews();
+    try {
+      await newsLoadWeek(monday);
+      newsState.status = 'ok';
+    } catch (error) {
+      newsState.status = newsState.weeks[monday] ? 'offline' : error.status === 404 ? 'ok' : 'error';
+    }
+  }
+  renderNews();
+}
+
+function newsSetMode(mode) {
+  newsState.mode = mode;
+  newsWriteLocal(NEWS_MODE_KEY, mode);
+  if (mode === 'week') newsShowWeek(newsState.week || newsWeekList()[0] || null);
+  else if (newsState.date) newsShowDay(newsState.date);
+  else renderNews();
 }
 
 /* ── Affichage ─────────────────────────────────────────────── */
@@ -277,6 +362,14 @@ function newsDayLabel(date) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function newsWeekLabel(monday) {
+  const [year, month, day] = monday.split('-').map(Number);
+  const start = new Date(year, month - 1, day);
+  const end = new Date(year, month - 1, day + 6);
+  const format = (date) => date.toLocaleDateString(getCurrentLocale(), { day: 'numeric', month: 'short' });
+  return t('news.weekLabel', { from: format(start), to: format(end) });
+}
+
 function newsThemeLabel(theme) {
   const label = t(`news.themes.${theme}`);
   return label === `news.themes.${theme}` ? theme : label;
@@ -284,24 +377,47 @@ function newsThemeLabel(theme) {
 
 function renderNewsToolbar(container) {
   const bar = newsEl('div', 'news-toolbar');
-  const days = newsState.index ? newsState.index.days : [];
-  const position = days.indexOf(newsState.date);
+  const weekMode = newsState.mode === 'week';
+  const list = weekMode ? newsWeekList() : newsState.index ? newsState.index.days : [];
+  const currentKey = weekMode ? newsState.week : newsState.date;
+  const position = list.indexOf(currentKey);
+  const show = (key) => (weekMode ? newsShowWeek(key) : newsShowDay(key));
 
+  const group = newsEl('div', 'news-toolbar__nav');
   const nav = newsEl('div', 'news-daynav');
   const previous = newsEl('button', 'news-daynav__btn', '‹');
   previous.type = 'button';
-  previous.title = t('news.previousDay');
-  previous.setAttribute('aria-label', t('news.previousDay'));
-  previous.disabled = position < 0 || position >= days.length - 1;
-  previous.addEventListener('click', () => newsShowDay(days[position + 1]));
+  previous.title = t(weekMode ? 'news.previousWeek' : 'news.previousDay');
+  previous.setAttribute('aria-label', previous.title);
+  previous.disabled = position < 0 || position >= list.length - 1;
+  previous.addEventListener('click', () => show(list[position + 1]));
   const next = newsEl('button', 'news-daynav__btn', '›');
   next.type = 'button';
-  next.title = t('news.nextDay');
-  next.setAttribute('aria-label', t('news.nextDay'));
+  next.title = t(weekMode ? 'news.nextWeek' : 'news.nextDay');
+  next.setAttribute('aria-label', next.title);
   next.disabled = position <= 0;
-  next.addEventListener('click', () => newsShowDay(days[position - 1]));
-  const label = newsEl('h2', 'news-daynav__label', newsState.date ? newsDayLabel(newsState.date) : t('news.tab'));
+  next.addEventListener('click', () => show(list[position - 1]));
+  let labelText = t('news.tab');
+  if (weekMode && newsState.week) labelText = newsWeekLabel(newsState.week);
+  if (!weekMode && newsState.date) labelText = newsDayLabel(newsState.date);
+  const label = newsEl('h2', 'news-daynav__label', labelText);
   nav.append(previous, label, next);
+
+  // Bascule Jour / Semaine, juste à droite de la sélection.
+  const modes = newsEl('div', 'news-modes');
+  modes.setAttribute('role', 'group');
+  modes.setAttribute('aria-label', t('news.modeAria'));
+  ['day', 'week'].forEach((mode) => {
+    const button = newsEl('button', 'news-mode', t(mode === 'day' ? 'news.modeDay' : 'news.modeWeek'));
+    button.type = 'button';
+    button.classList.toggle('is-active', newsState.mode === mode);
+    button.setAttribute('aria-pressed', newsState.mode === mode ? 'true' : 'false');
+    button.addEventListener('click', () => {
+      if (newsState.mode !== mode) newsSetMode(mode);
+    });
+    modes.append(button);
+  });
+  group.append(nav, modes);
 
   const meta = newsEl('div', 'news-toolbar__meta');
   if (newsState.index && newsState.index.updatedAt) {
@@ -323,7 +439,7 @@ function renderNewsToolbar(container) {
   refresh.addEventListener('click', () => newsRefresh());
   meta.append(refresh);
 
-  bar.append(nav, meta);
+  bar.append(group, meta);
   container.append(bar);
 
   const filters = newsEl('div', 'news-filters');
@@ -343,6 +459,40 @@ function renderNewsToolbar(container) {
     filters.append(chip);
   });
   container.append(filters);
+}
+
+function renderNewsPoints(block, data) {
+  if (data.auto) block.append(newsEl('p', 'news-auto', t('news.briefingAuto')));
+  const points = Array.isArray(data.points) ? data.points : [];
+  if (!points.length) {
+    block.append(newsEl('p', 'news-empty', data.error ? t('news.briefingErrorTheme') : t('news.briefingEmptyTheme')));
+    return;
+  }
+  const list = newsEl('ol', 'news-points');
+  points.forEach((point) => {
+    const item = newsEl('li', 'news-point');
+    const title = newsEl('p', 'news-point__title', point.title);
+    if (point.dates) title.prepend(newsEl('span', 'news-point__dates', point.dates));
+    item.append(title);
+    item.append(newsEl('p', 'news-point__summary', point.summary));
+    if (point.context) {
+      const context = newsEl('p', 'news-point__context');
+      context.append(newsEl('strong', null, `${t('news.context')} : `), document.createTextNode(point.context));
+      item.append(context);
+    }
+    if (Array.isArray(point.sources) && point.sources.length) {
+      const sources = newsEl('p', 'news-point__sources');
+      point.sources.forEach((source, index) => {
+        if (index) sources.append(document.createTextNode(' · '));
+        const link = newsLink(source.link, source.source, 'news-point__source');
+        link.title = source.title || '';
+        sources.append(link);
+      });
+      item.append(sources);
+    }
+    list.append(item);
+  });
+  block.append(list);
 }
 
 function renderNewsBriefing(container, day) {
@@ -391,45 +541,60 @@ function renderNewsBriefing(container, day) {
   }
   section.append(head);
 
-  const themes = NEWS_THEME_ORDER.filter((theme) => current.themes && current.themes[theme]).filter(
-    (theme) => newsState.theme === 'all' || newsState.theme === theme
-  );
-  themes.forEach((theme) => {
-    const block = newsEl('div', `news-theme news-theme--${theme}`);
-    block.append(newsEl('h4', 'news-theme__title', newsThemeLabel(theme)));
-    const data = current.themes[theme];
-    if (data.auto) block.append(newsEl('p', 'news-auto', t('news.briefingAuto')));
-    const points = Array.isArray(data.points) ? data.points : [];
-    if (!points.length) {
-      block.append(newsEl('p', 'news-empty', data.error ? t('news.briefingErrorTheme') : t('news.briefingEmptyTheme')));
-    } else {
-      const list = newsEl('ol', 'news-points');
-      points.forEach((point) => {
-        const item = newsEl('li', 'news-point');
-        item.append(newsEl('p', 'news-point__title', point.title));
-        item.append(newsEl('p', 'news-point__summary', point.summary));
-        if (point.context) {
-          const context = newsEl('p', 'news-point__context');
-          context.append(newsEl('strong', null, `${t('news.context')} : `), document.createTextNode(point.context));
-          item.append(context);
-        }
-        if (Array.isArray(point.sources) && point.sources.length) {
-          const sources = newsEl('p', 'news-point__sources');
-          point.sources.forEach((source, index) => {
-            if (index) sources.append(document.createTextNode(' · '));
-            const link = newsLink(source.link, source.source, 'news-point__source');
-            link.title = source.title || '';
-            sources.append(link);
-          });
-          item.append(sources);
-        }
-        list.append(item);
-      });
-      block.append(list);
+  // Un thème absent de ce briefing (ex. Justice, rédigé une fois par jour)
+  // est repris d'un autre briefing du même jour.
+  NEWS_THEME_ORDER.filter((theme) => newsState.theme === 'all' || newsState.theme === theme).forEach((theme) => {
+    let data = current.themes && current.themes[theme];
+    let origin = null;
+    if (!data) {
+      origin = briefings.find((briefing) => briefing !== current && briefing.themes && briefing.themes[theme]);
+      data = origin ? origin.themes[theme] : null;
     }
+    if (!data) return;
+    const block = newsEl('div', `news-theme news-theme--${theme}`);
+    const title = newsEl('h4', 'news-theme__title', newsThemeLabel(theme));
+    if (origin) {
+      title.append(
+        newsEl('span', 'news-theme__origin', t('news.fromOtherSlot', { slot: t(`news.slots.${origin.slot}`).toLowerCase() }))
+      );
+    }
+    block.append(title);
+    renderNewsPoints(block, data);
     section.append(block);
   });
   section.append(newsEl('p', 'news-note', t('news.briefingNote')));
+  container.append(section);
+}
+
+function renderNewsWeek(container, week) {
+  const section = newsEl('section', 'news-briefing news-week');
+  const head = newsEl('div', 'news-section__head');
+  head.append(newsEl('h3', 'news-section__title', t('news.weekTitle')));
+  if (week && week.generatedAt) {
+    const updated = new Date(week.generatedAt);
+    head.append(
+      newsEl(
+        'span',
+        'news-section__meta',
+        t('news.weekUpdated', { date: updated.toLocaleDateString(getCurrentLocale()), time: formatTime(updated) })
+      )
+    );
+  }
+  section.append(head);
+  if (!week || !week.themes) {
+    section.append(newsEl('p', 'news-empty', t('news.weekNone')));
+    container.append(section);
+    return;
+  }
+  NEWS_THEME_ORDER.filter((theme) => week.themes[theme])
+    .filter((theme) => newsState.theme === 'all' || newsState.theme === theme)
+    .forEach((theme) => {
+      const block = newsEl('div', `news-theme news-theme--${theme}`);
+      block.append(newsEl('h4', 'news-theme__title', newsThemeLabel(theme)));
+      renderNewsPoints(block, week.themes[theme]);
+      section.append(block);
+    });
+  section.append(newsEl('p', 'news-note', t('news.weekNote')));
   container.append(section);
 }
 
@@ -497,6 +662,14 @@ function renderNews() {
   message.classList.toggle('is-error', newsState.status === 'error' || newsState.status === 'offline');
   container.append(message);
 
+  if (newsState.mode === 'week') {
+    if (!newsState.index) return;
+    const weekLayout = newsEl('div', 'news-layout news-layout--week');
+    renderNewsWeek(weekLayout, newsState.week ? newsState.weeks[newsState.week] : null);
+    container.append(weekLayout);
+    return;
+  }
+
   const day = newsState.date ? newsState.days[newsState.date] : null;
   if (!day) return;
   const layout = newsEl('div', 'news-layout');
@@ -528,7 +701,11 @@ function initNews() {
   if (!panel) return;
   const savedTheme = newsReadLocal(NEWS_THEME_KEY);
   if (savedTheme && (savedTheme === 'all' || NEWS_THEME_ORDER.includes(savedTheme))) newsState.theme = savedTheme;
-  if (newsLoadCache()) newsState.date = newsState.index.days[0] || null;
+  if (newsReadLocal(NEWS_MODE_KEY) === 'week') newsState.mode = 'week';
+  if (newsLoadCache()) {
+    newsState.date = newsState.index.days[0] || null;
+    newsState.week = newsWeekList()[0] || null;
+  }
 
   // L'onglet est ouvert/fermé par script.js (classe « active ») : on observe.
   let wasActive = false;

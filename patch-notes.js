@@ -18,6 +18,8 @@ const PATCH_NOTES = [
       { area: 'news', text: 'Nouvel onglet Actualité : chaque jour, les titres de RFI, France 24, franceinfo, Courrier international, Public Sénat, LCP, du Conseil constitutionnel, du Conseil d’État et de sites juridiques, classés en International, France et Justice & droit.' },
       { area: 'news', text: '« L’essentiel » le matin et le soir : les sujets importants résumés par IA (Gemini), avec une ligne « Pour comprendre » et les liens vers les sources. Si l’IA ne répond pas, les sujets les plus repris par les médias s’affichent à la place.' },
       { area: 'news', text: 'Navigation sur 14 jours, filtres par thème, pastille « Nouveau » et lecture hors connexion de la dernière version.' },
+      { area: 'news', text: 'Résumé de la semaine : bouton Jour | Semaine à côté du choix du jour, avec les faits les plus importants de la semaine par thème, condensés et datés. Refait chaque soir.' },
+      { area: 'news', text: 'Justice & droit enrichi : Dalloz Actu Étudiant, Libération, RFI, jurisprudence du Conseil d’État, CNIL, Jus Politicum et la Revue des droits et libertés fondamentaux. Son résumé quotidien s’affiche aussi le soir.' },
       { area: 'calendar', text: 'Objectifs de révision (ex. 4 h par semaine) dans la colonne de droite : on attrape un objectif et on le dépose dans l’agenda pour planifier une séance, avec la progression de la semaine.' },
       { area: 'calendar', text: 'Cliquer-glisser vers le bas sur un jour crée un évènement sur la plage choisie et ouvre directement ses détails.' },
       { area: 'app', text: 'Ordre des onglets au choix : glisser un onglet dans la barre (appui long sur téléphone) ou flèches ▲▼ dans Paramètres. L’ordre est synchronisé avec le profil.' },

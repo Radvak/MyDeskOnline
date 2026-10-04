@@ -8,8 +8,9 @@
       partir des titres et chapôs uniquement. Sans clé ou si Gemini ne
       répond pas : sélection automatique des sujets les plus repris.
    Sortie (branche « news », lue par l'onglet Actualité) :
-     index.json             { updatedAt, days: ['2026-10-04', …], themes }
+     index.json             { updatedAt, days: ['2026-10-04', …], weeks: […], themes }
      days/AAAA-MM-JJ.json   { date, items: […], briefings: […] }
+     weeks/AAAA-MM-JJ.json  résumé de la semaine (date du lundi), refait chaque soir
      state.json             état interne du robot
    Usage : node news.mjs <dossier-de-sortie>
    ═══════════════════════════════════════════════════════════ */
@@ -21,6 +22,8 @@ import { SOURCES, THEMES } from './sources.mjs';
 
 const OUT_DIR = process.argv[2] || 'news-data';
 const DAYS_DIR = path.join(OUT_DIR, 'days');
+const WEEKS_DIR = path.join(OUT_DIR, 'weeks');
+const KEEP_WEEKS = 8;
 const KEEP_DAYS = 14;
 const TIME_ZONE = 'Europe/Paris';
 const SUMMARY_MAX = 400;
@@ -285,11 +288,11 @@ const availableModels = async (key) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const requestModel = async (key, model, prompt) => {
+const requestModel = async (key, model, prompt, systemPrompt) => {
   const response = await geminiFetch(`${GEMINI_API}/models/${model}:generateContent`, key, {
     method: 'POST',
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
     })
@@ -312,7 +315,7 @@ const requestModel = async (key, model, prompt) => {
   return extractJson(content);
 };
 
-const callModel = async (prompt) => {
+const callModel = async (prompt, systemPrompt = SYSTEM_PROMPT) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('clé GEMINI_API_KEY absente des secrets du dépôt');
   const queue = (await availableModels(key)).filter((model) => !deadModels.has(model));
@@ -323,7 +326,7 @@ const callModel = async (prompt) => {
     tried += 1;
     for (let attempt = 0; attempt <= GEMINI_BUSY_WAITS_MS.length; attempt += 1) {
       try {
-        return { model, data: await requestModel(key, model, prompt) };
+        return { model, data: await requestModel(key, model, prompt, systemPrompt) };
       } catch (error) {
         lastError = error;
         reportError(error.message);
@@ -408,16 +411,20 @@ const cleanPoints = (data, items) => {
       const sources = [];
       refs.forEach((ref) => {
         const item = items[Number(ref) - 1];
-        if (item && !sources.some((source) => source.link === item.link)) {
-          sources.push({ title: item.title, source: item.source, link: item.link });
-        }
+        if (!item) return;
+        const candidates = Array.isArray(item.sources) ? item.sources : [{ title: item.title, source: item.source, link: item.link }];
+        candidates.forEach((candidate) => {
+          if (candidate.link && !sources.some((source) => source.link === candidate.link)) sources.push(candidate);
+        });
       });
-      return {
+      const cleaned = {
         title: String(point.titre || '').trim(),
         summary: String(point.resume || '').trim(),
         context: String(point.contexte || '').trim(),
         sources: sources.slice(0, 4)
       };
+      if (point.dates) cleaned.dates = String(point.dates).trim();
+      return cleaned;
     })
     .filter((point) => point.title && point.summary)
     .slice(0, 8);
@@ -447,6 +454,15 @@ const dueSlot = (days, now) => {
   return { day, slot: slot.id };
 };
 
+// Un briefing du jour (autre que celui qu'on refait) contient déjà ce thème.
+const dayHasTheme = (day, theme, exceptSlot) =>
+  Boolean(
+    day &&
+      day.briefings.some(
+        (briefing) => briefing.slot !== exceptSlot && !briefing.fallback && briefing.themes && briefing.themes[theme]
+      )
+  );
+
 const makeBriefing = async (days, allItems, now, due) => {
   const last = lastBriefingTime(days, due);
   const hour = 3600 * 1000;
@@ -457,7 +473,7 @@ const makeBriefing = async (days, allItems, now, due) => {
   const briefing = { slot: due.slot, generatedAt: now.toISOString(), from: fromDate.toISOString(), themes: {} };
   for (const theme of Object.keys(THEMES)) {
     const daily = DAILY_THEMES.includes(theme);
-    if (daily && due.slot !== BRIEFING_SLOTS[0].id) continue;
+    if (daily && due.slot !== BRIEFING_SLOTS[0].id && dayHasTheme(days.get(due.day), theme, due.slot)) continue;
     const themeFrom = daily ? now.getTime() - 24 * hour : from;
     const seenTitles = new Set();
     const items = allItems
@@ -489,11 +505,119 @@ const makeBriefing = async (days, allItems, now, due) => {
   return briefing;
 };
 
+/* ── Résumé de la semaine ──────────────────────────────────── */
+
+const WEEK_PROMPT = `Tu rédiges le résumé de la semaine d'une revue de presse pour un étudiant en droit qui veut entretenir sa culture générale.
+On te donne, numérotés et datés, les sujets retenus chaque jour de la semaine (ou des dépêches).
+
+Consignes :
+- Retiens les 5 à 8 faits les plus importants de la semaine pour la culture générale. Un sujet qui a duré plusieurs jours n'apparaît qu'une fois, avec son évolution et où il en est à la fin de la semaine.
+- Pour chaque fait :
+  • "titre" : 10 mots maximum ;
+  • "resume" : 2 phrases maximum, condensées (l'essentiel, le résultat) ;
+  • "contexte" : une phrase qui explique pourquoi c'est important ou définit la notion à connaître ;
+  • "dates" : jour(s) concerné(s), par exemple "mar. 29" ou "lun. 28 → jeu. 1er" ;
+  • "sources" : les numéros utilisés.
+- N'utilise que les informations fournies ; n'invente aucun fait, chiffre ou nom.
+- Ton neutre, sans opinion. Écris en français.
+- Classe les faits du plus important au moins important.
+
+Réponds uniquement avec un objet JSON : {"points":[{"titre":"…","resume":"…","contexte":"…","dates":"…","sources":[1,2]}]}`;
+
+const shiftDay = (day, offset) => {
+  const date = new Date(`${day}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+};
+
+const mondayOf = (day) => {
+  const weekday = (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7; // lundi = 0
+  return shiftDay(day, -weekday);
+};
+
+const dayLabel = (day) =>
+  new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: '2-digit', timeZone: 'UTC' }).format(
+    new Date(`${day}T12:00:00Z`)
+  );
+
+// Matière d'un thème : les sujets des briefings du jour (déjà triés par
+// l'IA) s'il y en a assez, sinon les articles de la semaine.
+const weekEntries = (days, monday, theme) => {
+  const sunday = shiftDay(monday, 6);
+  const points = [];
+  const seen = new Set();
+  [...days.values()]
+    .filter((day) => day.date >= monday && day.date <= sunday)
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .forEach((day) => {
+      day.briefings.forEach((briefing) => {
+        const data = briefing.themes && briefing.themes[theme];
+        if (!data || data.auto) return;
+        (data.points || []).forEach((point) => {
+          const key = point.title.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          points.push({ date: day.date, title: point.title, summary: point.summary, context: point.context, sources: point.sources || [] });
+        });
+      });
+    });
+  if (points.length >= 5) return { entries: points, kind: 'points' };
+  const items = [];
+  days.forEach((day) => {
+    if (day.date < monday || day.date > sunday) return;
+    day.items.forEach((item) => {
+      if (item.theme === theme) items.push({ ...item, date: day.date, time: item.date });
+    });
+  });
+  items.sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+  return { entries: items, kind: 'items' };
+};
+
+const buildWeekPrompt = (theme, monday, entries) => {
+  const header = `${THEME_HINTS[theme]}\nSemaine du ${dayLabel(monday)} au ${dayLabel(shiftDay(monday, 6))}.\n\nSujets :\n`;
+  const lines = [];
+  let length = header.length;
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const summary = shorten(entry.summary || '', 260);
+    const line = `[${index + 1}] (${dayLabel(entry.date)}${entry.source ? `, ${entry.source}` : ''}) ${entry.title}${summary ? ` — ${summary}` : ''}`;
+    if (length + line.length + 1 > BRIEFING_MAX_PROMPT_CHARS) break;
+    lines.push(line);
+    length += line.length + 1;
+  }
+  return { prompt: header + lines.join('\n'), used: lines.length };
+};
+
+const makeWeek = async (days, monday, now) => {
+  const week = { week: monday, end: shiftDay(monday, 6), generatedAt: now.toISOString(), themes: {} };
+  for (const theme of Object.keys(THEMES)) {
+    const { entries, kind } = weekEntries(days, monday, theme);
+    if (entries.length < 2) {
+      week.themes[theme] = { points: [], count: entries.length };
+      continue;
+    }
+    const { prompt, used } = buildWeekPrompt(theme, monday, entries);
+    try {
+      console.log(`Semaine ${theme} : ${used} ${kind === 'points' ? 'sujets' : 'dépêches'}`);
+      const { model, data } = await callModel(prompt, WEEK_PROMPT);
+      week.model = model;
+      week.themes[theme] = { points: cleanPoints(data, entries.slice(0, used)), count: used };
+    } catch (error) {
+      reportError(`Semaine ${theme} impossible : ${error.message}`);
+      const items = kind === 'items' ? entries : [];
+      week.themes[theme] = { points: autoPoints(items), count: entries.length, auto: true };
+      week.fallback = true;
+    }
+  }
+  return week;
+};
+
 /* ── Programme principal ───────────────────────────────────── */
 
 const main = async () => {
   const now = new Date();
   await mkdir(DAYS_DIR, { recursive: true });
+  await mkdir(WEEKS_DIR, { recursive: true });
   const days = await loadDays();
   const state = await readJson(path.join(OUT_DIR, 'state.json'), { sources: {} });
   const cutoff = now.getTime() - KEEP_DAYS * 24 * 3600 * 1000;
@@ -556,10 +680,12 @@ const main = async () => {
 
   // Au plus 3 essais par créneau, pour ne pas épuiser le quota gratuit
   // si Gemini est indisponible (le briefing de secours reste alors).
+  const force = process.env.FORCE_BRIEFING === 'true';
   const due = dueSlot(days, now);
   const dueKey = due ? `${due.day}-${due.slot}` : '';
   const attempts = state.briefingAttempts && state.briefingAttempts.key === dueKey ? state.briefingAttempts.count : 0;
-  if (due && (attempts < 3 || process.env.FORCE_BRIEFING === 'true')) {
+  let newEvening = false;
+  if (due && (attempts < 3 || force)) {
     state.briefingAttempts = { key: dueKey, count: attempts + 1 };
     const briefing = await makeBriefing(days, allItems, now, due);
     const day = ensureDay(days, due.day);
@@ -568,8 +694,35 @@ const main = async () => {
     if (!(briefing.fallback && previous && !previous.fallback)) {
       day.briefings = day.briefings.filter((existing) => existing !== previous);
       day.briefings.push(briefing);
+      newEvening = briefing.slot === 'soir' && !briefing.fallback;
     }
   }
+
+  // Résumé de la semaine en cours : refait après le briefing du soir, ou
+  // s'il manque / n'a pas été rédigé par l'IA (3 essais par jour au plus).
+  const today = parisParts(now).day;
+  const monday = mondayOf(today);
+  const weekFile = path.join(WEEKS_DIR, `${monday}.json`);
+  const currentWeek = await readJson(weekFile, null);
+  const weekKey = `${today}`;
+  const weekAttempts = state.weekAttempts && state.weekAttempts.key === weekKey ? state.weekAttempts.count : 0;
+  const weekWanted = force || newEvening || !currentWeek || (currentWeek.fallback && weekAttempts < 3);
+  if (weekWanted && parisParts(now).hour >= BRIEFING_SLOTS[0].hour) {
+    state.weekAttempts = { key: weekKey, count: weekAttempts + 1 };
+    const week = await makeWeek(days, monday, now);
+    if (!(week.fallback && currentWeek && !currentWeek.fallback)) {
+      await writeFile(weekFile, JSON.stringify(week));
+    }
+  }
+  let weeks = [];
+  try {
+    weeks = (await readdir(WEEKS_DIR)).filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file)).map((file) => file.slice(0, 10));
+  } catch {
+    weeks = [];
+  }
+  weeks.sort().reverse();
+  for (const old of weeks.slice(KEEP_WEEKS)) await unlink(path.join(WEEKS_DIR, `${old}.json`)).catch(() => {});
+  weeks = weeks.slice(0, KEEP_WEEKS);
 
   for (const day of days.values()) {
     day.items.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
@@ -578,6 +731,7 @@ const main = async () => {
   const index = {
     updatedAt: now.toISOString(),
     days: [...days.keys()].sort().reverse(),
+    weeks,
     themes: THEMES,
     sources: SOURCES.map(({ name, theme, home }) => ({ name, theme, home }))
   };

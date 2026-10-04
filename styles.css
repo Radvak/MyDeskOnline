@@ -4960,3 +4960,60 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
     min-width: 0;
   }
 }
+
+.news-toolbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  min-width: 0;
+}
+
+.news-modes {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  flex: none;
+}
+
+.news-mode {
+  border: 0;
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0.3rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.news-mode.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.news-layout--week {
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 860px;
+}
+
+.news-point__dates {
+  display: inline-block;
+  margin-right: 0.45rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  vertical-align: 0.1em;
+}
+
+.news-theme__origin {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-weight: 400;
+}
