@@ -4737,3 +4737,61 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   color: var(--muted);
   font-style: italic;
 }
+
+/* ── Ordre des onglets ─────────────────────────────────── */
+.tab-link {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.tab-bar.is-reordering {
+  cursor: grabbing;
+}
+
+.tab-bar.is-reordering .tab-link {
+  cursor: grabbing;
+}
+
+.tab-link.is-dragging {
+  outline: 2px dashed var(--primary);
+  outline-offset: 2px;
+  opacity: 0.75;
+  transform: scale(1.05);
+}
+
+.settings-toggle__order {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.settings-toggle__move {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-toggle__move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.settings-tab-order {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.settings-tab-order .settings-section__desc {
+  margin: 0;
+}

@@ -56,7 +56,8 @@ const defaultData = {
       gantt: true,
       snake: true,
       trackirigo: true
-    }
+    },
+    order: []
   }
 };
 
@@ -1806,6 +1807,9 @@ function getTabVisibility(tabId) {
 }
 
 function applyTabVisibility() {
+  if (typeof applyTabOrder === 'function') {
+    applyTabOrder();
+  }
   const links = tabLinks.length ? tabLinks : Array.from(document.querySelectorAll('.tab-link'));
   OPTIONAL_TABS.forEach((tab) => {
     const visible = getTabVisibility(tab.id);
@@ -1836,7 +1840,11 @@ function renderTabVisibilitySettings() {
   if (!container) return;
   container.innerHTML = '';
 
-  OPTIONAL_TABS.forEach((tab) => {
+  // Même ordre que la barre d'onglets (réglable en glissant ou avec ▲▼).
+  const barOrder = Array.from(document.querySelectorAll('.tab-bar .tab-link')).map((link) => link.dataset.target);
+  const orderedTabs = OPTIONAL_TABS.slice().sort((a, b) => barOrder.indexOf(a.id) - barOrder.indexOf(b.id));
+
+  orderedTabs.forEach((tab, index) => {
     const wrapper = document.createElement('label');
     wrapper.className = 'settings-toggle';
 
@@ -1854,8 +1862,47 @@ function renderTabVisibilitySettings() {
 
     wrapper.appendChild(checkbox);
     wrapper.appendChild(label);
+    if (typeof moveTabInOrder === 'function') {
+      const arrows = document.createElement('span');
+      arrows.className = 'settings-toggle__order';
+      [
+        ['▲', -1, 'tabOrder.moveUp', index === 0],
+        ['▼', 1, 'tabOrder.moveDown', index === orderedTabs.length - 1]
+      ].forEach(([symbol, direction, key, disabled]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'settings-toggle__move';
+        button.textContent = symbol;
+        button.disabled = disabled;
+        button.title = t(key, { name: t(tab.labelKey) });
+        button.setAttribute('aria-label', button.title);
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          moveTabInOrder(tab.id, direction);
+        });
+        arrows.appendChild(button);
+      });
+      wrapper.appendChild(arrows);
+    }
     container.appendChild(wrapper);
   });
+
+  if (typeof resetTabOrder === 'function') {
+    const footer = document.createElement('div');
+    footer.className = 'settings-tab-order';
+    const hint = document.createElement('p');
+    hint.className = 'settings-section__desc';
+    hint.textContent = t('tabOrder.hint');
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'btn-secondary';
+    reset.textContent = t('tabOrder.reset');
+    reset.disabled = !(appData.tabs && Array.isArray(appData.tabs.order) && appData.tabs.order.length);
+    reset.addEventListener('click', () => resetTabOrder());
+    footer.appendChild(hint);
+    footer.appendChild(reset);
+    container.appendChild(footer);
+  }
 }
 
 function initSettings() {
@@ -4946,9 +4993,15 @@ async function bootstrap() {
   if (typeof registerNewsTranslations === 'function') {
     registerNewsTranslations();
   }
+  if (typeof registerTabOrderTranslations === 'function') {
+    registerTabOrderTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
+  if (typeof initTabOrder === 'function') {
+    initTabOrder();
+  }
   initLocalization();
   initSettings();
   initVersionIndicator();
