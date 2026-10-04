@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=33">
+  <link rel="stylesheet" href="styles.css?v=34">
 </head>
 <body>
   <header class="app-header">
@@ -262,6 +262,7 @@
         </div>
       </div>
       <div class="calendar-conflicts" id="calendar-conflicts" hidden></div>
+      <div class="calendar-goals" id="calendar-goals"></div>
       <div class="calendar-content">
         <div class="calendar-grid" id="calendar-grid"></div>
         <aside class="event-types-panel">
@@ -565,6 +566,10 @@
             <option value="" data-i18n="calendar.eventModal.typeNone">Aucun</option>
           </select>
         </label>
+        <label hidden>
+          <span data-i18n="goals.eventGoal">Compte pour l'objectif</span>
+          <select id="event-goal"></select>
+        </label>
         <label>
           <span data-i18n="calendar.eventModal.colorLabel">Couleur</span>
           <input type="color" id="event-color" value="#10b981">
@@ -641,21 +646,22 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=33" defer></script>
-  <script src="calendar-feed.js?v=33" defer></script>
-  <script src="restore.js?v=33" defer></script>
-  <script src="calendar-conflicts.js?v=33" defer></script>
-  <script src="ical.js?v=33" defer></script>
-  <script src="print.js?v=33" defer></script>
-  <script src="undo.js?v=33" defer></script>
-  <script src="sport-library.js?v=33" defer></script>
-  <script src="sport.js?v=33" defer></script>
-  <script src="menu-engine.js?v=33" defer></script>
-  <script src="menu.js?v=33" defer></script>
-  <script src="install.js?v=33" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=33" defer></script>
-  <script src="anki.js?v=33" defer></script>
-  <script src="script.js?v=33" defer></script>
+  <script src="sync.js?v=34" defer></script>
+  <script src="calendar-feed.js?v=34" defer></script>
+  <script src="restore.js?v=34" defer></script>
+  <script src="calendar-conflicts.js?v=34" defer></script>
+  <script src="calendar-goals.js?v=34" defer></script>
+  <script src="ical.js?v=34" defer></script>
+  <script src="print.js?v=34" defer></script>
+  <script src="undo.js?v=34" defer></script>
+  <script src="sport-library.js?v=34" defer></script>
+  <script src="sport.js?v=34" defer></script>
+  <script src="menu-engine.js?v=34" defer></script>
+  <script src="menu.js?v=34" defer></script>
+  <script src="install.js?v=34" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=34" defer></script>
+  <script src="anki.js?v=34" defer></script>
+  <script src="script.js?v=34" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

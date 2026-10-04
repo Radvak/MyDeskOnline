@@ -2133,6 +2133,7 @@ function renderCalendar() {
       cell.dataset.dayIndex = index;
       cell.dataset.hour = hour;
       cell.dataset.date = cellDate.toISOString();
+      cell.addEventListener('pointerdown', (event) => startRangeSelect(event, cell));
       cell.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         const baseDate = new Date(cell.dataset.date);
@@ -2513,6 +2514,7 @@ function renderCalendarEvents() {
     renderConflictBanner(conflicts.groups);
   }
   renderCalendarNowLine();
+  if (typeof renderGoalsPanel === 'function') renderGoalsPanel();
 }
 
 // Barre rouge à l'heure actuelle sur le jour d'aujourd'hui (mise à jour chaque minute).
@@ -2548,7 +2550,12 @@ let moveState = null;
 let calendarClickSuppressedUntil = 0;
 
 function calendarIsDragging() {
-  return Boolean(resizeState || (moveState && moveState.active));
+  return Boolean(
+    resizeState ||
+      (moveState && moveState.active) ||
+      (typeof rangeSelect !== 'undefined' && rangeSelect && rangeSelect.active) ||
+      (typeof goalDragActive === 'function' && goalDragActive())
+  );
 }
 
 function startEventMove(pointerEvent, occurrence, eventEl) {
@@ -2688,6 +2695,99 @@ document.addEventListener(
 document.addEventListener('keydown', (keyEvent) => {
   if (keyEvent.key === 'Escape' && moveState) cancelEventMove();
 });
+
+/* ── Sélectionner une plage horaire en glissant ───────────────
+   Clic gauche sur un créneau vide puis glisser vers le bas (souris) :
+   la plage se dessine par pas de 15 min, et au relâchement la fenêtre
+   de création s'ouvre, déjà remplie avec ce jour et ces horaires. */
+
+let rangeSelect = null;
+
+function startRangeSelect(pointerEvent, cell) {
+  if (pointerEvent.button !== 0 || pointerEvent.pointerType !== 'mouse') return;
+  if (pointerEvent.target.closest('.event') || resizeState || moveState) return;
+  const minutes = rangeMinutesAt(cell, pointerEvent.clientY, Math.floor);
+  rangeSelect = { cell, date: cell.dataset.date, anchor: minutes, from: minutes, to: minutes + EVENT_DURATION_STEP, startY: pointerEvent.clientY, active: false, box: null };
+  pointerEvent.preventDefault(); // pas de sélection de texte
+  document.addEventListener('pointermove', onRangeSelectMove);
+  document.addEventListener('pointerup', endRangeSelect);
+  document.addEventListener('pointercancel', cancelRangeSelect);
+}
+
+function rangeMinutesAt(cell, clientY, round = Math.round) {
+  const rect = cell.getBoundingClientRect();
+  const raw = Number(cell.dataset.hour) * 60 + ((clientY - rect.top) / rect.height) * 60;
+  const snapped = round(raw / EVENT_DURATION_STEP) * EVENT_DURATION_STEP;
+  return Math.max(CALENDAR_START_HOUR * 60, Math.min(CALENDAR_END_MINUTE, snapped));
+}
+
+function onRangeSelectMove(pointerEvent) {
+  if (!rangeSelect) return;
+  if (!rangeSelect.active && Math.abs(pointerEvent.clientY - rangeSelect.startY) < 6) return;
+  rangeSelect.active = true;
+  // Même jour que le clic de départ, quelle que soit la colonne survolée.
+  const target = document.elementFromPoint(rangeSelect.cell.getBoundingClientRect().left + 4, pointerEvent.clientY);
+  const cell = target && target.closest('.calendar-grid .hour-cell');
+  let minutes;
+  if (cell && cell.dataset.date === rangeSelect.date) minutes = rangeMinutesAt(cell, pointerEvent.clientY);
+  else minutes = pointerEvent.clientY < rangeSelect.startY ? CALENDAR_START_HOUR * 60 : CALENDAR_END_MINUTE;
+  rangeSelect.from = Math.min(rangeSelect.anchor, minutes);
+  rangeSelect.to = Math.max(rangeSelect.anchor + EVENT_DURATION_STEP, minutes);
+  drawRangeSelect();
+}
+
+function drawRangeSelect() {
+  const { date, from, to } = rangeSelect;
+  const startCell = calendarCellMap.get(`${date}-${Math.floor(from / 60)}`);
+  if (!startCell) return;
+  if (!rangeSelect.box) {
+    rangeSelect.box = document.createElement('div');
+    rangeSelect.box.className = 'calendar-selection';
+  }
+  const box = rangeSelect.box;
+  if (box.parentElement !== startCell) startCell.appendChild(box);
+  box.style.top = `${((from % 60) / 60) * calendarHourHeight}px`;
+  box.style.height = `${((to - from) / 60) * calendarHourHeight}px`;
+  const start = new Date(date);
+  start.setHours(Math.floor(from / 60), from % 60, 0, 0);
+  const end = new Date(date);
+  end.setHours(Math.floor(to / 60), to % 60, 0, 0);
+  box.textContent = `${formatTime(start)} – ${formatTime(end)}`;
+}
+
+function endRangeSelect() {
+  if (!rangeSelect) return;
+  const { active, date, from, to, box } = rangeSelect;
+  cleanupRangeSelect();
+  if (!active) return;
+  calendarClickSuppressedUntil = Date.now() + 400;
+  const start = new Date(date);
+  start.setHours(Math.floor(from / 60), from % 60, 0, 0);
+  // La plage reste affichée tant que la fenêtre est ouverte.
+  openEventModal({ start, duration: to - from });
+  const modal = document.getElementById('event-modal');
+  const clear = () => {
+    if (!modal.hidden) return;
+    if (box) box.remove();
+    observer.disconnect();
+  };
+  const observer = new MutationObserver(clear);
+  observer.observe(modal, { attributes: true, attributeFilter: ['hidden'] });
+}
+
+function cancelRangeSelect() {
+  if (!rangeSelect) return;
+  const { box } = rangeSelect;
+  cleanupRangeSelect();
+  if (box) box.remove();
+}
+
+function cleanupRangeSelect() {
+  rangeSelect = null;
+  document.removeEventListener('pointermove', onRangeSelectMove);
+  document.removeEventListener('pointerup', endRangeSelect);
+  document.removeEventListener('pointercancel', cancelRangeSelect);
+}
 
 function startDurationResize(pointerEvent, occurrence, eventEl, handle) {
   pointerEvent.preventDefault();
@@ -2896,6 +2996,7 @@ function updateSingleOccurrence(event, occurrenceStart, changes) {
     typeId: event.typeId,
     color: event.color,
     seriesId: event.id,
+    goalId: event.goalId,
     ...changes,
     recurrence: 'none'
   };
@@ -2976,7 +3077,7 @@ function fillEventLocationList() {
     });
 }
 
-function openEventModal({ start, event: existingEvent = null, occurrenceStart = null }) {
+function openEventModal({ start, duration: presetDuration = null, event: existingEvent = null, occurrenceStart = null }) {
   const modal = document.getElementById('event-modal');
   const form = document.getElementById('event-form');
   const titleInput = document.getElementById('event-title');
@@ -3002,6 +3103,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
 
   updateEventTypeSelect(existingEvent && existingEvent.typeId ? existingEvent.typeId : '');
   fillEventLocationList();
+  if (typeof fillEventGoalSelect === 'function') fillEventGoalSelect(existingEvent ? existingEvent.goalId : '');
 
   if (existingEvent) {
     modalTitle.textContent = t('calendar.eventModal.editTitle');
@@ -3020,7 +3122,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     titleInput.value = '';
     locationInput.value = '';
     datetimeInput.value = localized;
-    durationInput.value = 60;
+    durationInput.value = presetDuration || 60;
     recurrenceInput.value = 'none';
     typeInput.value = '';
     colorInput.value = DEFAULT_EVENT_COLOR;
@@ -3108,6 +3210,8 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
     durationInput.value = duration;
     const recurrence = recurrenceInput.value;
     const typeId = typeInput.value;
+    const goalSelect = document.getElementById('event-goal');
+    const goalId = goalSelect && goalSelect.value ? goalSelect.value : undefined;
     const color = colorInput.value || DEFAULT_EVENT_COLOR;
 
     if (modal.dataset.mode === 'edit' && modal.dataset.eventId) {
@@ -3118,13 +3222,15 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
           location: locationInput.value.trim(),
           duration,
           typeId,
-          color
+          color,
+          goalId
         };
         if (isRecurringEvent(targetEvent) && scopeInput.value === 'one') {
           updateSingleOccurrence(targetEvent, baseDate, { ...changes, start: datetimeValue });
         } else {
           shiftSeriesStart(targetEvent, baseDate, startDate);
           Object.assign(targetEvent, changes, { recurrence });
+          if (!goalId) delete targetEvent.goalId;
         }
       }
     } else {
@@ -3138,6 +3244,7 @@ function openEventModal({ start, event: existingEvent = null, occurrenceStart = 
         typeId,
         color
       };
+      if (goalId) newEvent.goalId = goalId;
       appData.calendar.events.push(newEvent);
     }
     saveData();
@@ -4824,6 +4931,9 @@ async function bootstrap() {
   }
   if (typeof registerConflictTranslations === 'function') {
     registerConflictTranslations();
+  }
+  if (typeof registerGoalTranslations === 'function') {
+    registerGoalTranslations();
   }
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();
