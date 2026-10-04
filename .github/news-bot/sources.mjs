@@ -1,6 +1,7 @@
 /* Sources de l'onglet Actualité (flux RSS publics).
-   Le Monde et Le Figaro ne sont pas repris : leurs flux sont réservés
-   à un usage personnel, or les données du robot sont publiques. */
+   Le Monde, Le Figaro et Les Affiches parisiennes ne sont pas repris :
+   leurs flux sont réservés à un usage personnel, or les données du
+   robot sont publiques. */
 
 export const THEMES = {
   monde: 'International',
@@ -33,5 +34,12 @@ export const SOURCES = [
   { id: 'club-juristes', name: 'Le Club des juristes', theme: 'juridique', home: 'https://www.leclubdesjuristes.com/', url: 'https://www.leclubdesjuristes.com/feed/' },
   { id: 'surligneurs', name: 'Les Surligneurs', theme: 'juridique', home: 'https://www.lessurligneurs.eu/', url: 'https://www.lessurligneurs.eu/feed/' },
   { id: 'actu-juridique', name: 'Actu-Juridique', theme: 'juridique', home: 'https://www.actu-juridique.fr/', url: 'https://www.actu-juridique.fr/feed/' },
-  { id: 'fi-justice', name: 'franceinfo', theme: 'juridique', home: 'https://www.francetvinfo.fr/societe/justice/', url: 'https://www.francetvinfo.fr/societe/justice.rss' }
+  { id: 'fi-justice', name: 'franceinfo', theme: 'juridique', home: 'https://www.francetvinfo.fr/societe/justice/', url: 'https://www.francetvinfo.fr/societe/justice.rss' },
+  { id: 'liberation-justice', name: 'Libération', theme: 'juridique', home: 'https://www.liberation.fr/societe/police-justice/', url: 'https://www.liberation.fr/arc/outboundfeeds/rss-all/category/societe/police-justice/?outputType=xml' },
+  { id: 'rfi-justice', name: 'RFI', theme: 'juridique', home: 'https://www.rfi.fr/fr/tag/justice/', url: 'https://www.rfi.fr/fr/tag/justice/rss' },
+  { id: 'dalloz-etudiant', name: 'Dalloz Actu Étudiant', theme: 'juridique', home: 'https://actu.dalloz-etudiant.fr/', url: 'https://actu.dalloz-etudiant.fr/rss.xml' },
+  { id: 'conseil-etat-jurisprudence', name: "Conseil d'État", theme: 'juridique', home: 'https://www.conseil-etat.fr/decisions-de-justice/jurisprudence', url: 'https://www.conseil-etat.fr/rss/analyses-de-jurisprudence-rss' },
+  { id: 'cnil', name: 'CNIL', theme: 'juridique', home: 'https://www.cnil.fr/', url: 'https://www.cnil.fr/fr/rss.xml' },
+  { id: 'jus-politicum', name: 'Jus Politicum', theme: 'juridique', home: 'https://blog.juspoliticum.com/', url: 'https://blog.juspoliticum.com/feed/' },
+  { id: 'revue-dlf', name: 'Revue des droits et libertés fondamentaux', theme: 'juridique', home: 'https://revuedlf.com/', url: 'https://revuedlf.com/feed/' }
 ];
