@@ -14,6 +14,8 @@ const MENU_GIST_KEY = 'mydesk-menu-gist';
 const MENU_FICHIER_REPERE = 'menu-base.gz.b64';
 const MENU_DB = 'mydesk-menu';
 const MENU_VERIF_MS = 10 * 60 * 1000;
+const MENU_VUE_KEY = 'mydesk-menu-vue';
+const MENU_VUES = ['menus', 'courses', 'planning', 'stock', 'catalogue'];
 
 const MENU_TRANSLATIONS = {
   fr: {
@@ -25,7 +27,8 @@ const MENU_TRANSLATIONS = {
     error: 'Impossible de charger les menus : {message}',
     updated: 'Menus mis à jour ({date}).',
     publishedOn: 'Données du PC publiées le {date}',
-    refresh: '↻ Vérifier les mises à jour'
+    refresh: 'Vérifier les mises à jour',
+    vues: { menus: 'Recettes', courses: 'Courses', planning: 'À cuisiner', stock: 'Stock', catalogue: 'Catalogue' }
   },
   en: {
     loading: 'Loading menus…',
@@ -36,7 +39,8 @@ const MENU_TRANSLATIONS = {
     error: 'Unable to load menus: {message}',
     updated: 'Menus updated ({date}).',
     publishedOn: 'PC data published on {date}',
-    refresh: '↻ Check for updates'
+    refresh: 'Check for updates',
+    vues: { menus: 'Recipes', courses: 'Shopping', planning: 'To cook', stock: 'Pantry', catalogue: 'Catalogue' }
   },
   vi: {
     loading: 'Đang tải thực đơn…',
@@ -47,7 +51,8 @@ const MENU_TRANSLATIONS = {
     error: 'Không thể tải thực đơn: {message}',
     updated: 'Đã cập nhật thực đơn ({date}).',
     publishedOn: 'Dữ liệu máy tính xuất bản ngày {date}',
-    refresh: '↻ Kiểm tra cập nhật'
+    refresh: 'Kiểm tra cập nhật',
+    vues: { menus: 'Công thức', courses: 'Đi chợ', planning: 'Cần nấu', stock: 'Kho', catalogue: 'Danh mục' }
   }
 };
 const MENU_TAB_TRANSLATIONS = { fr: 'Menu', en: 'Meals', vi: 'Thực đơn' };
@@ -241,15 +246,19 @@ const MENU_SHIM = `
       status: reponse.status, headers: { 'Content-Type': 'application/json' }
     }));
   };
-  // Le scraping reste sur le PC : on masque son onglet et on ouvre "Tous les menus".
-  var style = document.createElement('style');
-  // + petits écrans : sans min-width:0, le rail d'onglets (défilant) et le
-  // contenu gardaient leur largeur minimale et élargissaient toute la page.
-  style.textContent = '#onglet-recette{display:none!important}'
-    + '@media (max-width:1000px){.app{grid-template-columns:minmax(0,1fr)}.app>*{min-width:0}.scene{padding:20px 14px 60px}}';
-  document.head.appendChild(style);
+  // La navigation passe dans la barre de MyDesk (le rail de l'outil est
+  // masqué par le thème) : chaque changement d'écran lui est signalé, et on
+  // rouvre le dernier écran consulté. Le scraping reste sur le PC.
   document.addEventListener('DOMContentLoaded', function () {
-    if (typeof window.afficherOnglet === 'function') window.afficherOnglet('menus');
+    var parent = window.parent;
+    if (parent.menuAppliquerTheme) parent.menuAppliquerTheme();
+    if (typeof window.afficherOnglet !== 'function') return;
+    var afficher = window.afficherOnglet;
+    window.afficherOnglet = function (nom) {
+      afficher(nom);
+      if (parent.menuVueAffichee) parent.menuVueAffichee(nom);
+    };
+    window.afficherOnglet(parent.menuVueInitiale ? parent.menuVueInitiale() : 'menus');
   });
 })();
 <\/script>`;
@@ -257,17 +266,138 @@ const MENU_SHIM = `
 function menuAfficherIframe() {
   const conteneur = document.getElementById('menutool-frame');
   if (!conteneur || !menuDonnees || !menuDonnees.ui) return;
-  const html = menuDonnees.ui.includes('<head>')
-    ? menuDonnees.ui.replace('<head>', `<head>${MENU_SHIM}`)
-    : MENU_SHIM + menuDonnees.ui;
+  // Polices de l'outil -> police de MyDesk (variable posée par le thème).
+  const ui = menuDonnees.ui
+    .split('"Newsreader", Georgia, serif').join('var(--md-font)')
+    .split('"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif').join('var(--md-font)');
+  const html = ui.includes('<head>') ? ui.replace('<head>', `<head>${MENU_SHIM}`) : MENU_SHIM + ui;
   let iframe = conteneur.querySelector('iframe');
   if (!iframe) {
     iframe = document.createElement('iframe');
     iframe.title = 'Menu';
     conteneur.appendChild(iframe);
   }
+  conteneur.classList.add('is-loading');
+  iframe.onload = () => {
+    conteneur.classList.remove('is-loading');
+    menuAppliquerTheme();
+  };
   iframe.srcdoc = html;
   menuEtatAffiche = JSON.stringify(appData.menu || null);
+}
+
+/* ── Intégration : thème, navigation, hauteur ──────────────── */
+
+// L'outil décrit ses couleurs par rôle (--papier, --surface, --ink,
+// --accent...) : on lui donne celles de MyDesk, recalculées à chaque
+// changement d'apparence (mode sombre, thème, police, arrondis).
+function menuCouleursMyDesk() {
+  const racine = getComputedStyle(document.documentElement);
+  const lire = (nom, defaut) => (racine.getPropertyValue(nom) || '').trim() || defaut;
+  return {
+    sombre: document.documentElement.getAttribute('data-theme') === 'dark',
+    fond: lire('--background', '#f4f6fb'),
+    surface: lire('--surface', '#ffffff'),
+    texte: lire('--text', '#1f2937'),
+    discret: lire('--muted', '#6b7280'),
+    trait: lire('--border', '#d1d5db'),
+    accent: lire('--primary', '#4e73df'),
+    rayon: parseFloat(lire('--radius-base', '8')) || 8,
+    police: getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif'
+  };
+}
+
+function menuCssTheme() {
+  const c = menuCouleursMyDesk();
+  const mix = (a, pourcent, b) => `color-mix(in srgb, ${a} ${pourcent}%, ${b})`;
+  const semantique = c.sombre
+    ? '--ok:#4ade80;--ok-doux:#14261c;--ok-bord:#1f4a31;--sur-ok:#0b1a12;'
+      + '--warn:#fbbf24;--warn-doux:#2b2313;--warn-bord:#4d3b14;'
+      + '--err:#f87171;--err-doux:#2e1a1d;--err-bord:#5b2a2d;'
+      + '--ombre-1:0 1px 2px rgba(0,0,0,.3);--ombre-2:0 4px 14px rgba(0,0,0,.35);--ombre-3:0 12px 36px rgba(0,0,0,.5);'
+    : '--ok:#047857;--ok-doux:#ecfdf5;--ok-bord:#a7f3d0;--sur-ok:#ffffff;'
+      + '--warn:#b45309;--warn-doux:#fffbeb;--warn-bord:#fde68a;'
+      + '--err:#dc2626;--err-doux:#fef2f2;--err-bord:#fecaca;'
+      + '--ombre-1:0 1px 2px rgba(15,23,42,.05);--ombre-2:0 4px 14px rgba(15,23,42,.08);--ombre-3:0 12px 32px rgba(15,23,42,.14);';
+  return ':root:root,:root:root[data-theme="clair"]{'
+    + `--papier:${c.surface};--surface:${mix(c.fond, 45, c.surface)};`
+    + `--surface-2:${mix(c.fond, 80, c.surface)};--surface-3:${mix(c.texte, 8, c.fond)};`
+    + `--ink:${c.texte};--ink-2:${mix(c.texte, 75, c.surface)};--ink-3:${c.discret};`
+    + `--line:${c.trait};--line-fort:${mix(c.texte, 20, c.trait)};`
+    + `--accent:${c.accent};--accent-fonce:${mix(c.accent, 78, c.texte)};`
+    + `--accent-doux:${mix(c.accent, 14, c.surface)};--sur-accent:#fff;`
+    + `--rayon:${c.rayon + 2}px;--rayon-s:${Math.max(4, c.rayon - 2)}px;`
+    + `--md-font:${c.police};${semantique}color-scheme:${c.sombre ? 'dark' : 'light'};}`
+    + 'body{background:var(--papier);color:var(--ink);font-family:var(--md-font)}'
+    + '.rail,#onglet-recette{display:none!important}'
+    + '.app{display:block;min-height:0}.app>*{min-width:0}'
+    + '.scene{max-width:none;padding:18px 22px 48px}'
+    // Le titre de l'écran est déjà dans la barre de MyDesk.
+    + '.scene h1{display:none}'
+    + '@media (max-width:700px){.scene{padding:12px 10px 40px}}';
+}
+
+function menuAppliquerTheme() {
+  const iframe = document.querySelector('#menutool-frame iframe');
+  const doc = iframe && iframe.contentDocument;
+  if (!doc || !doc.head) return;
+  let style = doc.getElementById('mydesk-theme');
+  if (!style) {
+    style = doc.createElement('style');
+    style.id = 'mydesk-theme';
+  }
+  // Toujours en dernier dans <head>, pour passer après les styles de l'outil.
+  doc.head.appendChild(style);
+  style.textContent = menuCssTheme();
+  if (document.documentElement.getAttribute('data-theme') === 'dark') doc.documentElement.removeAttribute('data-theme');
+  else doc.documentElement.setAttribute('data-theme', 'clair');
+}
+
+function menuVueInitiale() {
+  try {
+    const vue = localStorage.getItem(MENU_VUE_KEY);
+    if (MENU_VUES.includes(vue)) return vue;
+  } catch (error) {
+    // ignoré
+  }
+  return 'menus';
+}
+
+// Appelé par l'iframe à chaque changement d'écran.
+function menuVueAffichee(nom) {
+  document.querySelectorAll('#menutool-vues .menutool-vue').forEach((bouton) => {
+    const actif = bouton.dataset.vue === nom;
+    bouton.classList.toggle('is-active', actif);
+    if (actif) bouton.setAttribute('aria-current', 'page');
+    else bouton.removeAttribute('aria-current');
+  });
+  if (!MENU_VUES.includes(nom)) return;
+  try {
+    localStorage.setItem(MENU_VUE_KEY, nom);
+  } catch (error) {
+    // ignoré
+  }
+}
+
+function menuOuvrirVue(nom) {
+  const iframe = document.querySelector('#menutool-frame iframe');
+  const fenetre = iframe && iframe.contentWindow;
+  if (fenetre && typeof fenetre.afficherOnglet === 'function') {
+    fenetre.afficherOnglet(nom);
+    fenetre.scrollTo(0, 0);
+  } else {
+    menuVueAffichee(nom);
+  }
+}
+
+// L'iframe occupe toute la hauteur visible sous la barre : une seule zone
+// qui défile, comme une page de l'outil, sans double barre de défilement.
+function menuAjusterHauteur() {
+  const conteneur = document.getElementById('menutool-frame');
+  if (!conteneur || !conteneur.offsetParent) return;
+  const haut = conteneur.getBoundingClientRect().top + window.scrollY;
+  const marge = window.innerWidth <= 600 ? 8 : 24;
+  conteneur.style.height = `${Math.max(420, window.innerHeight - haut - marge)}px`;
 }
 
 // Appelé par l'iframe après chaque action : l'iframe connaît déjà cet état.
@@ -324,6 +454,7 @@ async function menuCharger(forcer = false) {
 // À l'ouverture de l'onglet : vérifie les mises à jour et, si l'état a changé
 // ailleurs (autre appareil), recharge l'iframe pour l'afficher.
 function menuOnglet() {
+  requestAnimationFrame(menuAjusterHauteur);
   menuCharger();
   if (menuDonnees && menuEtatAffiche !== null && menuEtatAffiche !== JSON.stringify(appData.menu || null)) {
     menuAfficherIframe();
@@ -335,5 +466,16 @@ function initMenuTool() {
   if (bouton) bouton.addEventListener('click', () => menuCharger(true));
   const lien = document.querySelector('.tab-link[data-target="menutool"]');
   if (lien) lien.addEventListener('click', menuOnglet);
+  document.querySelectorAll('#menutool-vues .menutool-vue').forEach((vue) => {
+    vue.addEventListener('click', () => menuOuvrirVue(vue.dataset.vue));
+  });
+  menuVueAffichee(menuVueInitiale());
+  window.addEventListener('resize', menuAjusterHauteur);
+  // Mode sombre, thème, police : l'outil suit l'apparence de MyDesk.
+  let attente = null;
+  new MutationObserver(() => {
+    cancelAnimationFrame(attente);
+    attente = requestAnimationFrame(menuAppliquerTheme);
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] });
   if (document.querySelector('#menutool.tab-panel.active')) menuOnglet();
 }

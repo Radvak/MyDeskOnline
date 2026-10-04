@@ -24,6 +24,7 @@ const PATCH_NOTES = [
       { area: 'calendar', text: 'Cliquer-glisser vers le bas sur un jour crée un évènement sur la plage choisie et ouvre directement ses détails.' },
       { area: 'todo', text: 'To Do List repensée : listes en cartes colorées avec progression, ajout rapide au clavier (Entrée pour enchaîner, « demain », « vendredi », « 12/10 » pour l’échéance, « ! » pour important), échéances colorées (en retard, aujourd’hui), étoile « importante », tâches faites rangées dans « Terminées ».' },
       { area: 'todo', text: 'To Do List : vues Toutes / Aujourd’hui / Importantes, recherche, résumé de ce qui reste à faire, glisser une tâche pour la déplacer (même vers une autre liste), suppression annulable.' },
+      { area: 'menu', text: 'Onglet Menu intégré au site : couleurs, police et mode sombre de MyDesk, navigation Recettes / Courses / À cuisiner / Stock / Catalogue dans la barre du haut (le dernier écran ouvert est retenu), une seule zone qui défile sur toute la hauteur.' },
       { area: 'app', text: 'Ordre des onglets au choix : glisser un onglet dans la barre (appui long sur téléphone) ou flèches ▲▼ dans Paramètres. L’ordre est synchronisé avec le profil.' },
       { area: 'app', text: 'Nouvel onglet Patch-Notes : toutes les mises à jour depuis le début du fork.' }
     ]

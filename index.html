@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=43">
+  <link rel="stylesheet" href="styles.css?v=44">
 </head>
 <body>
   <header class="app-header">
@@ -432,9 +432,18 @@
 
     <section id="menutool" class="tab-panel">
       <div class="menutool-bar">
-        <span class="menutool-info" id="menutool-info"></span>
-        <span class="menutool-status" id="menutool-status" aria-live="polite"></span>
-        <button type="button" id="menutool-refresh" class="btn-secondary" data-i18n="menutool.refresh">↻ Vérifier les mises à jour</button>
+        <nav class="menutool-vues" id="menutool-vues" aria-label="Menu">
+          <button type="button" class="menutool-vue" data-vue="menus" data-i18n="menutool.vues.menus">Recettes</button>
+          <button type="button" class="menutool-vue" data-vue="courses" data-i18n="menutool.vues.courses">Courses</button>
+          <button type="button" class="menutool-vue" data-vue="planning" data-i18n="menutool.vues.planning">À cuisiner</button>
+          <button type="button" class="menutool-vue" data-vue="stock" data-i18n="menutool.vues.stock">Stock</button>
+          <button type="button" class="menutool-vue" data-vue="catalogue" data-i18n="menutool.vues.catalogue">Catalogue</button>
+        </nav>
+        <div class="menutool-meta">
+          <span class="menutool-info" id="menutool-info"></span>
+          <span class="menutool-status" id="menutool-status" aria-live="polite"></span>
+          <button type="button" id="menutool-refresh" class="menutool-refresh" data-i18n-title="menutool.refresh" title="Vérifier les mises à jour" aria-label="Vérifier les mises à jour">↻</button>
+        </div>
       </div>
       <div class="menutool-frame" id="menutool-frame"></div>
     </section>
@@ -653,26 +662,26 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=43" defer></script>
-  <script src="calendar-feed.js?v=43" defer></script>
-  <script src="restore.js?v=43" defer></script>
-  <script src="calendar-conflicts.js?v=43" defer></script>
-  <script src="calendar-goals.js?v=43" defer></script>
-  <script src="ical.js?v=43" defer></script>
-  <script src="print.js?v=43" defer></script>
-  <script src="undo.js?v=43" defer></script>
-  <script src="sport-library.js?v=43" defer></script>
-  <script src="sport.js?v=43" defer></script>
-  <script src="menu-engine.js?v=43" defer></script>
-  <script src="menu.js?v=43" defer></script>
-  <script src="install.js?v=43" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=43" defer></script>
-  <script src="anki.js?v=43" defer></script>
-  <script src="news.js?v=43" defer></script>
-  <script src="tab-order.js?v=43" defer></script>
-  <script src="patch-notes.js?v=43" defer></script>
-  <script src="todo.js?v=43" defer></script>
-  <script src="script.js?v=43" defer></script>
+  <script src="sync.js?v=44" defer></script>
+  <script src="calendar-feed.js?v=44" defer></script>
+  <script src="restore.js?v=44" defer></script>
+  <script src="calendar-conflicts.js?v=44" defer></script>
+  <script src="calendar-goals.js?v=44" defer></script>
+  <script src="ical.js?v=44" defer></script>
+  <script src="print.js?v=44" defer></script>
+  <script src="undo.js?v=44" defer></script>
+  <script src="sport-library.js?v=44" defer></script>
+  <script src="sport.js?v=44" defer></script>
+  <script src="menu-engine.js?v=44" defer></script>
+  <script src="menu.js?v=44" defer></script>
+  <script src="install.js?v=44" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=44" defer></script>
+  <script src="anki.js?v=44" defer></script>
+  <script src="news.js?v=44" defer></script>
+  <script src="tab-order.js?v=44" defer></script>
+  <script src="patch-notes.js?v=44" defer></script>
+  <script src="todo.js?v=44" defer></script>
+  <script src="script.js?v=44" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
