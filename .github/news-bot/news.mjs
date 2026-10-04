@@ -38,8 +38,11 @@ const BRIEFING_MIN_WINDOW_H = 8;
 const BRIEFING_MAX_ITEMS = 90;
 const BRIEFING_MAX_PROMPT_CHARS = 40000;
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
-// Ordre de préférence ; les alias « latest » suivent les nouvelles versions.
-const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
+// Repli si la liste des modèles est illisible. Sinon on prend les modèles
+// « flash » proposés par Google, du plus récent au plus ancien.
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+const GEMINI_MAX_MODELS = 5;
+const GEMINI_BUSY_WAITS_MS = [8000, 20000]; // modèle saturé (503) : on réessaie après ces pauses
 // L'actu juridique est plus lente : un seul briefing par jour, sur 24 h.
 const DAILY_THEMES = ['juridique'];
 
@@ -245,6 +248,22 @@ const geminiFetch = (url, key, options = {}) =>
 // Modèles disponibles : on lit la liste (les noms changent) et on garde
 // ceux de la liste de préférence, sinon un modèle « flash » proposé.
 let modelList = null;
+const deadModels = new Set(); // modèles retirés (404) : plus essayés pendant ce passage
+
+const modelVersion = (id) => {
+  const match = id.match(/^gemini-(\d+(?:\.\d+)?)-flash/);
+  return match ? Number(match[1]) : 0;
+};
+
+// Ordre : flash numérotés du plus récent, alias « latest », puis versions « lite ».
+const rankModels = (ids) => {
+  const flash = ids.filter((id) => /^gemini-[\d.]+-flash$/.test(id)).sort((a, b) => modelVersion(b) - modelVersion(a));
+  const lite = ids.filter((id) => /^gemini-[\d.]+-flash-lite$/.test(id)).sort((a, b) => modelVersion(b) - modelVersion(a));
+  const aliases = GEMINI_MODELS.filter((id) => ids.includes(id));
+  const ordered = [...flash.slice(0, 2), aliases[0], ...lite.slice(0, 1), ...aliases.slice(1), ...flash.slice(2)];
+  return ordered.filter((id, index) => id && ordered.indexOf(id) === index);
+};
+
 const availableModels = async (key) => {
   if (modelList) return modelList;
   try {
@@ -254,18 +273,17 @@ const availableModels = async (key) => {
     const models = (JSON.parse(body).models || []).filter((model) =>
       (model.supportedGenerationMethods || []).includes('generateContent')
     );
-    const ids = models.map((model) => String(model.name).replace(/^models\//, ''));
-    const preferred = GEMINI_MODELS.filter((id) => ids.includes(id));
-    const others = ids.filter((id) => /^gemini-[\d.]+-flash(-lite)?$/.test(id) && !preferred.includes(id));
-    modelList = [...preferred, ...others].slice(0, 3);
+    modelList = rankModels(models.map((model) => String(model.name).replace(/^models\//, '')));
     console.log(`Modèles retenus : ${modelList.join(', ')}`);
   } catch (error) {
     reportError(`Liste des modèles illisible (${error.message}), liste par défaut.`);
     modelList = [];
   }
-  if (!modelList.length) modelList = GEMINI_MODELS.slice(0, 2);
+  if (!modelList.length) modelList = GEMINI_MODELS.slice();
   return modelList;
 };
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const requestModel = async (key, model, prompt) => {
   const response = await geminiFetch(`${GEMINI_API}/models/${model}:generateContent`, key, {
@@ -280,6 +298,9 @@ const requestModel = async (key, model, prompt) => {
   if (!response.ok) {
     const error = new Error(`${model} : HTTP ${response.status} ${text.slice(0, 300)}`);
     error.status = response.status;
+    // Google indique parfois le modèle qui remplace celui-ci.
+    const suggested = text.match(/use models\/(gemini-[\w.-]+)/);
+    if (suggested) error.suggested = suggested[1];
     throw error;
   }
   const candidate = (JSON.parse(text).candidates || [])[0];
@@ -294,17 +315,35 @@ const requestModel = async (key, model, prompt) => {
 const callModel = async (prompt) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('clé GEMINI_API_KEY absente des secrets du dépôt');
+  const queue = (await availableModels(key)).filter((model) => !deadModels.has(model));
   let lastError = null;
-  for (const model of await availableModels(key)) {
-    try {
-      return { model, data: await requestModel(key, model, prompt) };
-    } catch (error) {
-      lastError = error;
-      reportError(error.message);
-      // Clé refusée : inutile d'essayer d'autres modèles.
-      if (error.status === 401 || error.status === 403) break;
-      if (error.status === 400 && /API_KEY|api key/i.test(error.message)) break;
+  let tried = 0;
+  while (queue.length && tried < GEMINI_MAX_MODELS) {
+    const model = queue.shift();
+    tried += 1;
+    for (let attempt = 0; attempt <= GEMINI_BUSY_WAITS_MS.length; attempt += 1) {
+      try {
+        return { model, data: await requestModel(key, model, prompt) };
+      } catch (error) {
+        lastError = error;
+        reportError(error.message);
+        // Saturé : on patiente puis on réessaie le même modèle.
+        if ((error.status === 503 || error.status === 500) && attempt < GEMINI_BUSY_WAITS_MS.length) {
+          await wait(GEMINI_BUSY_WAITS_MS[attempt]);
+          continue;
+        }
+        if (error.status === 404) {
+          deadModels.add(model);
+          if (error.suggested && !deadModels.has(error.suggested) && !queue.includes(error.suggested)) {
+            queue.unshift(error.suggested);
+          }
+        }
+        break;
+      }
     }
+    // Clé refusée : inutile d'essayer d'autres modèles.
+    if (lastError && (lastError.status === 401 || lastError.status === 403)) break;
+    if (lastError && lastError.status === 400 && /API_KEY|api key/i.test(lastError.message)) break;
   }
   throw lastError || new Error('aucun modèle');
 };
