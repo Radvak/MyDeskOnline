@@ -27,6 +27,7 @@ const NEWS_TRANSLATIONS = {
     loading: 'Chargement de l’actualité…',
     offline: 'Impossible de charger l’actualité. Affichage de la dernière version enregistrée.',
     error: 'Impossible de charger l’actualité. Vérifie ta connexion puis réessaie.',
+    pending: 'Pas encore d’actualité : le robot n’a pas encore fait son premier passage (il tourne toutes les heures).',
     previousDay: 'Jour précédent',
     nextDay: 'Jour suivant',
     today: 'Aujourd’hui',
@@ -56,6 +57,7 @@ const NEWS_TRANSLATIONS = {
     loading: 'Loading the news…',
     offline: 'Could not load the news. Showing the last saved version.',
     error: 'Could not load the news. Check your connection and try again.',
+    pending: 'No news yet: the robot has not run for the first time (it runs every hour).',
     previousDay: 'Previous day',
     nextDay: 'Next day',
     today: 'Today',
@@ -85,6 +87,7 @@ const NEWS_TRANSLATIONS = {
     loading: 'Đang tải tin tức…',
     offline: 'Không tải được tin tức. Đang hiển thị bản đã lưu gần nhất.',
     error: 'Không tải được tin tức. Kiểm tra kết nối rồi thử lại.',
+    pending: 'Chưa có tin tức: robot chưa chạy lần đầu (robot chạy mỗi giờ).',
     previousDay: 'Ngày trước',
     nextDay: 'Ngày sau',
     today: 'Hôm nay',
@@ -122,7 +125,7 @@ const newsState = {
   date: null, // jour affiché
   slot: null, // briefing affiché (matin / soir)
   theme: 'all',
-  status: 'idle', // idle | loading | ok | offline | error
+  status: 'idle', // idle | loading | ok | offline | error | pending
   loadedAt: 0,
   headlinesShown: NEWS_HEADLINES_STEP,
   seenBefore: 0, // dernière visite : les articles plus récents sont « nouveaux »
@@ -174,7 +177,11 @@ async function newsFetchJson(file) {
   // Le CDN de GitHub garde les fichiers ~5 min : le paramètre évite d'attendre davantage.
   const stamp = Math.floor(Date.now() / 60000);
   const response = await fetch(`${NEWS_DATA_URL}${file}?t=${stamp}`, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(`HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   return response.json();
 }
 
@@ -207,7 +214,9 @@ async function newsRefresh() {
     newsSaveCache();
   } catch (error) {
     console.warn('Actualité indisponible', error);
-    newsState.status = newsState.index ? 'offline' : 'error';
+    // 404 sur index.json : la branche « news » n'existe pas encore.
+    if (newsState.index) newsState.status = 'offline';
+    else newsState.status = error.status === 404 ? 'pending' : 'error';
   }
   renderNews();
 }
@@ -480,6 +489,7 @@ function renderNews() {
   if (newsState.status === 'loading' && !newsState.index) message.textContent = t('news.loading');
   if (newsState.status === 'offline') message.textContent = t('news.offline');
   if (newsState.status === 'error') message.textContent = t('news.error');
+  if (newsState.status === 'pending') message.textContent = t('news.pending');
   message.classList.toggle('is-error', newsState.status === 'error' || newsState.status === 'offline');
   container.append(message);
 
