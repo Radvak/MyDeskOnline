@@ -122,7 +122,8 @@ const MenuEngine = (() => {
     const anciens = base.ancien_poids_piece_g || {};
     Object.entries(stock).forEach(([c, entree]) => {
       if (!aLaPiece(c) || !entree || entree.unite === 'piece') return;
-      entree.quantite_g = Math.round(((entree.quantite_g || 0) / (anciens[c] || 1)) * 2) / 2;
+      const g = entree.quantite_g || 0;
+      entree.quantite_g = g > 0 ? Math.max(0.5, Math.round((g / (anciens[c] || 1)) * 2) / 2) : 0;
       entree.unite = 'piece';
     });
   }
@@ -607,6 +608,85 @@ const MenuEngine = (() => {
     return null;
   }
 
+  /* ── "À choisir" (app.py : mode_demande, achat_automatique...) ── */
+
+  // La liste ne choisit seule la quantité que si recette et magasin comptent
+  // pareil (pièces / pièces, poids / poids). Sinon : ligne "à choisir", avec
+  // les mots de la recette et tous les produits en lice.
+  const MOTS_MESURE_CUISINE = ['cuill', 'c.', 'cas', 'cac', 'cs', 'cc', 'pincee', 'verre', 'tasse', 'tbsp', 'tsp', 'goutte', 'noix', 'brin', 'branche', 'filet', 'noisette', 'zeste'];
+  const UNITES_POIDS_CONSIGNE = /^\s*[\d.,/]+\s*(?:g|gr|grs|grammes?|kg|kilos?|ml|cl|dl|l|litres?|oz)\b/i;
+
+  function modeDemande(consigne, libelle) {
+    const texteConsigne = String(consigne || '').trim();
+    if (!texteConsigne) return 'libre';
+    if (UNITES_POIDS_CONSIGNE.test(texteConsigne)) return 'poids';
+    const mots = normaliserTexte(`${texteConsigne} ${libelle || ''}`).replace(/[\d.,/]+/g, ' ').split(/\s+/).filter(Boolean);
+    if (mots.length && MOTS_MESURE_CUISINE.some((m) => mots[0].startsWith(m))) return 'mesure';
+    return 'piece';
+  }
+
+  function modesDemandeRecette(r) {
+    const approximatifs = new Set(r.approximatifs || []);
+    const consignes = r.instructions || {};
+    const libelles = r.noms_origine || {};
+    const modes = {};
+    Object.entries(r.poids || {}).forEach(([c, valeur]) => {
+      if (!valeur || valeur <= 0) return;
+      if (!approximatifs.has(c)) {
+        modes[c] = new Set([aLaPiece(c) ? 'piece' : 'poids']);
+        return;
+      }
+      const noms = libelles[c] || [];
+      const textes = consignes[c] && consignes[c].length ? consignes[c] : [''];
+      modes[c] = new Set(textes.map((t, i) => modeDemande(t, i < noms.length ? noms[i] : '')));
+    });
+    return modes;
+  }
+
+  function achatAutomatique(c, modes, candidats) {
+    const liste = [...(modes || [])];
+    if (aLaPiece(c)) return liste.every((m) => m === 'piece');
+    return liste.every((m) => m === 'poids' || m === 'mesure') && candidats.some((p) => poidsProduitG(p));
+  }
+
+  function optionsAChoisir(candidats, c) {
+    const options = [];
+    candidats.forEach((p) => {
+      const prix = Number(p.prix);
+      if (p.prix === null || p.prix === undefined || !Number.isFinite(prix)) return;
+      const poids = poidsProduitG(p);
+      const pieces = piecesParProduit(p);
+      const [avantage, pct] = reductionCarteU(p);
+      let unite = 'piece';
+      let prixRef = prix;
+      if (poids) {
+        unite = 'g';
+        prixRef = arrondi((prix / poids) * 1000, 3);
+      } else if (pieces) {
+        prixRef = arrondi(prix / pieces, 3);
+      }
+      const contenance = contenanceProduit(p, c);
+      options.push({
+        id: p.id,
+        produit: p.nom,
+        rayon: p.rayon,
+        nb_unites: 1,
+        poids_unite_g: contenance ? arrondi(contenance, 1) : null,
+        unite,
+        prix_unite: prix,
+        prix_kg: prixRef,
+        cout_total: arrondi(remise(prix, pct), 2),
+        cout_total_sans_carte_u: arrondi(prix, 2),
+        approximatif: false,
+        en_promo: Boolean(p.en_promo),
+        avantage_carte_u: avantage,
+        reduction_carte_u_pct: pct
+      });
+    });
+    options.sort((a, b) => (a.unite !== 'g') - (b.unite !== 'g') || a.prix_kg - b.prix_kg);
+    return options;
+  }
+
   /* ── Génération de la liste de courses ───────────────────── */
 
   function genererListeDeCourses(recettesListe, extras = {}) {
@@ -633,7 +713,12 @@ const MenuEngine = (() => {
     const besoinsParRecette = [];
     const demandesParIngredient = {};
     const approximatifParIngredient = {};
+    const modesParIngredient = {};
     trouvees.forEach(([r, ratio]) => {
+      Object.entries(modesDemandeRecette(r)).forEach(([c, modes]) => {
+        modesParIngredient[c] = modesParIngredient[c] || new Set();
+        modes.forEach((m) => modesParIngredient[c].add(m));
+      });
       const besoinsRecette = {};
       Object.entries(demandesOriginales(r, ratio)).forEach(([c, demandes]) => {
         (demandesParIngredient[c] = demandesParIngredient[c] || []).push(...demandes);
@@ -714,6 +799,38 @@ const MenuEngine = (() => {
       }
 
       const idManuel = choixManuels[c];
+      const candidats = candidatsDe(infos);
+      if (!achatAutomatique(c, modesParIngredient[c], candidats)) {
+        const options = optionsAChoisir(candidats, c);
+        let retenu = options.find((o) => o.id === idManuel) || null;
+        if (!retenu && idManuel && produitsParId.has(idManuel)) retenu = optionsAChoisir([produitsParId.get(idManuel)], c)[0] || null;
+        if (!options.length && !retenu) {
+          nonResolus.push({ ingredient: c, unite: uniteIngredient(c), grammes: arrondi(grammes, 1), ...demande(c), raison: 'aucun produit coursesu.com correspondant' });
+          return;
+        }
+        const item = {
+          ingredient: c,
+          unite: uniteIngredient(c),
+          grammes_necessaires: arrondi(grammes, 1),
+          ...demande(c),
+          a_choisir: true,
+          grammage_estime: true,
+          produit: retenu ? retenu.produit : null,
+          produit_id: retenu ? retenu.id : null,
+          nb_unites: retenu ? 1 : null,
+          poids_unite_g: retenu ? retenu.poids_unite_g : null,
+          cout_total: retenu ? retenu.cout_total_sans_carte_u : 0.0,
+          gain_carte_u: retenu ? arrondi(retenu.cout_total_sans_carte_u - retenu.cout_total, 2) : 0.0,
+          approximatif: false,
+          recettes: recettesParIngredient[c] || [],
+          alternatives: options
+        };
+        if (detailStock[c]) item.pris_au_stock_g = detailStock[c].pris_au_stock_g;
+        if (retenu) coutTotal += item.cout_total;
+        const rayon = (retenu && retenu.rayon) || 'À choisir';
+        (rayons[rayon] = rayons[rayon] || []).push(item);
+        return;
+      }
       let choix = null;
       if (idManuel && produitsParId.has(idManuel)) {
         const produitManuel = produitsParId.get(idManuel);
