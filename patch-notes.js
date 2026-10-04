@@ -26,6 +26,7 @@ const PATCH_NOTES = [
       { area: 'todo', text: 'To Do List : vues Toutes / Aujourd’hui / Importantes, recherche, résumé de ce qui reste à faire, glisser une tâche pour la déplacer (même vers une autre liste), suppression annulable.' },
       { area: 'menu', text: 'Onglet Menu intégré au site : couleurs, police et mode sombre de MyDesk, navigation Recettes / Courses / À cuisiner / Stock / Catalogue dans la barre du haut (le dernier écran ouvert est retenu), une seule zone qui défile sur toute la hauteur.' },
       { area: 'menu', text: 'Menu en nombre de repas : un repas = ce que mange un homme de 20 ans, 75 kg, 1,85 m (≈ 950 kcal). « Finir la sélection » demande combien de repas faire de chaque recette, la liste achète juste ce qu’il faut, et « À cuisiner », le stock et le journal comptent en repas. (Les écrans changent après la prochaine publication depuis le PC.)' },
+      { area: 'menu', text: 'Menu : œufs, concombres, citrons, avocats… comptés à la pièce partout (recettes, stock « 8 œufs », liste de courses « 1 boîte de 10 », prix par pièce), sans poids moyen deviné. Le prix des recettes compte enfin ces ingrédients (l’œuf valait 0 € dans plus de 1 000 recettes).' },
       { area: 'app', text: 'Ordre des onglets au choix : glisser un onglet dans la barre (appui long sur téléphone) ou flèches ▲▼ dans Paramètres. L’ordre est synchronisé avec le profil.' },
       { area: 'app', text: 'Nouvel onglet Patch-Notes : toutes les mises à jour depuis le début du fork.' }
     ]

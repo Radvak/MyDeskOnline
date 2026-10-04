@@ -98,7 +98,33 @@ const MenuEngine = (() => {
     Object.keys(vide).forEach((cle) => {
       if (e[cle] === undefined || e[cle] === null) e[cle] = vide[cle];
     });
+    convertirStockEnPieces(e.stock);
     return e;
+  }
+
+  /* ── Ingrédients à la pièce (stock_manager.py, scrape_marmiton.py) ── */
+
+  // Œufs, concombres, citrons... : quantités en NOMBRE DE PIÈCES (recette,
+  // stock, liste), jamais en grammes. "quantite_g" garde son nom mais porte
+  // alors des pièces, avec "unite": "piece".
+  const aLaPiece = (c) => Boolean(base && base.ingredients_a_la_piece && base.ingredients_a_la_piece[c]);
+  const uniteIngredient = (c) => (aLaPiece(c) ? 'piece' : 'g');
+
+  function avecUnite(c, entree) {
+    if (aLaPiece(c)) entree.unite = 'piece';
+    return entree;
+  }
+
+  // Anciennes entrées en grammes (480 g d'œuf) -> pièces, une seule fois, avec
+  // le poids que l'ancien code avait lui-même utilisé (cf. publier_mydesk.py).
+  function convertirStockEnPieces(stock) {
+    if (!stock || !base || !base.ingredients_a_la_piece) return;
+    const anciens = base.ancien_poids_piece_g || {};
+    Object.entries(stock).forEach(([c, entree]) => {
+      if (!aLaPiece(c) || !entree || entree.unite === 'piece') return;
+      entree.quantite_g = Math.round(((entree.quantite_g || 0) / (anciens[c] || 1)) * 2) / 2;
+      entree.unite = 'piece';
+    });
   }
 
   function sauver() {
@@ -326,7 +352,7 @@ const MenuEngine = (() => {
     Object.entries(achatsG).forEach(([c, g]) => {
       if (!g || g <= 0) return;
       const entree = stock[c] || { quantite_g: 0 };
-      stock[c] = { quantite_g: arrondi((entree.quantite_g || 0) + g, 1), derniere_maj: aujourdhui };
+      stock[c] = avecUnite(c, { quantite_g: arrondi((entree.quantite_g || 0) + g, 1), derniere_maj: aujourdhui });
     });
   }
 
@@ -345,7 +371,7 @@ const MenuEngine = (() => {
       const dispo = (stock[c] && stock[c].quantite_g) || 0;
       const consomme = Math.min(besoin, dispo);
       const restant = dispo - consomme;
-      if (restant > 0) stock[c] = { quantite_g: arrondi(restant, 1), derniere_maj: isoDate(new Date()) };
+      if (restant > 0) stock[c] = avecUnite(c, { quantite_g: arrondi(restant, 1), derniere_maj: isoDate(new Date()) });
       else delete stock[c];
       rapport[c] = {
         consomme_g: arrondi(consomme, 1),
@@ -409,26 +435,39 @@ const MenuEngine = (() => {
   function poidsProduitG(p) {
     const manuels = (base && base.poids_manuels) || {};
     if (p.id in manuels) return Number(manuels[p.id]);
-    const valeur = p.quantite_valeur;
-    const unite = p.quantite_unite ? String(p.quantite_unite).trim().toLowerCase() : '';
-    const nom = String(p.nom || '').toLowerCase();
-    if (valeur !== null && valeur !== undefined && valeur !== '') {
-      const val = Number(valeur);
-      if (Number.isFinite(val)) {
-        if (['g', 'gr', 'grs', 'ml'].includes(unite)) return val;
-        if (['kg', 'l'].includes(unite)) return val * 1000;
-        if (unite === 'cl') return val * 10;
-        if (['x', ''].includes(unite) && (nom.includes('oeuf') || nom.includes('œuf'))) return val * 60.0;
-      }
-    }
+    const catalogue = poidsCatalogueG(p);
+    if (catalogue) return catalogue;
     const estime = p.poids_estime_g;
     if (estime !== null && estime !== undefined && estime !== '' && Number.isFinite(Number(estime))) return Number(estime);
-    if (nom.includes('oeuf') || nom.includes('œuf')) {
-      const m = /bo[iî]te de (\d+)/.exec(nom);
-      if (m) return Number(m[1]) * 60.0;
-    }
     return null;
   }
+
+  // marmiton.poids_catalogue_g : poids réel écrit par le catalogue, jamais estimé.
+  function poidsCatalogueG(p) {
+    const val = Number(p.quantite_valeur);
+    if (p.quantite_valeur === null || p.quantite_valeur === undefined || p.quantite_valeur === '' || !Number.isFinite(val) || val <= 0) return null;
+    const facteur = { g: 1, gr: 1, grs: 1, ml: 1, kg: 1000, l: 1000, cl: 10 }[String(p.quantite_unite || '').trim().toLowerCase()];
+    return facteur ? val * facteur : null;
+  }
+
+  // marmiton.pieces_par_produit : "Boîte de 10" -> 10, "La pièce" -> 1,
+  // vendu au poids -> null.
+  const MOTIFS_PIECES_PRODUIT = [
+    /\b(?:boite|plateau|lot|filet|sachet|barquette|bouquet|ruban|insert|pack|etui|coffret)\s+(?:de\s+)?(\d+)\b/,
+    /\b(\d+)\s*(?:fruits?|pieces?|oeufs|unites?)\b/,
+    /\bx\s?(\d+)\b/
+  ];
+  function piecesParProduit(p) {
+    const nom = normaliserTexte(p.nom || '');
+    for (const motif of MOTIFS_PIECES_PRODUIT) {
+      const m = motif.exec(nom);
+      if (m && Number(m[1]) > 0) return Number(m[1]);
+    }
+    return String(p.unite_prix || '').trim().toLowerCase() === 'pce' ? 1 : null;
+  }
+
+  // app.contenance_produit : pièces pour un ingrédient à la pièce, grammes sinon.
+  const contenanceProduit = (p, c) => (aLaPiece(c) ? piecesParProduit(p) : poidsProduitG(p));
 
   function extrairePourcentageReduction(texte) {
     if (!texte) return null;
@@ -445,28 +484,22 @@ const MenuEngine = (() => {
 
   function choisirProduit(candidats, grammes, canonique, produitIdForce) {
     if (!candidats.length) return null;
-    const infos = base.canoniques[canonique] || {};
-    const poidsDefaut = infos.poids_defaut_g;
     const ratioMax = base.ratio_gaspillage_max || 3.0;
     const sansPlafond = new Set(base.rayons_sans_plafond || []);
+    const piece = aLaPiece(canonique);
 
-    const construireOptions = (autoriserEstimationPiece) => {
+    // Plus d'estimation par poids moyen (04/10/2026, cf. app.choisir_produit) :
+    // quantités en pièces pour un ingrédient à la pièce, prix par pièce.
+    const construireOptions = () => {
       const options = [];
       candidats.forEach((p) => {
         const prixUnite = Number(p.prix);
         if (p.prix === null || p.prix === undefined || !Number.isFinite(prixUnite)) return;
-        let poidsUnite = poidsProduitG(p);
-        let approxime = false;
-        if (
-          autoriserEstimationPiece && (!poidsUnite || poidsUnite <= 0) &&
-          String(p.unite_prix || '').trim().toLowerCase() === 'pce' && poidsDefaut
-        ) {
-          poidsUnite = poidsDefaut;
-          approxime = true;
-        }
+        const poidsUnite = contenanceProduit(p, canonique);
+        const approxime = false;
         if (!poidsUnite || poidsUnite <= 0) return;
         const nbUnites = Math.ceil(grammes / poidsUnite);
-        const prixKg = arrondi((prixUnite / poidsUnite) * 1000, 3);
+        const prixKg = arrondi(piece ? prixUnite / poidsUnite : (prixUnite / poidsUnite) * 1000, 3);
         const [avantage, pct] = reductionCarteU(p);
         const prixUniteEffectif = remise(prixUnite, pct);
         options.push({
@@ -475,6 +508,7 @@ const MenuEngine = (() => {
           rayon: p.rayon,
           nb_unites: nbUnites,
           poids_unite_g: arrondi(poidsUnite, 1),
+          unite: uniteIngredient(canonique),
           prix_unite: prixUnite,
           prix_kg: arrondi(prixKg, 3),
           prix_kg_effectif: arrondi(remise(prixKg, pct), 3),
@@ -489,8 +523,7 @@ const MenuEngine = (() => {
       return options;
     };
 
-    let options = construireOptions(false);
-    if (!options.length) options = construireOptions(true);
+    const options = construireOptions();
 
     if (options.length) {
       options.sort((a, b) => a.prix_kg_effectif - b.prix_kg_effectif);
@@ -508,6 +541,9 @@ const MenuEngine = (() => {
     }
 
     // Repli : aucun poids exploitable -> prix/kg du catalogue, approximatif.
+    // Jamais pour un ingrédient à la pièce (un prix au kg ne dit pas combien
+    // de pièces acheter).
+    if (piece) return null;
     const optionsPrixKg = [];
     candidats.forEach((p) => {
       if (!['kg', 'l'].includes(String(p.unite_prix || '').trim().toLowerCase())) return;
@@ -537,11 +573,11 @@ const MenuEngine = (() => {
     return { ...(force || alternatives[0]), alternatives };
   }
 
-  function choixDepuisProduit(p, grammes) {
+  function choixDepuisProduit(p, grammes, canonique) {
     const prixUnite = Number(p.prix);
     if (p.prix === null || p.prix === undefined || !Number.isFinite(prixUnite)) return null;
     const [, pct] = reductionCarteU(p);
-    const poidsUnite = poidsProduitG(p);
+    const poidsUnite = contenanceProduit(p, canonique);
     if (poidsUnite && poidsUnite > 0) {
       const nbUnites = Math.ceil(grammes / poidsUnite);
       return {
@@ -549,12 +585,13 @@ const MenuEngine = (() => {
         produit: p.nom,
         nb_unites: nbUnites,
         poids_unite_g: arrondi(poidsUnite, 1),
+        unite: uniteIngredient(canonique),
         cout_total: arrondi(nbUnites * remise(prixUnite, pct), 2),
         cout_total_sans_carte_u: arrondi(nbUnites * prixUnite, 2),
         approximatif: false
       };
     }
-    if (['kg', 'l'].includes(String(p.unite_prix || '').trim().toLowerCase())) {
+    if (['kg', 'l'].includes(String(p.unite_prix || '').trim().toLowerCase()) && !aLaPiece(canonique)) {
       const prixKg = Number(p.prix_unitaire);
       if (!Number.isFinite(prixKg) || p.prix_unitaire === null) return null;
       return {
@@ -648,6 +685,7 @@ const MenuEngine = (() => {
         const info = detailStock[c] || {};
         couvertParStock.push({
           ingredient: c,
+          unite: uniteIngredient(c),
           grammes_necessaires: arrondi(besoinsBruts[c], 1),
           ...demande(c),
           restant_apres_g: info.restant_apres_g || 0,
@@ -679,7 +717,7 @@ const MenuEngine = (() => {
       let choix = null;
       if (idManuel && produitsParId.has(idManuel)) {
         const produitManuel = produitsParId.get(idManuel);
-        choix = choixDepuisProduit(produitManuel, grammes);
+        choix = choixDepuisProduit(produitManuel, grammes, c);
         if (choix) {
           choix.rayon = produitManuel.rayon;
           choix.alternatives = [{ ...choix }];
@@ -689,7 +727,7 @@ const MenuEngine = (() => {
         choix = choisirProduit(candidatsDe(infos), grammes, c, idManuel);
       }
       if (!choix) {
-        nonResolus.push({ ingredient: c, grammes: arrondi(grammes, 1), ...demande(c), raison: 'aucun produit coursesu.com correspondant' });
+        nonResolus.push({ ingredient: c, unite: uniteIngredient(c), grammes: arrondi(grammes, 1), ...demande(c), raison: 'aucun produit coursesu.com correspondant' });
         return;
       }
       const coutReel = choix.cout_total_sans_carte_u ?? choix.cout_total;
@@ -697,6 +735,7 @@ const MenuEngine = (() => {
       coutTotal += coutReel;
       const item = {
         ingredient: c,
+        unite: uniteIngredient(c),
         grammes_necessaires: arrondi(grammes, 1),
         ...demande(c),
         produit: choix.produit,
@@ -1168,7 +1207,7 @@ const MenuEngine = (() => {
       }
       const stock = etat().stock;
       if (quantite <= 0) delete stock[c];
-      else stock[c] = { quantite_g: arrondi(quantite, 1), derniere_maj: isoDate(new Date()) };
+      else stock[c] = avecUnite(c, { quantite_g: arrondi(quantite, 1), derniere_maj: isoDate(new Date()) });
       sauver();
       return ok(stock);
     },
@@ -1197,7 +1236,7 @@ const MenuEngine = (() => {
       if (!Number.isFinite(grammes)) return erreur('Grammage manquant.');
       const p = produitsParId && produitsParId.get(produitId);
       if (!p) return erreur('Produit introuvable dans le catalogue.', 404);
-      const resultat = choixDepuisProduit(p, grammes);
+      const resultat = choixDepuisProduit(p, grammes, ingredient);
       if (!resultat) return erreur('Prix ou poids introuvable pour ce produit (conditionnement non détecté).');
       const coutReel = resultat.cout_total_sans_carte_u ?? resultat.cout_total;
       resultat.gain_carte_u = arrondi(coutReel - resultat.cout_total, 2);
