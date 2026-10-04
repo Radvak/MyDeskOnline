@@ -1,5 +1,5 @@
 # Onglet Actualité : récupère les flux RSS toutes les heures et rédige
-# le briefing (matin et soir) avec GitHub Models. Les données sont
+# le briefing (matin et soir) avec Gemini (secret GEMINI_API_KEY). Les données sont
 # publiées seules dans la branche « news » (un unique commit remplacé
 # à chaque passage, pour ne pas alourdir le dépôt).
 name: Actualité
@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: write
-  models: read
 
 concurrency:
   group: news
@@ -27,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Récupérer les données existantes
         run: |
@@ -40,7 +39,7 @@ jobs:
       - name: Lire les flux et rédiger le briefing
         run: node .github/news-bot/news.mjs news-data
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FORCE_BRIEFING: ${{ inputs.briefing }}
 
       - name: Publier dans la branche news

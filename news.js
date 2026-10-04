@@ -40,6 +40,7 @@ const NEWS_TRANSLATIONS = {
     briefingNone: 'Pas encore de briefing pour ce jour. Il est rédigé vers 7 h et vers 19 h.',
     briefingEmptyTheme: 'Rien de marquant sur la période.',
     briefingErrorTheme: 'Résumé indisponible cette fois-ci.',
+    briefingAuto: 'IA indisponible : voici les sujets les plus repris par les médias.',
     briefingNote: 'Résumé rédigé par IA à partir des titres et chapôs des articles. En cas de doute, ouvre la source.',
     context: 'Pour comprendre',
     headlinesTitle: 'Tous les titres',
@@ -70,6 +71,7 @@ const NEWS_TRANSLATIONS = {
     briefingNone: 'No briefing for this day yet. It is written around 7 am and 7 pm (Paris time).',
     briefingEmptyTheme: 'Nothing major over this period.',
     briefingErrorTheme: 'Summary unavailable this time.',
+    briefingAuto: 'AI unavailable: here are the stories most covered by the media.',
     briefingNote: 'AI-written summary (in French) based on article headlines and leads. When in doubt, open the source.',
     context: 'Background',
     headlinesTitle: 'All headlines',
@@ -100,6 +102,7 @@ const NEWS_TRANSLATIONS = {
     briefingNone: 'Chưa có bản tóm tắt cho ngày này. Bản tóm tắt được viết khoảng 7 giờ và 19 giờ (giờ Paris).',
     briefingEmptyTheme: 'Không có gì nổi bật trong khoảng thời gian này.',
     briefingErrorTheme: 'Lần này không có bản tóm tắt.',
+    briefingAuto: 'AI không khả dụng: đây là các chủ đề được báo chí đưa tin nhiều nhất.',
     briefingNote: 'Bản tóm tắt do AI viết (bằng tiếng Pháp) từ tiêu đề và phần mở đầu bài báo. Nếu nghi ngờ, hãy mở nguồn.',
     context: 'Bối cảnh',
     headlinesTitle: 'Tất cả tiêu đề',
@@ -395,6 +398,7 @@ function renderNewsBriefing(container, day) {
     const block = newsEl('div', `news-theme news-theme--${theme}`);
     block.append(newsEl('h4', 'news-theme__title', newsThemeLabel(theme)));
     const data = current.themes[theme];
+    if (data.auto) block.append(newsEl('p', 'news-auto', t('news.briefingAuto')));
     const points = Array.isArray(data.points) ? data.points : [];
     if (!points.length) {
       block.append(newsEl('p', 'news-empty', data.error ? t('news.briefingErrorTheme') : t('news.briefingEmptyTheme')));

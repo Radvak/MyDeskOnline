@@ -4730,3 +4730,10 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   .news-briefing,
   .news-headlines { padding: 0.85rem; }
 }
+
+.news-auto {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}

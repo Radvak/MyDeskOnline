@@ -4,7 +4,9 @@
    1. lit les flux RSS de sources.mjs ;
    2. range les articles par jour (heure de Paris), garde 14 jours ;
    3. deux fois par jour (matin, soir), rédige un briefing par thème
-      avec GitHub Models, à partir des titres et chapôs uniquement.
+      avec Gemini (clé GEMINI_API_KEY dans les secrets du dépôt), à
+      partir des titres et chapôs uniquement. Sans clé ou si Gemini ne
+      répond pas : sélection automatique des sujets les plus repris.
    Sortie (branche « news », lue par l'onglet Actualité) :
      index.json             { updatedAt, days: ['2026-10-04', …], themes }
      days/AAAA-MM-JJ.json   { date, items: […], briefings: […] }
@@ -33,10 +35,11 @@ const BRIEFING_SLOTS = [
 ];
 const BRIEFING_MAX_WINDOW_H = 24;
 const BRIEFING_MIN_WINDOW_H = 8;
-const BRIEFING_MAX_ITEMS = 60;
-const BRIEFING_MAX_PROMPT_CHARS = 18000; // ≈ 6 000 jetons : sous la limite de 8 000 de l'offre gratuite
-const MODELS_ENDPOINT = 'https://models.github.ai/inference/chat/completions';
-const MODELS = ['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'openai/gpt-4o', 'openai/gpt-4o-mini'];
+const BRIEFING_MAX_ITEMS = 90;
+const BRIEFING_MAX_PROMPT_CHARS = 40000;
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
+// Ordre de préférence ; les alias « latest » suivent les nouvelles versions.
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
 // L'actu juridique est plus lente : un seul briefing par jour, sur 24 h.
 const DAILY_THEMES = ['juridique'];
 
@@ -179,7 +182,7 @@ const ensureDay = (days, date) => {
   return days.get(date);
 };
 
-/* ── Briefing (GitHub Models) ──────────────────────────────── */
+/* ── Briefing (Gemini) ─────────────────────────────────────── */
 
 const SYSTEM_PROMPT = `Tu rédiges une revue de presse pour un étudiant en droit qui veut entretenir sa culture générale sur l'actualité.
 On te donne des dépêches numérotées (titre et chapô) publiées par des médias et institutions français.
@@ -228,13 +231,6 @@ const extractJson = (text) => {
   return JSON.parse(text.slice(start, end + 1));
 };
 
-const MODELS_HEADERS = (token) => ({
-  Accept: 'application/vnd.github+json',
-  Authorization: `Bearer ${token}`,
-  'Content-Type': 'application/json',
-  'X-GitHub-Api-Version': '2022-11-28'
-});
-
 // Erreurs gardées dans state.json (public) et affichées sur la page du
 // passage dans Actions, pour comprendre un échec sans lire tout le journal.
 const briefingErrors = [];
@@ -243,68 +239,126 @@ const reportError = (message) => {
   console.log(`::warning title=Briefing::${message.replace(/\s+/g, ' ').slice(0, 400)}`);
 };
 
-// Modèles disponibles : on lit le catalogue (les modèles changent) et on
-// garde ceux de la liste de préférence, sinon les premiers proposés.
+const geminiFetch = (url, key, options = {}) =>
+  fetch(url, { ...options, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key } });
+
+// Modèles disponibles : on lit la liste (les noms changent) et on garde
+// ceux de la liste de préférence, sinon un modèle « flash » proposé.
 let modelList = null;
-const availableModels = async (token) => {
+const availableModels = async (key) => {
   if (modelList) return modelList;
   try {
-    const response = await fetch('https://models.github.ai/catalog/models', { headers: MODELS_HEADERS(token) });
-    if (!response.ok) throw new Error(`catalogue : HTTP ${response.status}`);
-    const catalog = await response.json();
-    const ids = (Array.isArray(catalog) ? catalog : catalog.data || []).map((model) => model.id).filter(Boolean);
-    const preferred = MODELS.filter((id) => ids.includes(id));
-    const others = ids.filter((id) => id.startsWith('openai/gpt') && !preferred.includes(id));
-    modelList = [...preferred, ...others].slice(0, 4);
+    const response = await geminiFetch(`${GEMINI_API}/models?pageSize=200`, key);
+    const body = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} ${body.slice(0, 200)}`);
+    const models = (JSON.parse(body).models || []).filter((model) =>
+      (model.supportedGenerationMethods || []).includes('generateContent')
+    );
+    const ids = models.map((model) => String(model.name).replace(/^models\//, ''));
+    const preferred = GEMINI_MODELS.filter((id) => ids.includes(id));
+    const others = ids.filter((id) => /^gemini-[\d.]+-flash(-lite)?$/.test(id) && !preferred.includes(id));
+    modelList = [...preferred, ...others].slice(0, 3);
     console.log(`Modèles retenus : ${modelList.join(', ')}`);
   } catch (error) {
-    reportError(`Catalogue des modèles illisible (${error.message}), liste par défaut.`);
-    modelList = MODELS.slice(0, 4);
+    reportError(`Liste des modèles illisible (${error.message}), liste par défaut.`);
+    modelList = [];
   }
-  if (!modelList.length) modelList = MODELS.slice(0, 4);
+  if (!modelList.length) modelList = GEMINI_MODELS.slice(0, 2);
   return modelList;
 };
 
-const requestModel = async (token, model, prompt, tuned) => {
-  const body = {
-    model,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: prompt }
-    ]
-  };
-  // Certains modèles refusent ces réglages : on réessaie sans.
-  if (tuned) body.temperature = 0.2;
-  const response = await fetch(MODELS_ENDPOINT, { method: 'POST', headers: MODELS_HEADERS(token), body: JSON.stringify(body) });
+const requestModel = async (key, model, prompt) => {
+  const response = await geminiFetch(`${GEMINI_API}/models/${model}:generateContent`, key, {
+    method: 'POST',
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
+    })
+  });
   const text = await response.text();
   if (!response.ok) {
     const error = new Error(`${model} : HTTP ${response.status} ${text.slice(0, 300)}`);
     error.status = response.status;
     throw error;
   }
-  const content = JSON.parse(text).choices?.[0]?.message?.content || '';
+  const candidate = (JSON.parse(text).candidates || [])[0];
+  const content =
+    candidate && candidate.content && Array.isArray(candidate.content.parts)
+      ? candidate.content.parts.map((part) => part.text || '').join('')
+      : '';
+  if (!content) throw new Error(`${model} : réponse vide (${candidate ? candidate.finishReason : 'aucun candidat'})`);
   return extractJson(content);
 };
 
 const callModel = async (prompt) => {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('GITHUB_TOKEN absent');
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('clé GEMINI_API_KEY absente des secrets du dépôt');
   let lastError = null;
-  for (const model of await availableModels(token)) {
-    for (const tuned of [true, false]) {
-      try {
-        return { model, data: await requestModel(token, model, prompt, tuned) };
-      } catch (error) {
-        lastError = error;
-        reportError(error.message);
-        // 400 : peut-être un réglage refusé, on réessaie sans ; sinon modèle suivant.
-        if (error.status !== 400) break;
-      }
+  for (const model of await availableModels(key)) {
+    try {
+      return { model, data: await requestModel(key, model, prompt) };
+    } catch (error) {
+      lastError = error;
+      reportError(error.message);
+      // Clé refusée : inutile d'essayer d'autres modèles.
+      if (error.status === 401 || error.status === 403) break;
+      if (error.status === 400 && /API_KEY|api key/i.test(error.message)) break;
     }
-    // Quota dépassé ou droits manquants : inutile d'essayer d'autres modèles.
-    if (lastError && (lastError.status === 401 || lastError.status === 403 || lastError.status === 429)) break;
   }
   throw lastError || new Error('aucun modèle');
+};
+
+/* ── Secours sans IA : sujets les plus repris ──────────────── */
+
+const STOP_WORDS = new Set(
+  'les des une un le la de du et en au aux pour par sur dans avec sans est sont ont qui que quoi cette ces sa son ses leur leurs plus pas ne il elle ils elles on nous vous apres avant contre entre selon comme mais ou donc lors face fait faire etre avoir deux trois tout tous direct video'.split(' ')
+);
+
+const titleWords = (title) =>
+  new Set(
+    title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .split(' ')
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+  );
+
+// Regroupe les titres qui partagent des mots, puis garde les sujets
+// repris par le plus de sources.
+const autoPoints = (items) => {
+  const clusters = [];
+  items.forEach((item) => {
+    const words = titleWords(item.title);
+    const cluster = clusters.find((candidate) => {
+      let shared = 0;
+      words.forEach((word) => {
+        if (candidate.words.has(word)) shared += 1;
+      });
+      return shared >= 3 || (shared >= 2 && shared / Math.max(1, Math.min(words.size, candidate.words.size)) >= 0.5);
+    });
+    if (cluster) {
+      cluster.items.push(item);
+      words.forEach((word) => cluster.words.add(word));
+    } else {
+      clusters.push({ items: [item], words });
+    }
+  });
+  return clusters
+    .map((cluster) => ({ ...cluster, sources: new Set(cluster.items.map((item) => item.source)).size }))
+    .sort((a, b) => b.sources - a.sources || b.items.length - a.items.length)
+    .slice(0, 5)
+    .map((cluster) => {
+      const best = cluster.items.reduce((a, b) => ((b.summary || '').length > (a.summary || '').length ? b : a));
+      return {
+        title: cluster.items[0].title,
+        summary: best.summary || '',
+        context: '',
+        sources: cluster.items.slice(0, 4).map((item) => ({ title: item.title, source: item.source, link: item.link }))
+      };
+    });
 };
 
 const cleanPoints = (data, items) => {
@@ -330,10 +384,12 @@ const cleanPoints = (data, items) => {
     .slice(0, 8);
 };
 
-const lastBriefingTime = (days) => {
+const lastBriefingTime = (days, due) => {
   let last = 0;
   days.forEach((day) => {
     day.briefings.forEach((briefing) => {
+      // Le briefing qu'on refait ne compte pas.
+      if (day.date === due.day && briefing.slot === due.slot) return;
       last = Math.max(last, Date.parse(briefing.generatedAt) || 0);
     });
   });
@@ -346,19 +402,20 @@ const dueSlot = (days, now) => {
   if (!slot) return null;
   const existing = days.get(day);
   const force = process.env.FORCE_BRIEFING === 'true';
-  if (!force && existing && existing.briefings.some((briefing) => briefing.slot === slot.id)) return null;
+  const done = existing && existing.briefings.find((briefing) => briefing.slot === slot.id);
+  // Un briefing de secours (IA indisponible) est refait au passage suivant.
+  if (!force && done && !done.fallback) return null;
   return { day, slot: slot.id };
 };
 
 const makeBriefing = async (days, allItems, now, due) => {
-  const last = lastBriefingTime(days);
+  const last = lastBriefingTime(days, due);
   const hour = 3600 * 1000;
   let from = now.getTime() - BRIEFING_MAX_WINDOW_H * hour;
   if (last > from) from = Math.min(last, now.getTime() - BRIEFING_MIN_WINDOW_H * hour);
   const fromDate = new Date(from);
 
   const briefing = { slot: due.slot, generatedAt: now.toISOString(), from: fromDate.toISOString(), themes: {} };
-  let success = 0;
   for (const theme of Object.keys(THEMES)) {
     const daily = DAILY_THEMES.includes(theme);
     if (daily && due.slot !== BRIEFING_SLOTS[0].id) continue;
@@ -376,7 +433,6 @@ const makeBriefing = async (days, allItems, now, due) => {
       .slice(0, BRIEFING_MAX_ITEMS);
     if (items.length < 2) {
       briefing.themes[theme] = { points: [], count: items.length };
-      success += 1;
       continue;
     }
     const { prompt, used } = buildPrompt(theme, items, new Date(themeFrom), now);
@@ -385,13 +441,12 @@ const makeBriefing = async (days, allItems, now, due) => {
       const { model, data } = await callModel(prompt);
       briefing.model = model;
       briefing.themes[theme] = { points: cleanPoints(data, items.slice(0, used)), count: used };
-      success += 1;
     } catch (error) {
       reportError(`Briefing ${theme} impossible : ${error.message}`);
-      briefing.themes[theme] = { points: [], count: used, error: true };
+      briefing.themes[theme] = { points: autoPoints(items), count: items.length, auto: true };
+      briefing.fallback = true;
     }
   }
-  if (!success) return null;
   return briefing;
 };
 
@@ -461,16 +516,18 @@ const main = async () => {
   days.forEach((day) => allItems.push(...day.items));
 
   // Au plus 3 essais par créneau, pour ne pas épuiser le quota gratuit
-  // si le service de modèles est indisponible.
+  // si Gemini est indisponible (le briefing de secours reste alors).
   const due = dueSlot(days, now);
   const dueKey = due ? `${due.day}-${due.slot}` : '';
   const attempts = state.briefingAttempts && state.briefingAttempts.key === dueKey ? state.briefingAttempts.count : 0;
   if (due && (attempts < 3 || process.env.FORCE_BRIEFING === 'true')) {
     state.briefingAttempts = { key: dueKey, count: attempts + 1 };
     const briefing = await makeBriefing(days, allItems, now, due);
-    if (briefing) {
-      const day = ensureDay(days, due.day);
-      day.briefings = day.briefings.filter((existing) => existing.slot !== briefing.slot);
+    const day = ensureDay(days, due.day);
+    const previous = day.briefings.find((existing) => existing.slot === briefing.slot);
+    // Un nouvel essai raté ne remplace pas un briefing déjà rédigé par l'IA.
+    if (!(briefing.fallback && previous && !previous.fallback)) {
+      day.briefings = day.briefings.filter((existing) => existing !== previous);
       day.briefings.push(briefing);
     }
   }
