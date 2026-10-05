@@ -2338,9 +2338,10 @@ function renderEventTypes() {
   updateEventTypeSelect();
 }
 
-function getOccurrencesForWeek(event) {
+// rangeStart : début des 7 jours à couvrir (par défaut la semaine affichée).
+function getOccurrencesForWeek(event, rangeStart = currentWeekStart) {
   const occurrences = [];
-  const weekStart = new Date(currentWeekStart);
+  const weekStart = new Date(rangeStart);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
   const base = new Date(event.start);
@@ -2558,6 +2559,7 @@ function renderCalendarEvents() {
   }
   renderCalendarNowLine();
   if (typeof renderGoalsPanel === 'function') renderGoalsPanel();
+  if (typeof renderRemindersPanel === 'function') renderRemindersPanel();
 }
 
 // Barre rouge à l'heure actuelle sur le jour d'aujourd'hui (mise à jour chaque minute).
@@ -3040,6 +3042,7 @@ function updateSingleOccurrence(event, occurrenceStart, changes) {
     color: event.color,
     seriesId: event.id,
     goalId: event.goalId,
+    reminder: event.reminder,
     ...changes,
     recurrence: 'none'
   };
@@ -3147,6 +3150,7 @@ function openEventModal({ start, duration: presetDuration = null, event: existin
   updateEventTypeSelect(existingEvent && existingEvent.typeId ? existingEvent.typeId : '');
   fillEventLocationList();
   if (typeof fillEventGoalSelect === 'function') fillEventGoalSelect(existingEvent ? existingEvent.goalId : '');
+  if (typeof fillEventReminderSelect === 'function') fillEventReminderSelect(existingEvent ? existingEvent.reminder : undefined);
 
   if (existingEvent) {
     modalTitle.textContent = t('calendar.eventModal.editTitle');
@@ -3256,6 +3260,7 @@ function openEventModal({ start, duration: presetDuration = null, event: existin
     const goalSelect = document.getElementById('event-goal');
     const goalId = goalSelect && goalSelect.value ? goalSelect.value : undefined;
     const color = colorInput.value || DEFAULT_EVENT_COLOR;
+    const reminder = typeof readEventReminderSelect === 'function' ? readEventReminderSelect() : undefined;
 
     if (modal.dataset.mode === 'edit' && modal.dataset.eventId) {
       const targetEvent = appData.calendar.events.find((evt) => evt.id === modal.dataset.eventId);
@@ -3266,14 +3271,17 @@ function openEventModal({ start, duration: presetDuration = null, event: existin
           duration,
           typeId,
           color,
-          goalId
+          goalId,
+          reminder
         };
         if (isRecurringEvent(targetEvent) && scopeInput.value === 'one') {
-          updateSingleOccurrence(targetEvent, baseDate, { ...changes, start: datetimeValue });
+          const single = updateSingleOccurrence(targetEvent, baseDate, { ...changes, start: datetimeValue });
+          if (reminder === undefined) delete single.reminder;
         } else {
           shiftSeriesStart(targetEvent, baseDate, startDate);
           Object.assign(targetEvent, changes, { recurrence });
           if (!goalId) delete targetEvent.goalId;
+          if (reminder === undefined) delete targetEvent.reminder;
         }
       }
     } else {
@@ -3288,6 +3296,7 @@ function openEventModal({ start, duration: presetDuration = null, event: existin
         color
       };
       if (goalId) newEvent.goalId = goalId;
+      if (reminder !== undefined) newEvent.reminder = reminder;
       appData.calendar.events.push(newEvent);
     }
     saveData();
@@ -4859,6 +4868,9 @@ async function bootstrap() {
   if (typeof registerGoalTranslations === 'function') {
     registerGoalTranslations();
   }
+  if (typeof registerReminderTranslations === 'function') {
+    registerReminderTranslations();
+  }
   if (typeof registerInstallTranslations === 'function') {
     registerInstallTranslations();
   }
@@ -4899,6 +4911,9 @@ async function bootstrap() {
   }
   if (typeof initIcsImport === 'function') {
     initIcsImport();
+  }
+  if (typeof initCalendarReminders === 'function') {
+    initCalendarReminders();
   }
   if (typeof initSchedulePrint === 'function') {
     initSchedulePrint();

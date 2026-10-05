@@ -4361,6 +4361,17 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .calendar-goals__add { padding: 0.35rem 0.75rem; }
 .calendar-goals__list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; }
 .calendar-goals__hint { margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--muted); }
+/* Rappels de l'agenda (calendar-reminders.js) */
+.calendar-reminders { padding: 1rem 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
+.calendar-reminders h3 { margin: 0; font-size: 1rem; }
+.calendar-reminders__status { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.calendar-reminders__status.is-warning { color: #b45309; }
+[data-theme="dark"] .calendar-reminders__status.is-warning { color: #fbbf24; }
+.calendar-reminders__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.calendar-reminders__row button { padding: 0.35rem 0.75rem; }
+.calendar-reminders__lead { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.calendar-reminders__lead select { flex: 1; min-width: 0; }
+.calendar-reminders__note { margin: 0; font-size: 0.78rem; color: var(--muted); }
 .goal-card {
   display: flex;
   flex-direction: column;
