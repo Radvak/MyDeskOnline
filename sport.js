@@ -109,7 +109,14 @@ const SPORT_TRANSLATIONS = {
     excludeConfirm: 'Ne plus proposer « {name} » ? Il sera remplacé par la variante la plus proche.',
     target: 'Objectif : autant ou mieux que le {date} → {values}',
     intensity: 'Chaque série : arrête-toi quand il te reste 1 à 3 répétitions propres en réserve.',
-    addSet: 'Ajouter une série'
+    addSet: 'Ajouter une série',
+    holdStart: '▶ Chrono',
+    holdStartTitle: 'Chronométrer la prochaine série (3 s pour se mettre en place)',
+    holdGetReady: 'en position…',
+    holdReached: 'Objectif atteint ! Tiens encore si tu peux.',
+    holdStop: '✓ Stop',
+    holdCancel: 'Annuler sans noter',
+    autoRest: 'Repos lancé tout seul après chaque série notée'
   },
   en: {
     sessionsTitle: 'Workouts',
@@ -207,7 +214,14 @@ const SPORT_TRANSLATIONS = {
     excludeConfirm: 'Stop suggesting "{name}"? It will be replaced by the closest variation.',
     target: 'Goal: match or beat {date} → {values}',
     intensity: 'Every set: stop when you have 1 to 3 clean reps left in the tank.',
-    addSet: 'Add a set'
+    addSet: 'Add a set',
+    holdStart: '▶ Timer',
+    holdStartTitle: 'Time the next set (3 s to get into position)',
+    holdGetReady: 'get into position…',
+    holdReached: 'Goal reached! Hold on longer if you can.',
+    holdStop: '✓ Stop',
+    holdCancel: 'Cancel without saving',
+    autoRest: 'Start the rest timer after each logged set'
   },
   vi: {
     sessionsTitle: 'Buổi tập',
@@ -305,7 +319,14 @@ const SPORT_TRANSLATIONS = {
     excludeConfirm: 'Không đề xuất "{name}" nữa? Bài sẽ được thay bằng biến thể gần nhất.',
     target: 'Mục tiêu: bằng hoặc hơn ngày {date} → {values}',
     intensity: 'Mỗi hiệp: dừng khi còn 1–3 lần lặp chuẩn trong sức.',
-    addSet: 'Thêm một hiệp'
+    addSet: 'Thêm một hiệp',
+    holdStart: '▶ Bấm giờ',
+    holdStartTitle: 'Bấm giờ hiệp tiếp theo (3 giây để vào tư thế)',
+    holdGetReady: 'vào tư thế…',
+    holdReached: 'Đạt mục tiêu! Cố giữ thêm nếu được.',
+    holdStop: '✓ Dừng',
+    holdCancel: 'Hủy, không ghi',
+    autoRest: 'Tự bắt đầu giờ nghỉ sau mỗi hiệp đã ghi'
   }
 };
 
@@ -434,6 +455,16 @@ function parseRepRange(reps) {
   if (range) return { min: Number(range[1]), max: Number(range[2]) };
   const single = /(\d+)/.exec(text);
   return single ? { min: Number(single[1]), max: Number(single[1]) } : null;
+}
+
+// Exercice tenu : la fourchette est en secondes (« 20–40 s », « 20–30 s / côté »).
+function isTimedExercise(exercise) {
+  return /\d\s*s\b/.test(String((exercise && exercise.reps) || ''));
+}
+
+function sportSessionDone(session, dateKey) {
+  const log = getSportLog(dateKey, session.id);
+  return session.exercises.length > 0 && session.exercises.every((exercise) => log[exercise.id] && log[exercise.id].done);
 }
 
 function getLadderStep(exercise) {
@@ -671,12 +702,14 @@ function attachSportClick(eventEl, occurrence) {
 
 /* ── Minuteur de repos ─────────────────────────────────────── */
 
-function sportBeep() {
+const SPORT_HOLD_COUNTDOWN_S = 3;
+
+function sportBeep(times = 3) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const context = new AudioCtx();
-    [0, 0.25, 0.5].forEach((offset) => {
+    [0, 0.25, 0.5].slice(0, times).forEach((offset) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       oscillator.frequency.value = 880;
@@ -692,6 +725,16 @@ function sportBeep() {
   }
 }
 
+function sportAlert() {
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  sportBeep();
+}
+
+function formatClock(seconds) {
+  const value = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
+}
+
 function stopRestTimer() {
   if (sportTimer) clearInterval(sportTimer.interval);
   sportTimer = null;
@@ -699,7 +742,8 @@ function stopRestTimer() {
   if (box) box.hidden = true;
 }
 
-function startRestTimer(seconds, label) {
+// Boîte flottante partagée par le minuteur de repos et le chrono des exercices tenus.
+function sportTimerBox() {
   stopRestTimer();
   let box = document.getElementById('sport-timer');
   if (!box) {
@@ -710,36 +754,92 @@ function startRestTimer(seconds, label) {
   }
   box.hidden = false;
   box.innerHTML = '';
-  const text = sportEl('div', 'sport-timer__text');
-  const count = sportEl('div', 'sport-timer__count');
-  const barWrap = sportEl('div', 'sport-timer__track');
-  const bar = sportEl('div', 'sport-timer__bar');
-  barWrap.appendChild(bar);
-  const stop = sportEl('button', 'sport-timer__stop', t('sport.timerStop'));
-  stop.type = 'button';
-  stop.addEventListener('click', stopRestTimer);
-  text.textContent = `${t('sport.timerRunning')} · ${label}`;
-  box.append(text, count, barWrap, stop);
+  box.classList.remove('sport-timer--done');
+  const ui = {
+    box,
+    text: sportEl('div', 'sport-timer__text'),
+    count: sportEl('div', 'sport-timer__count'),
+    bar: sportEl('div', 'sport-timer__bar'),
+    actions: sportEl('div', 'sport-timer__actions')
+  };
+  const track = sportEl('div', 'sport-timer__track');
+  track.appendChild(ui.bar);
+  box.append(ui.text, ui.count, track, ui.actions);
+  return ui;
+}
+
+function startRestTimer(seconds, label) {
+  const ui = sportTimerBox();
+  ui.actions.appendChild(sportButton('sport-timer__stop', t('sport.timerStop'), stopRestTimer));
+  ui.text.textContent = `${t('sport.timerRunning')} · ${label}`;
 
   const end = Date.now() + seconds * 1000;
   const tick = () => {
     const left = Math.max(0, Math.round((end - Date.now()) / 1000));
-    count.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-    bar.style.width = `${(left / seconds) * 100}%`;
+    ui.count.textContent = formatClock(left);
+    ui.bar.style.width = `${(left / seconds) * 100}%`;
     if (left <= 0) {
       clearInterval(sportTimer.interval);
-      text.textContent = t('sport.timerDone');
-      box.classList.add('sport-timer--done');
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      sportBeep();
+      ui.text.textContent = t('sport.timerDone');
+      ui.box.classList.add('sport-timer--done');
+      sportAlert();
       setTimeout(() => {
         if (sportTimer && sportTimer.end === end) stopRestTimer();
       }, 5000);
     }
   };
-  box.classList.remove('sport-timer--done');
   sportTimer = { end, interval: setInterval(tick, 250) };
   tick();
+}
+
+// Chrono d'un exercice tenu : 3 s pour se mettre en place, puis le temps
+// monte. Bip à l'objectif ; « Stop » renvoie les secondes tenues.
+function startHoldTimer(label, target, onStop) {
+  const ui = sportTimerBox();
+  const startAt = Date.now() + SPORT_HOLD_COUNTDOWN_S * 1000;
+  let started = false;
+  let reached = false;
+  const finish = (save) => {
+    const held = started ? Math.floor((Date.now() - startAt) / 1000) : 0;
+    stopRestTimer();
+    if (save && held > 0) onStop(held);
+  };
+  ui.actions.append(
+    sportButton('sport-timer__stop', t('sport.holdStop'), () => finish(true)),
+    sportButton('sport-timer__cancel', '✕', () => finish(false), t('sport.holdCancel'))
+  );
+  const tick = () => {
+    const now = Date.now();
+    if (now < startAt) {
+      ui.text.textContent = `${label} · ${t('sport.holdGetReady')}`;
+      ui.count.textContent = String(Math.ceil((startAt - now) / 1000));
+      ui.bar.style.width = '0%';
+      return;
+    }
+    if (!started) {
+      started = true;
+      sportBeep(1);
+    }
+    const held = Math.floor((now - startAt) / 1000);
+    ui.count.textContent = target ? `${formatClock(held)} / ${formatClock(target)}` : formatClock(held);
+    ui.bar.style.width = target ? `${Math.min(1, held / target) * 100}%` : '100%';
+    if (!reached && target && held >= target) {
+      reached = true;
+      ui.box.classList.add('sport-timer--done');
+      sportAlert();
+    }
+    ui.text.textContent = reached ? t('sport.holdReached') : label;
+  };
+  sportTimer = { end: startAt, interval: setInterval(tick, 200) };
+  tick();
+}
+
+// Après une série notée aujourd'hui : repos de l'exercice, sauf si la séance est finie.
+function autoRestAfterSet(session, exercise, dateKey) {
+  if (appData.sport.autoRest === false || dateKey !== sportDateKey(new Date())) return;
+  const rest = Number(exercise.rest) || 0;
+  if (rest <= 0 || sportSessionDone(session, dateKey)) return;
+  startRestTimer(rest, exercise.name || t('sport.exercise'));
 }
 
 /* ── Rendu : helpers ───────────────────────────────────────── */
@@ -1040,6 +1140,16 @@ function renderSportWorkout(main, session, date) {
   progressLabel.id = 'sport-progress-label';
   card.append(progress, progressLabel);
   card.appendChild(sportEl('p', 'sport-hero__intensity', t('sport.intensity')));
+  const autoRest = sportEl('label', 'sport-hero__toggle');
+  const autoRestBox = document.createElement('input');
+  autoRestBox.type = 'checkbox';
+  autoRestBox.checked = appData.sport.autoRest !== false;
+  autoRestBox.addEventListener('change', () => {
+    appData.sport.autoRest = autoRestBox.checked;
+    saveData();
+  });
+  autoRest.append(autoRestBox, sportEl('span', '', t('sport.autoRest')));
+  card.appendChild(autoRest);
 
   if (session.description) {
     const details = sportEl('details', 'sport-instructions');
@@ -1162,6 +1272,10 @@ function renderSportWorkout(main, session, date) {
         'aria-label': t('sport.setLabel', { n: i + 1 }),
         placeholder: lastSets[i] ? String(lastSets[i]) : `S${i + 1}`
       });
+      // « change » : à la sortie de la case (ou Entrée), pas à chaque chiffre tapé.
+      input.addEventListener('change', () => {
+        if (Number(input.value) > 0) autoRestAfterSet(session, exercise, dateKey);
+      });
       colorInput(input, i);
       inputs.push(input);
       setsRow.insertBefore(input, addSetButton);
@@ -1179,6 +1293,25 @@ function renderSportWorkout(main, session, date) {
         sportButton('sport-rest-btn', t('sport.restTimer', { rest: formatRest(exercise.rest) }), () => {
           startRestTimer(Number(exercise.rest), exercise.name || t('sport.exercise'));
         })
+      );
+    }
+    if (isTimedExercise(exercise)) {
+      setsRow.appendChild(
+        sportButton('sport-hold-btn', t('sport.holdStart'), () => {
+          let index = inputs.findIndex((input) => !(Number(input.value) > 0));
+          if (index === -1) {
+            addSetInput(inputs.length);
+            index = inputs.length - 1;
+          }
+          const range = parseRepRange(exercise.reps);
+          const target = Math.max(Number(lastSets[index]) || 0, range ? range.min : 0);
+          startHoldTimer(`${exercise.name || t('sport.exercise')} · ${t('sport.setLabel', { n: index + 1 })}`, target, (seconds) => {
+            const input = inputs[index];
+            input.value = seconds;
+            input.dispatchEvent(new Event('input'));
+            input.dispatchEvent(new Event('change'));
+          });
+        }, t('sport.holdStartTitle'))
       );
     }
     body.appendChild(setsRow);
