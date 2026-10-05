@@ -213,7 +213,7 @@ const MenuEngine = (() => {
   /* ── Repas (app.py : parts_par_repas & co) ──────────────── */
 
   // Une part = ce qu'annonce la recette ; un repas = une portion d'homme de
-  // 20 ans / 75 kg (base.kcal_par_portion). Les parts restent l'unité interne.
+  // 20 ans, 1,85 m, 73 kg (base.kcal_par_portion). Les parts restent l'unité interne.
   function partsParRepas(r) {
     const servingsBase = Number(r && r.servings_base);
     const portions = Number(r && r.portions_reelles);
