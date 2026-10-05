@@ -392,6 +392,7 @@ function ensureSportData() {
   if (!Array.isArray(appData.sport.excluded)) appData.sport.excluded = SPORT_DEFAULT_EXCLUDED.slice();
   migrerProgrammeV3();
   migrerProgrammeV4();
+  migrerProgrammeV5();
   renommerSeancesPrefaites();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
@@ -409,7 +410,18 @@ function ensureSportData() {
 
 function sportProgramIndexByName(name) {
   const index = SPORT_PROGRAM.findIndex((template) => template.name === name);
-  return index !== -1 ? index : SPORT_PROGRAM_OLD_NAMES.indexOf(name);
+  if (index !== -1) return index;
+  const letter = SPORT_PROGRAM_OLD_NAMES.indexOf(name);
+  return letter !== -1 ? letter : SPORT_PROGRAM_V4_NAMES.indexOf(name);
+}
+
+// Renomme une séance et ses créneaux de l'agenda qui portaient son nom.
+function renameSportSession(session, name) {
+  const oldName = session.name;
+  session.name = name;
+  (appData.calendar && Array.isArray(appData.calendar.events) ? appData.calendar.events : []).forEach((event) => {
+    if (event.sportSessionId === session.id && event.title === oldName) event.title = name;
+  });
 }
 
 // Séances préfaites encore au nom d'origine « A — … » : on retire la lettre
@@ -419,11 +431,7 @@ function renommerSeancesPrefaites() {
     if (session.template !== SPORT_TEMPLATE_KEY) return;
     const index = SPORT_PROGRAM_OLD_NAMES.indexOf(session.name);
     if (index === -1) return;
-    const oldName = session.name;
-    session.name = SPORT_PROGRAM[index].name;
-    (appData.calendar && Array.isArray(appData.calendar.events) ? appData.calendar.events : []).forEach((event) => {
-      if (event.sportSessionId === session.id && event.title === oldName) event.title = session.name;
-    });
+    renameSportSession(session, SPORT_PROGRAM[index].name);
   });
 }
 
@@ -575,9 +583,51 @@ function migrerProgrammeV4() {
       exercise.sets = sets;
       exercise.rest = rest;
     });
-    session.templateVersion = SPORT_PROGRAM_VERSION;
+    session.templateVersion = 4;
   });
   appData.sport.migration = 4;
+}
+
+// v5 (05/10/2026) : autant de tirage que de poussée, et des épaules, sans
+// meuble solide. Rowing sac à dos → rowing inversé à la barre (A et C),
+// pompes larges → Y-T-W (A), pont fessier → leg curl à la serviette (B).
+// C devient « Pecs, épaules & abdos » : ses pompes passent en premier (même
+// exercice, l'historique suit) et ses pompes larges deviennent des pompes
+// piquées. Seuls les exercices encore à leur échelle d'origine changent ;
+// le nom et les consignes aussi, s'ils n'ont pas été modifiés à la main.
+function migrerProgrammeV5() {
+  if ((appData.sport.migration || 0) >= 5) return;
+  const aRemplacer = { 0: { 1: 'row', 3: 'wide' }, 1: { 3: 'hinge' }, 2: { 1: 'row' } }; // séance -> position -> ancienne échelle
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 4) return;
+    const index = Number.isInteger(session.templateIndex)
+      ? session.templateIndex
+      : sportProgramIndexByName(session.name);
+    const template = SPORT_PROGRAM[index];
+    if (!template) return;
+    const exercises = session.exercises;
+    const apply = (exercise, position) => {
+      const [ladderId, stepIndex, sets, rest] = template.exercises[position];
+      applyLadderStep(exercise, ladderId, stepIndex);
+      exercise.sets = sets;
+      exercise.rest = rest;
+    };
+    if (index === 2 && exercises[0] && exercises[0].ladder === 'wide' && exercises[3] && exercises[3].ladder === 'push') {
+      const [wide, , , push] = exercises;
+      exercises[0] = push;
+      exercises[3] = wide;
+      [, , push.sets, push.rest] = template.exercises[0];
+      apply(wide, 3);
+    }
+    Object.entries(aRemplacer[index] || {}).forEach(([position, ancienne]) => {
+      const exercise = exercises[position];
+      if (exercise && exercise.ladder === ancienne) apply(exercise, Number(position));
+    });
+    if (session.description === SPORT_PROGRAM_V4_DESCRIPTIONS[index]) session.description = template.description;
+    if (session.name === SPORT_PROGRAM_V4_NAMES[index]) renameSportSession(session, template.name);
+    session.templateVersion = 5;
+  });
+  appData.sport.migration = 5;
 }
 
 function isExcludedName(name) {

@@ -105,7 +105,7 @@ const SPORT_LADDERS = {
       {
         name: 'Pompes larges pieds surélevés',
         reps: '8–12',
-        how: ['Pieds sur une chaise, mains larges.', 'Plus dur que les pompes larges au sol : plus de poids sur les bras.'],
+        how: ['Pieds sur une chaise, le lit ou le canapé, mains larges.', 'Plus dur que les pompes larges au sol : plus de poids sur les bras.'],
         mistakes: ['Cambrer le dos.']
       }
     ]
@@ -192,7 +192,7 @@ const SPORT_LADDERS = {
         name: 'Rowing un bras avec sac à dos',
         reps: '10–15 / bras',
         how: [
-          'Une main et un genou posés sur une chaise, l’autre pied au sol, dos plat.',
+          'Une main et un genou posés sur le lit ou le bord du canapé, l’autre pied au sol, dos plat.',
           'Sac à dos chargé tenu par la poignée, bras tendu vers le sol.',
           'Tire le sac vers la hanche en gardant le coude près du corps, puis redescends en 2 secondes.',
           'Fais toutes les répétitions d’un côté, puis change.'
@@ -217,6 +217,118 @@ const SPORT_LADDERS = {
           'Tiens 1 seconde en haut, omoplates serrées, puis descends en 3 secondes.'
         ],
         mistakes: ['Sacrifier l’amplitude pour le poids.']
+      }
+    ]
+  },
+  invrow: {
+    name: 'Rowing inversé à la barre',
+    muscles: 'Dos (milieu du dos, grands dorsaux), arrière des épaules, biceps',
+    cue: 'Corps gainé, tire la poitrine vers la barre, serre les omoplates, redescends en 2 s.',
+    note: 'Barre à pression dans l’encadrement d’une porte (pas entre deux cloisons en plâtre), à hauteur de hanches. Caoutchouc ou feutre sous les embouts pour ne pas marquer la peinture ; serre fort, teste en tirant doucement puis en mettant ton poids, et resserre-la à chaque séance. Plus la barre est basse, plus c’est dur.',
+    steps: [
+      {
+        name: 'Rowing inversé à la barre, barre haute',
+        reps: '8–12',
+        how: [
+          'Barre à hauteur de poitrine, mains écartées de la largeur des épaules.',
+          'Avance les pieds sous la barre et penche-toi en arrière, bras tendus, corps droit.',
+          'Tire la poitrine vers la barre en serrant les omoplates, coudes à ~45° du buste.',
+          'Redescends en 2 secondes jusqu’aux bras tendus.'
+        ],
+        mistakes: ['Hanches qui cassent.', 'Épaules qui remontent vers les oreilles.']
+      },
+      {
+        name: 'Rowing inversé à la barre, genoux fléchis',
+        reps: '8–12',
+        how: [
+          'Barre à hauteur de hanches. Allongé dessous, mains largeur d’épaules, pieds à plat au sol, genoux fléchis.',
+          'Corps gainé des épaules aux genoux.',
+          'Monte jusqu’à ce que la poitrine frôle la barre, serre les omoplates 1 seconde, redescends en 2 secondes.'
+        ],
+        mistakes: ['Fesses qui pendent.', 'Tirer avec les bras sans serrer les omoplates.']
+      },
+      {
+        name: 'Rowing inversé à la barre, jambes tendues',
+        reps: '8–12',
+        how: ['Même position, jambes tendues, appui sur les talons.', 'Corps droit comme une planche du début à la fin.'],
+        mistakes: ['Hanches qui tombent.', 'Demi-amplitude.']
+      },
+      {
+        name: 'Rowing inversé à la barre, pieds surélevés',
+        reps: '8–12',
+        how: ['Talons posés sur le lit ou le canapé, corps horizontal sous la barre.', 'Tire jusqu’à toucher presque la barre, descente lente.'],
+        mistakes: ['Demi-amplitude.', 'Support qui glisse.']
+      }
+    ]
+  },
+  pike: {
+    name: 'Pompes piquées (épaules)',
+    muscles: 'Épaules (avant et milieu), triceps, haut des pecs',
+    cue: 'Hanches hautes (V à l’envers), la tête descend devant les mains, coudes à ~45°.',
+    steps: [
+      {
+        name: 'Pompes piquées sur les genoux',
+        reps: '8–12',
+        how: [
+          'À genoux, mains au sol un peu devant toi, hanches hautes au-dessus des genoux.',
+          'Plie les coudes pour descendre le haut de la tête vers le sol, un peu devant les mains.',
+          'Pousse pour remonter jusqu’aux bras tendus.'
+        ],
+        mistakes: ['Coudes grands ouverts sur les côtés.', 'Descendre la poitrine au lieu de la tête (ça redevient une pompe).']
+      },
+      {
+        name: 'Pompes piquées',
+        reps: '6–10',
+        how: [
+          'Position de pompe, puis marche avec les pieds vers les mains pour former un V à l’envers, hanches hautes.',
+          'Descends le haut de la tête vers le sol devant les mains, coudes à ~45°.',
+          'Remonte en poussant le sol loin de toi.'
+        ],
+        mistakes: ['Hanches qui descendent.', 'Demi-amplitude.']
+      },
+      {
+        name: 'Pompes piquées pieds surélevés (lit ou canapé)',
+        reps: '6–10',
+        how: [
+          'Pieds sur le lit ou le canapé, mains au sol, hanches hautes : le buste se rapproche de la verticale.',
+          'Même descente, la tête devant les mains.',
+          'Plus les pieds sont hauts et les mains proches du support, plus c’est dur.'
+        ],
+        mistakes: ['Cambrer le dos.', 'Support qui glisse : cale-le contre un mur.']
+      }
+    ]
+  },
+  hamcurl: {
+    name: 'Leg curl à la serviette',
+    muscles: 'Arrière des cuisses (ischio-jambiers), fessiers',
+    cue: 'Bassin haut tout le long, glisse lentement, ramène les talons en serrant les fessiers.',
+    note: 'Sur parquet ou carrelage : serviette ou chaussettes sous les talons. Sur moquette : un sac plastique ou une assiette en carton glisse mieux.',
+    steps: [
+      {
+        name: 'Leg curl à la serviette, aller seulement',
+        reps: '6–10',
+        how: [
+          'Sur le dos, genoux pliés, talons posés sur une serviette, sur un sol lisse.',
+          'Monte le bassin comme pour un pont fessier.',
+          'Bassin haut, fais glisser les talons loin de toi en 4 secondes, jusqu’aux jambes presque tendues.',
+          'Pose les fesses, ramène les pieds, recommence.'
+        ],
+        mistakes: ['Bassin qui tombe pendant la glissade.', 'Aller trop vite : tout l’effet vient de la lenteur.']
+      },
+      {
+        name: 'Leg curl à la serviette',
+        reps: '8–12',
+        how: [
+          'Même départ, bassin haut.',
+          'Glisse les talons loin de toi en 3 secondes, puis ramène-les vers les fesses sans laisser descendre le bassin.'
+        ],
+        mistakes: ['Cambrer le bas du dos pour tirer.', 'Bassin qui retombe au retour.']
+      },
+      {
+        name: 'Leg curl à la serviette sur une jambe',
+        reps: '6–10 / jambe',
+        how: ['Même mouvement avec un seul talon sur la serviette, l’autre jambe tendue en l’air.'],
+        mistakes: ['Bassin qui penche d’un côté.']
       }
     ]
   },
@@ -262,7 +374,7 @@ const SPORT_LADDERS = {
       {
         name: 'Squat assisté (en tenant un meuble)',
         reps: '12–20',
-        how: ['Tiens-toi à un meuble stable devant toi.', 'Descends en poussant les hanches en arrière, remonte en poussant dans le sol.'],
+        how: ['Tiens-toi à un meuble stable ou à l’encadrement d’une porte.', 'Descends en poussant les hanches en arrière, remonte en poussant dans le sol.'],
         mistakes: ['Se tirer avec les bras.']
       },
       {
@@ -289,7 +401,7 @@ const SPORT_LADDERS = {
       {
         name: 'Squat bulgare (pied arrière sur une chaise)',
         reps: '8–12 / jambe',
-        how: ['Dessus du pied arrière posé sur une chaise.', 'Descends jusqu’à ce que la cuisse avant soit parallèle au sol.'],
+        how: ['Dessus du pied arrière posé sur une chaise, le lit ou le canapé.', 'Descends jusqu’à ce que la cuisse avant soit parallèle au sol.'],
         mistakes: ['Pied avant trop près de la chaise.']
       },
       {
@@ -538,24 +650,37 @@ const SPORT_LADDERS = {
   }
 };
 
-// Programme v4 : 3 séances full body, accent pecs + abdos.
-// Par semaine : ≈ 17 séries de poussée, 10 de tirage, 12 de jambes,
-// abdos en flexion (crunchs) + gainage. [échelle, étape de départ, séries, repos en s]
-const SPORT_PROGRAM_VERSION = 4;
+// Programme v5 : 3 séances full body, accent pecs + abdos, sans meuble solide
+// (barre de traction à pression posée bas pour le rowing inversé).
+// Par semaine : ≈ 11 séries de poussée horizontale + 3 d'épaules (pompes
+// piquées), 13 de tirage (rowings + Y-T-W), 12 de jambes (dont arrière des
+// cuisses), abdos en flexion + gainage. [échelle, étape de départ, séries, repos en s]
+const SPORT_PROGRAM_VERSION = 5;
 // Anciens noms (avec la lettre), pour reconnaître et renommer les séances existantes.
 const SPORT_PROGRAM_OLD_NAMES = ['A — Pecs & abdos', 'B — Dos, jambes & gainage', 'C — Pecs & abdos (volume)'];
+// Programme v4, pour reconnaître les séances jamais modifiées à la main.
+const SPORT_PROGRAM_V4_NAMES = ['Pecs & abdos', 'Dos, jambes & gainage', 'Pecs & abdos (volume)'];
+const SPORT_PROGRAM_V4_DESCRIPTIONS = [
+  'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules dans chaque sens, 10 squats lents, 10 pompes faciles (contre un mur).\n' +
+    'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
+  'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 supermans lents.\n' +
+    'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.',
+  'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
+    'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.'
+];
 const SPORT_PROGRAM = [
   {
     weekday: 1,
     name: 'Pecs & abdos',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules dans chaque sens, 10 squats lents, 10 pompes faciles (contre un mur).\n' +
+      'Barre de traction dans l’encadrement d’une porte, à hauteur de hanches, caoutchouc ou feutre sous les embouts : serre-la et teste-la avant de commencer.\n' +
       'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
     exercises: [
       ['push', 2, 4, 90],
-      ['row', 0, 3, 90],
+      ['invrow', 1, 3, 90],
       ['squat', 1, 3, 60],
-      ['wide', 0, 3, 75],
+      ['back', 1, 3, 45],
       ['revcrunch', 0, 3, 45],
       ['plank', 1, 3, 45]
     ]
@@ -565,27 +690,29 @@ const SPORT_PROGRAM = [
     name: 'Dos, jambes & gainage',
     description:
       'Échauffement (5 min) : 30 s de montées de genoux, 10 rotations de hanches, 10 squats lents, 10 supermans lents.\n' +
-      'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.',
+      'Le dos équilibre le travail des pecs : épaules en arrière, posture droite, pecs mieux mis en valeur.\n' +
+      'Leg curl : sur parquet ou carrelage, une serviette ou des chaussettes sous les talons.',
     exercises: [
       ['row', 1, 4, 90],
       ['close', 1, 3, 75],
       ['squat', 2, 3, 60],
-      ['hinge', 0, 3, 60],
+      ['hamcurl', 0, 3, 60],
       ['side', 1, 3, 45],
       ['hollow', 0, 3, 45]
     ]
   },
   {
     weekday: 5,
-    name: 'Pecs & abdos (volume)',
+    name: 'Pecs, épaules & abdos',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
-      'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.',
+      'Barre de traction à hauteur de hanches, bien serrée (teste-la avant).\n' +
+      'Pompes piquées : hanches hautes, la tête descend devant les mains. C’est l’exercice des épaules de la semaine.',
     exercises: [
-      ['wide', 0, 4, 90],
-      ['row', 0, 3, 90],
+      ['push', 2, 4, 90],
+      ['invrow', 1, 3, 90],
       ['squat', 1, 3, 60],
-      ['push', 2, 3, 75],
+      ['pike', 0, 3, 75],
       ['hollow', 1, 3, 45],
       ['crunch', 0, 3, 45]
     ]
@@ -600,6 +727,9 @@ const SPORT_VIDEOS = {
   close: ['FvnPL4cYUQk', 'FvnPL4cYUQk', '5QH97LnIXgo', 'mhVgRRoNAgg'],
   pull: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
   row: ['puaKVJOY8eg', 'aGTrrWvX6vk', '4PqtlMA-45Y'],
+  invrow: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
+  pike: [null, null, null],
+  hamcurl: [null, null, null],
   back: ['KuddSXD0Jk0', 'ZpZEQ2JCXyc', 'LSy6R7j3PDc'],
   squat: ['tPTVVEaYza0', 'RhusC-zA56k', 'Ey1o1oQ8x6M', 'eCJxHKDXBqk', null],
   hinge: ['9Wma4mC8wpw', 'QWu5ApIBD9A', null],
@@ -621,7 +751,7 @@ const SPORT_DEFAULT_EXCLUDED = [
 ];
 
 // Échelle de repli quand toutes les variantes d'une échelle sont exclues.
-const SPORT_LADDER_FALLBACK = { pull: 'row' };
+const SPORT_LADDER_FALLBACK = { pull: 'row', invrow: 'row' };
 
 // Conseils affichés dans la fiche « ? » de chaque exercice.
 const SPORT_TIPS = {
@@ -633,7 +763,8 @@ const SPORT_TIPS = {
   ],
   safety: [
     'Courbatures : normal. Douleur vive ou articulaire : arrête et prends la variante plus facile.',
-    'Vérifie la solidité du matériel (table, chaise) avant de t’en servir.'
+    'Vérifie la solidité du matériel (table, chaise) avant de t’en servir.',
+    'Barre de traction à pression : dans l’encadrement d’une porte, embouts protégés (caoutchouc, feutre), serrée et testée à chaque séance avant de mettre tout ton poids.'
   ],
   abs: [
     'Les abdos se construisent ici, mais ne deviennent visibles que si la graisse du ventre est assez fine : ça se joue surtout dans l’assiette.',
