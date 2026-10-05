@@ -1351,6 +1351,18 @@ const MenuEngine = (() => {
       return ok({ ok: true, liste: { id: liste.id, nom: liste.nom }, nb_recettes: recettes.length, introuvables });
     },
 
+    // Sort un plat de « À cuisiner » sans le cuisiner : stock et journal intacts.
+    '/plats-a-preparer/retirer': (body) => {
+      const url = String(body.url || '').trim();
+      if (!url) return erreur('Plat manquant.');
+      const e = etat();
+      const restants = e.plats.filter((p) => p.url !== url);
+      if (restants.length === e.plats.length) return erreur('Ce plat n’est plus dans « À cuisiner ».', 404);
+      e.plats = restants;
+      sauver();
+      return ok({ ok: true });
+    },
+
     '/plats-a-preparer/cuisine': (body) => {
       const url = String(body.url || '').trim();
       if (!url) return erreur('Plat manquant.');
