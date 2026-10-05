@@ -5839,3 +5839,68 @@ body.onboarding-open { overflow: hidden; }
 [data-theme="dark"] .sport-delta--up { color: #34d399; }
 [data-theme="dark"] .sport-delta--down { color: #fbbf24; }
 .sport-summary__stat .sport-delta { text-align: left; }
+
+/* Sport : mode séance guidée (sport-guided.js) */
+body.sport-guided-open { overflow: hidden; }
+.sport-hero__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; }
+.sport-guided-btn { background: #f97316; color: #fff; }
+.sport-guided {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: var(--background);
+  color: var(--text);
+}
+.sport-guided__top, .sport-guided__steps, .sport-guided__body { width: 100%; max-width: 640px; margin: 0 auto; box-sizing: border-box; }
+.sport-guided__top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.sport-guided__session { font-weight: 600; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sport-guided__close { background: transparent; color: var(--muted); font-size: 1.3rem; padding: 0.3rem 0.6rem; }
+.sport-guided__steps { display: flex; gap: 4px; margin-top: 0.75rem; }
+.sport-guided__steps span { flex: 1; height: 6px; border-radius: 999px; background: rgba(148, 163, 184, 0.3); }
+.sport-guided__steps span.done { background: #10b981; }
+.sport-guided__steps span.current { background: #f97316; }
+.sport-guided__body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; padding: 1.5rem 0; text-align: center; }
+.sport-guided__body.is-summary { justify-content: flex-start; align-items: stretch; text-align: left; }
+.sport-guided__eyebrow { margin: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.sport-guided__name { margin: 0; font-size: clamp(1.5rem, 5vw, 2.2rem); line-height: 1.2; }
+.sport-guided__meta, .sport-guided__tip { margin: 0; color: var(--muted); }
+.sport-guided__technique { width: 100%; text-align: left; font-size: 0.9rem; }
+.sport-guided__technique summary { cursor: pointer; text-align: center; color: var(--primary); font-weight: 600; }
+.sport-guided__stepper { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0; }
+.sport-guided__bump { width: 3.5rem; height: 3.5rem; padding: 0; border-radius: 999px; font-size: 1.6rem; line-height: 1; }
+.sport-guided__value-box { display: flex; flex-direction: column; align-items: center; }
+.sport-guided__value {
+  width: 7rem;
+  font: inherit;
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  background: transparent;
+  color: inherit;
+  -moz-appearance: textfield;
+}
+.sport-guided__value::-webkit-outer-spin-button,
+.sport-guided__value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sport-guided__value:focus { outline: none; border-bottom-color: #f97316; }
+.sport-guided__unit { font-size: 0.8rem; color: var(--muted); }
+.sport-guided__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; width: 100%; }
+.sport-guided__done { min-width: min(60%, 320px); padding: 0.9rem 1.5rem; font-size: 1.1rem; background: #10b981; color: #fff; }
+.sport-guided__hold { padding: 0.9rem 1.5rem; font-size: 1.05rem; background: #f97316; color: #fff; }
+.sport-guided__secondary { padding: 0.9rem 1.2rem; background: transparent; color: inherit; border: 1px solid var(--border); }
+.sport-guided__nav { display: flex; justify-content: space-between; width: 100%; margin-top: 0.5rem; }
+.sport-guided__nav button { background: transparent; color: var(--muted); }
+.sport-guided__nav button:disabled { opacity: 0.35; cursor: default; }
+.sport-guided__count { font-size: clamp(4rem, 18vw, 7rem); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.sport-guided__track { width: 100%; max-width: 420px; height: 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.25); overflow: hidden; }
+.sport-guided__bar { width: 0; height: 100%; background: #f97316; transition: width 0.2s linear; }
+.sport-guided.is-reached .sport-guided__bar { background: #10b981; }
+.sport-guided.is-reached .sport-guided__count { color: #10b981; }
+.sport-hero__top { flex-wrap: wrap; }
+.sport-hero__top > div:first-child { flex: 1 1 12rem; min-width: 0; }
+.sport-card .sport-hero__toggle input { width: auto; flex: none; margin: 0; padding: 0; }

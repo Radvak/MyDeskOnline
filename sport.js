@@ -1258,6 +1258,7 @@ function renderSportSummary(container, session, dateKey) {
           applyLadderStep(exercise, exercise.ladder, step);
           saveData();
           renderSportMain();
+          if (typeof sportGuided !== 'undefined' && sportGuided) renderSportGuided();
         })
       );
       list.appendChild(item);
@@ -1303,13 +1304,17 @@ function renderSportWorkout(main, session, date) {
     subtitle = t('sport.notScheduled');
   }
   titleBlock.appendChild(sportEl('p', 'sport-hero__subtitle', subtitle));
-  titleRow.append(
-    titleBlock,
+  const heroActions = sportEl('div', 'sport-hero__actions');
+  if (session.exercises.length && typeof openSportGuided === 'function') {
+    heroActions.appendChild(sportButton('sport-guided-btn', t('sport.guidedStart'), () => openSportGuided(session, date), t('sport.guidedTitle')));
+  }
+  heroActions.appendChild(
     sportButton('sport-edit-btn', t('sport.edit'), () => {
       sportView = 'edit';
       renderSportMain();
     })
   );
+  titleRow.append(titleBlock, heroActions);
   card.appendChild(titleRow);
 
   const progress = sportEl('div', 'sport-progress');
