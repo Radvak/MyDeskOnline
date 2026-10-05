@@ -176,6 +176,27 @@ const MenuEngine = (() => {
     return Math.round((x + Number.EPSILON) * f) / f;
   };
 
+  function nombreFr(valeur, decimales = 1) {
+    const r = arrondi(valeur, decimales);
+    if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+    return r.toFixed(decimales).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',');
+  }
+
+  function grammesFr(grammes) {
+    return grammes >= 1000 ? `${nombreFr(grammes / 1000, 2)} kg` : `${nombreFr(grammes, 0)} g`;
+  }
+
+  function etapesALEchelle(modeles, parts, grammesParPart) {
+    return modeles.map((etape) => etape.replace(/\{(box|g|x|paquets)(?::([^}:]+))?(?::([^}]+))?\}/g, (tout, genre, a, b) => {
+      const g = a !== undefined ? grammesParPart[a.trim()] : undefined;
+      if (genre === 'box') return nombreFr(parts);
+      if (genre === 'x' && Number.isFinite(parseFloat(String(a).replace(',', '.')))) return nombreFr(parseFloat(String(a).replace(',', '.')) * parts);
+      if (genre === 'g' && Number.isFinite(g)) return grammesFr(g * parts);
+      if (genre === 'paquets' && Number.isFinite(g) && Number(b) > 0) return nombreFr((g * parts) / Number(b));
+      return tout;
+    }));
+  }
+
   function nombreOuNone(valeur) {
     if (valeur === null || valeur === undefined || valeur === '') return null;
     const n = Number(valeur);
@@ -1049,6 +1070,8 @@ const MenuEngine = (() => {
       return ok({ ...nr, recettes: (nr.recettes || []).filter((r) => !supprimee(r.url)) });
     },
 
+    // Étapes à repères (box du midi), comme etapes_a_l_echelle dans app.py :
+    // {box}, {g:canonique}, {x:n}, {paquets:canonique:taille}.
     '/menus/detail': (params) => {
       const url = params.get('url') || '';
       const detailBase = base.details[url];
@@ -1073,6 +1096,9 @@ const MenuEngine = (() => {
           if (item.prix !== null) item.prix = arrondi(item.prix * facteur, 2);
         });
         if (detail.prix_estime_coursesu !== null) detail.prix_estime_coursesu = arrondi(detail.prix_estime_coursesu * facteur, 2);
+      }
+      if (Array.isArray(detail.etapes_modeles) && detail.grammes_par_part) {
+        detail.etapes = etapesALEchelle(detail.etapes_modeles, (detail.servings_base || 1) * facteur, detail.grammes_par_part);
       }
       const a = etat().annotations[url] || {};
       return ok({
