@@ -1,7 +1,7 @@
 /* Service worker : rend l'app installable et utilisable hors ligne.
    Stratégie « réseau d'abord » pour toujours servir la dernière version,
    avec repli sur le cache hors connexion. */
-const CACHE_NAME = 'mydesk-shell-v63';
+const CACHE_NAME = 'mydesk-shell-v64';
 const APP_SHELL = [
   './',
   'index.html',
@@ -78,14 +78,19 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Clic sur un rappel de l'agenda : revenir sur MyDesk (onglet déjà ouvert de préférence).
+// Clic sur un rappel de l'agenda : revenir sur MyDesk (onglet déjà ouvert de
+// préférence), qui ouvre ce que le rappel indique (ex. la séance de sport).
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const data = event.notification.data || {};
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       const open = windows.find((client) => 'focus' in client);
-      if (open) return open.focus();
-      return self.clients.openWindow ? self.clients.openWindow('./') : undefined;
+      if (open) {
+        open.postMessage({ type: 'mydesk-notification-click', data });
+        return open.focus();
+      }
+      return self.clients.openWindow ? self.clients.openWindow(data.url || './') : undefined;
     })
   );
 });

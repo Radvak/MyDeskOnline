@@ -126,7 +126,8 @@ const SPORT_TRANSLATIONS = {
     summaryRecord: '🏆 {name} : {value} (avant {before})',
     summaryUnlocked: 'Variantes débloquées',
     summaryFirst: 'Première fois sur ces variantes : ces chiffres seront ton objectif la prochaine fois.',
-    summaryDetail: 'Détail'
+    summaryDetail: 'Détail',
+    reminderExercises: '{count} exercices : {names}'
   },
   en: {
     sessionsTitle: 'Workouts',
@@ -241,7 +242,8 @@ const SPORT_TRANSLATIONS = {
     summaryRecord: '🏆 {name}: {value} (was {before})',
     summaryUnlocked: 'Unlocked variations',
     summaryFirst: 'First time on these variations: these numbers will be your goal next time.',
-    summaryDetail: 'Details'
+    summaryDetail: 'Details',
+    reminderExercises: '{count} exercises: {names}'
   },
   vi: {
     sessionsTitle: 'Buổi tập',
@@ -356,7 +358,8 @@ const SPORT_TRANSLATIONS = {
     summaryRecord: '🏆 {name}: {value} (trước: {before})',
     summaryUnlocked: 'Biến thể đã mở khóa',
     summaryFirst: 'Lần đầu với các biến thể này: các con số này sẽ là mục tiêu lần sau.',
-    summaryDetail: 'Chi tiết'
+    summaryDetail: 'Chi tiết',
+    reminderExercises: '{count} bài: {names}'
   }
 };
 
@@ -728,6 +731,39 @@ function openSportFromCalendar(occurrence) {
   }
   goToSportTab();
   renderSport();
+}
+
+// Ouvre l'onglet Sport sur une séance et un jour (clic sur un rappel).
+function openSportSessionOn(sessionId, dateKey) {
+  ensureSportData();
+  sportSelectedDate = dateKey ? new Date(`${dateKey}T00:00`) : null;
+  sportPickerEvent = null;
+  sportView = 'workout';
+  if (getSportSession(sessionId)) appData.sport.activeSessionId = sessionId;
+  goToSportTab();
+  renderSport();
+}
+
+// Contenu du rappel d'un créneau Sport (calendar-reminders.js) : nom de la
+// séance, exercices et où on en est de la semaine.
+function sportReminderContent(event, occurrence) {
+  ensureSportData();
+  const session = getSportSession(event.sportSessionId);
+  if (!session) return null;
+  const lines = [];
+  const names = session.exercises.map((exercise) => exercise.name).filter(Boolean);
+  if (names.length) {
+    lines.push(t('sport.reminderExercises', { count: names.length, names: `${names.slice(0, 3).join(', ')}${names.length > 3 ? '…' : ''}` }));
+  }
+  if (typeof sportWeekStats === 'function') {
+    const week = sportWeekStats(startOfWeek(new Date(occurrence.start)));
+    if (week.planned) lines.push(t('sport.weekBadge', week));
+  }
+  return {
+    title: `🏋️ ${session.name || t('sport.newSessionName')}`,
+    lines,
+    open: { tab: 'sport', session: session.id, date: sportDateKey(new Date(occurrence.start)) }
+  };
 }
 
 // Branche le clic gauche sur un évènement sport de l'agenda.
@@ -1303,6 +1339,8 @@ function renderSportWorkout(main, session, date) {
   let subtitle;
   if (plannedToday) {
     subtitle = t('sport.plannedAt', { time: formatTime(new Date(plannedToday.start)), duration: plannedToday.duration });
+    const lead = typeof reminderEnabled === 'function' && reminderEnabled() ? reminderLeadFor(plannedToday.sourceEvent) : null;
+    if (lead !== null) subtitle += ` · 🔔 ${reminderFormatLead(lead)}`;
   } else if (days.length) {
     subtitle = `${t('sport.notPlanned')} · ${t('sport.plannedOn', { days: days.map((d) => weekdayName(d)).join(', ') })}`;
   } else {

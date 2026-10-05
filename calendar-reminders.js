@@ -218,8 +218,17 @@ async function reminderShow(title, options) {
   notification.onclick = () => {
     window.focus();
     notification.close();
+    reminderOpenTarget(settings.data);
   };
   return 'page';
+}
+
+// Après un clic sur un rappel : une séance de sport s'ouvre dans l'onglet Sport.
+function reminderOpenTarget(data) {
+  const target = data && data.open;
+  if (target && target.tab === 'sport' && typeof openSportSessionOn === 'function') {
+    openSportSessionOn(target.session, target.date);
+  }
 }
 
 function checkCalendarReminders() {
@@ -245,14 +254,17 @@ function checkCalendarReminders() {
       changed = true;
       const end = new Date(start + occurrence.duration * 60000);
       const place = (event.location || '').trim();
+      // Créneau Sport : nom de la séance, exercices, semaine ; le clic ouvre la séance.
+      const sport = event.sportSessionId && typeof sportReminderContent === 'function' ? sportReminderContent(event, occurrence) : null;
       const body = [
         `${reminderFormatIn(start - now)} · ${formatTime(occurrence.start)} – ${formatTime(end)}`,
-        place ? `📍 ${place}` : ''
+        place ? `📍 ${place}` : '',
+        ...(sport ? sport.lines : [])
       ].filter(Boolean).join('\n');
-      reminderShow(event.title || t('calendar.eventDefaultTitle'), {
+      reminderShow(sport ? sport.title : event.title || t('calendar.eventDefaultTitle'), {
         body,
         tag: `mydesk-${key}`, // même rappel dans deux onglets : une seule notification
-        data: { url: './' }
+        data: sport ? { url: './?tab=sport', open: sport.open } : { url: './' }
       }).catch((error) => console.warn('Rappel impossible', error));
     });
   });
@@ -388,6 +400,11 @@ function readEventReminderSelect() {
 
 function initCalendarReminders() {
   renderRemindersPanel();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'mydesk-notification-click') reminderOpenTarget(event.data.data);
+    });
+  }
   clearInterval(reminderTimer);
   reminderTimer = setInterval(checkCalendarReminders, REMINDER_CHECK_MS);
   document.addEventListener('visibilitychange', checkCalendarReminders);
