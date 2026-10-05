@@ -17,6 +17,7 @@ const PATCH_NOTES = [
     items: [
       { area: 'news', text: 'Bouton « ✨ Générer le résumé » dans Actualité : lance le robot tout de suite. Avec un jeton GitHub dédié (limité au dépôt, permission Actions seulement, gardé sur l’appareil), c’est en un clic ; sinon le bouton explique comment le lancer depuis GitHub.' },
       { area: 'news', text: 'Rattrapage automatique : à l’ouverture de l’onglet, si le résumé du matin ou du soir manque, l’app le demande toute seule au robot.' },
+      { area: 'app', text: 'Assistant de démarrage à la première ouverture : langue, style (mode clair/sombre, thème, police, aperçu en direct) puis choix des onglets, avec une description de chacun. Relançable depuis Paramètres ; lien direct vers la synchronisation pour retrouver ses données d’un autre appareil.' },
       { area: 'todo', text: 'To Do : le texte des tâches ne disparaît plus (il se réduisait à une barre vide quand la liste était dessinée onglet fermé).' },
       { area: 'calendar', text: 'Agenda : les heures s’affichent en haut de chaque évènement, même quand le titre prend deux lignes ; un créneau court tient sur une ligne avec son heure de début.' },
       { area: 'news', text: 'Robot plus fiable : 4 passages prévus par heure (GitHub en sautait beaucoup) et nouveaux essais espacés quand Gemini est saturé.' }

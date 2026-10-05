@@ -4818,6 +4818,8 @@ function initSnake() {
 }
 
 async function bootstrap() {
+  // Avant initData, qui enregistre les données par défaut.
+  const firstVisit = typeof onboardingIsFirstVisit === 'function' && onboardingIsFirstVisit();
   if (typeof registerSyncTranslations === 'function') {
     registerSyncTranslations();
   }
@@ -4862,6 +4864,9 @@ async function bootstrap() {
   }
   if (typeof registerTodoTranslations === 'function') {
     registerTodoTranslations();
+  }
+  if (typeof registerOnboardingTranslations === 'function') {
+    registerOnboardingTranslations();
   }
   await initData();
   initAppearance();
@@ -4912,6 +4917,9 @@ async function bootstrap() {
   }
   if (typeof initInstall === 'function') {
     initInstall();
+  }
+  if (typeof initOnboarding === 'function') {
+    initOnboarding(firstVisit);
   }
 }
 
