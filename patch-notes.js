@@ -22,6 +22,8 @@ const PATCH_NOTES = [
       { area: 'calendar', text: 'Agenda : les heures s’affichent en haut de chaque évènement, même quand le titre prend deux lignes ; un créneau court tient sur une ligne avec son heure de début.' },
       { area: 'news', text: 'Robot plus fiable : 4 passages prévus par heure (GitHub en sautait beaucoup) et nouveaux essais espacés quand Gemini est saturé.' },
       { area: 'menu', text: 'Menu : les repas se comptent en entiers (1 ou 2, jamais 1,5), au choix comme à l’affichage. « Combien de repas ? » reprend le nombre de ta dernière liste pour chaque recette (la box du midi prise pour 7 revient à 7), et un bouton « ✕ Retirer » enlève une recette de la sélection sans quitter la fenêtre.' },
+      { area: 'menu', text: 'Menu : « 👤 Mon profil » (sexe, âge, taille, poids, activité) fixe ce que vaut un repas pour toi ; le nombre de repas de chaque recette et ce que la liste achète suivent. Chaque compte garde le sien.' },
+      { area: 'menu', text: 'Listes de courses : bouton « 🔄 Recalculer avec le stock » (et recalcul en revenant sur l’onglet), bouton « 🗑️ Supprimer la liste », et quantités arrondies au-dessus — 2 saucisses ou 2 œufs plutôt que 1,5.' },
       { area: 'menu', text: 'Menu : 330 ingrédients de recettes mieux reconnus (crozets, passata, beaufort, poissons, pruneaux…) et des prix retrouvés pour la crème végétale, la pâte filo, les galettes de sarrasin, les cacahuètes, l’orange, le Tabasco ou les cèpes, qui comptaient 0 €. (Après la prochaine publication depuis le PC.)' }
     ]
   },

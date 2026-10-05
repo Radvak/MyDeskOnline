@@ -214,9 +214,52 @@ const MenuEngine = (() => {
 
   // Une part = ce qu'annonce la recette ; un repas = une portion d'homme de
   // 20 ans, 1,85 m, 73 kg (base.kcal_par_portion). Les parts restent l'unité interne.
+  // Profil de la personne (sexe, âge, taille, poids, activité) : fixe ce que
+  // vaut UN repas. Chacun règle le sien (« Mon profil », gardé dans
+  // appData.menu.profil) ; à défaut, celui du PC publié dans la base.
+  // app.py : charger_profil / kcal_repas_actuel / valider_profil.
+  const PROFIL_DEFAUT = { sexe: 'homme', age: 20, poids_kg: 73, taille_cm: 185, activite: 1.55 };
+  const ACTIVITES = [1.2, 1.375, 1.55, 1.725, 1.9];
+
+  function profil() {
+    return { ...PROFIL_DEFAUT, ...((base && base.profil) || {}), ...(etat().profil || {}) };
+  }
+
+  function kcalRepas(p = profil()) {
+    const metabolisme = 10 * p.poids_kg + 6.25 * p.taille_cm - 5 * p.age + (p.sexe === 'femme' ? -161 : 5);
+    return Math.round((metabolisme * p.activite) / 3 / 10) * 10;
+  }
+
+  function validerProfil(data) {
+    data = data || {};
+    if (data.sexe !== 'homme' && data.sexe !== 'femme') return [null, 'Sexe : homme ou femme.'];
+    const bornes = { age: [10, 100, 'Âge'], taille_cm: [120, 230, 'Taille'], poids_kg: [30, 250, 'Poids'] };
+    const p = { sexe: data.sexe };
+    for (const [cle, [mini, maxi, nom]] of Object.entries(bornes)) {
+      const v = nombreOuNone(data[cle]);
+      if (v === null || v < mini || v > maxi) return [null, `${nom} : entre ${mini} et ${maxi}.`];
+      p[cle] = arrondi(v, 1);
+    }
+    const activite = nombreOuNone(data.activite);
+    if (!ACTIVITES.includes(activite)) return [null, "Niveau d'activité inconnu."];
+    p.activite = activite;
+    return [p, null];
+  }
+
+  // Repas que fait la recette telle qu'écrite, avec le repère du profil ; la
+  // box du midi garde son nombre fixé (repas_fixes).
+  function portionsDe(r) {
+    if (!r) return null;
+    const fixes = Number(r.repas_fixes);
+    if (fixes > 0) return fixes;
+    const kcal = Number(r.kcal_total);
+    if (kcal > 0) return arrondi(kcal / kcalRepas(), 1);
+    return r.portions_reelles ?? null;
+  }
+
   function partsParRepas(r) {
     const servingsBase = Number(r && r.servings_base);
-    const portions = Number(r && r.portions_reelles);
+    const portions = Number(portionsDe(r));
     if (!servingsBase || !portions) return null;
     return servingsBase / portions;
   }
@@ -259,9 +302,8 @@ const MenuEngine = (() => {
     const tete = espace === -1 ? [texte] : [texte.slice(0, espace), texte.slice(espace + 1)];
     const nombre = Number(tete[0].replace(',', '.'));
     if (!Number.isFinite(nombre) || tete[0] === '') return [consigne, false];
-    const misALEchelle = nombre * facteur;
-    const arr = Math.round(misALEchelle * 2) / 2;
-    if (arr <= 0 || Math.abs(misALEchelle - arr) > 0.01) return [consigne, false];
+    // Toujours un entier, arrondi au-dessus : jamais « 1,5 saucisse ».
+    const arr = Math.max(1, Math.ceil(nombre * facteur - 0.01));
     const reste = tete.length > 1 ? tete[1] : '';
     return [`${arr} ${reste}`.trim(), true];
   }
@@ -305,7 +347,7 @@ const MenuEngine = (() => {
           demandes.push(libelle || canonique);
           return;
         }
-        const affiche = Math.ceil(nombre * ratio * 2) / 2;
+        const affiche = Math.max(1, Math.ceil(nombre * ratio - 0.01));
         if (reste) {
           const liaison = 'aeiouyéèêh'.includes(libelle.slice(0, 1).toLowerCase()) && libelle ? "d'" : 'de ';
           demandes.push(libelle ? `${affiche} ${reste} ${liaison}${libelle}` : `${affiche} ${reste}`);
@@ -764,6 +806,9 @@ const MenuEngine = (() => {
 
     const [aTraiter, dejaEnPlacard] = filtrerPlacardPermanent(besoinsBruts);
     const [besoinsReels, detailStock] = appliquerStockSurBesoins(aTraiter);
+    Object.keys(besoinsReels).forEach((c) => {
+      if (besoinsReels[c] > 0 && aLaPiece(c)) besoinsReels[c] = Math.ceil(besoinsReels[c] - 0.01);
+    });
 
     const rayons = {};
     const nonResolus = [];
@@ -971,9 +1016,17 @@ const MenuEngine = (() => {
         .filter((r) => !supprimee(r.url))
         .map((r) => {
           const a = annotations[r.url] || {};
-          return { ...r, note: a.note || 0, commentaire: a.commentaire || '' };
+          const portions = portionsDe(recette(r.url)) ?? r.portions_reelles;
+          const prix = r.prix_estime_coursesu;
+          return {
+            ...r,
+            portions_reelles: portions,
+            prix_par_portion_reelle: prix !== null && prix !== undefined && portions ? arrondi(prix / portions, 2) : null,
+            note: a.note || 0,
+            commentaire: a.commentaire || ''
+          };
         });
-      return ok({ ...base.menus, recettes, kcal_par_portion: base.menus.kcal_par_portion || base.kcal_par_portion });
+      return ok({ ...base.menus, recettes, kcal_par_portion: kcalRepas() });
     },
 
     '/menus/non-reconnus': () => {
@@ -993,7 +1046,10 @@ const MenuEngine = (() => {
       let nonMisesALEchelle = false;
       if (facteur !== 1.0) {
         detail.ingredients.forEach((item) => {
-          if (item.grammes !== null) item.grammes = arrondi(item.grammes * facteur, 1);
+          if (item.grammes !== null) {
+            item.grammes = arrondi(item.grammes * facteur, 1);
+            if (item.unite === 'piece') item.grammes = Math.max(1, Math.ceil(item.grammes - 0.01));
+          }
           if (item.consigne_originale) {
             const [texte, ajustee] = consigneALEchelle(item.consigne_originale, facteur);
             item.consigne_originale = texte;
@@ -1107,7 +1163,7 @@ const MenuEngine = (() => {
         if (partsMax < 0.5) return;
         const [manquants, couverts] = couvertureParStock(poids);
         const prix = r.prix_total;
-        const portions = r.portions_reelles;
+        const portions = portionsDe(r);
         plats.push({
           url,
           nom: r.nom,
@@ -1140,8 +1196,10 @@ const MenuEngine = (() => {
       };
       const prixOuInfini = (p) => (p.prix_par_portion_reelle === null || p.prix_par_portion_reelle === undefined ? Infinity : p.prix_par_portion_reelle);
       plats.sort((a, b) => a.priorite - b.priorite || (prixOuInfini(a) - prixOuInfini(b)) || parNom(a, b));
-      return ok({ ok: true, plats, kcal_par_portion: base.kcal_par_portion });
+      return ok({ ok: true, plats, kcal_par_portion: kcalRepas() });
     },
+
+    '/profil': () => ok({ ok: true, profil: profil(), kcal_par_repas: kcalRepas() }),
 
     '/produits/recherche': (params) => {
       const q = (params.get('q') || '').trim();
@@ -1162,6 +1220,13 @@ const MenuEngine = (() => {
   };
 
   const routesPost = {
+    '/profil': (body) => {
+      const [p, message] = validerProfil(body);
+      if (!p) return erreur(message);
+      etat().profil = p;
+      sauver();
+      return ok({ ok: true, profil: profil(), kcal_par_repas: kcalRepas() });
+    },
     '/start': () => erreur(MESSAGE_PC, 409),
     '/stop': () => erreur(MESSAGE_PC, 409),
     '/recettes/start': () => erreur(MESSAGE_PC, 409),
@@ -1384,6 +1449,16 @@ const MenuEngine = (() => {
       return ok(contenu);
     }
     if (method !== 'POST') return erreur('Méthode non prise en charge.', 405);
+
+    // app.py : supprimer_liste_courses.
+    if (action === 'supprimer') {
+      const e = etat();
+      e.listes = e.listes.filter((l) => l.id !== id);
+      const avant = e.plats.length;
+      e.plats = e.plats.filter((p) => p.liste_id !== id);
+      sauver();
+      return ok({ ok: true, plats_retires: avant - e.plats.length });
+    }
 
     if (action === 'renommer') {
       const nom = String(body.nom || '').trim().slice(0, 120);
