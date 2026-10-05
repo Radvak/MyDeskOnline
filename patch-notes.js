@@ -12,6 +12,15 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu
 const PATCH_NOTES = [
   {
+    date: '2026-10-05',
+    title: 'Résumé de l’actualité à la demande',
+    items: [
+      { area: 'news', text: 'Bouton « ✨ Générer le résumé » dans Actualité : lance le robot tout de suite. Avec un jeton GitHub dédié (limité au dépôt, permission Actions seulement, gardé sur l’appareil), c’est en un clic ; sinon le bouton explique comment le lancer depuis GitHub.' },
+      { area: 'news', text: 'Rattrapage automatique : à l’ouverture de l’onglet, si le résumé du matin ou du soir manque, l’app le demande toute seule au robot.' },
+      { area: 'news', text: 'Robot plus fiable : 4 passages prévus par heure (GitHub en sautait beaucoup) et nouveaux essais espacés quand Gemini est saturé.' }
+    ]
+  },
+  {
     date: '2026-10-04',
     title: 'Actualité, objectifs de révision et onglets à la carte',
     items: [

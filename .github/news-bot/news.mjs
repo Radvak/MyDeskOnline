@@ -678,15 +678,19 @@ const main = async () => {
   const allItems = [];
   days.forEach((day) => allItems.push(...day.items));
 
-  // Au plus 3 essais par créneau, pour ne pas épuiser le quota gratuit
-  // si Gemini est indisponible (le briefing de secours reste alors).
+  // Au plus 6 essais par créneau, espacés d'au moins 25 min : Gemini
+  // gratuit est souvent saturé (503/429) pendant un moment, trois essais
+  // rapprochés échouaient tous (05/10). Le briefing de secours reste en
+  // attendant. Une demande depuis l'app (FORCE_BRIEFING) passe toujours.
   const force = process.env.FORCE_BRIEFING === 'true';
   const due = dueSlot(days, now);
   const dueKey = due ? `${due.day}-${due.slot}` : '';
-  const attempts = state.briefingAttempts && state.briefingAttempts.key === dueKey ? state.briefingAttempts.count : 0;
+  const previousAttempt = state.briefingAttempts && state.briefingAttempts.key === dueKey ? state.briefingAttempts : null;
+  const attempts = previousAttempt ? previousAttempt.count : 0;
+  const spaced = !previousAttempt || !previousAttempt.at || now.getTime() - Date.parse(previousAttempt.at) >= 25 * 60 * 1000;
   let newEvening = false;
-  if (due && (attempts < 3 || force)) {
-    state.briefingAttempts = { key: dueKey, count: attempts + 1 };
+  if (due && ((attempts < 6 && spaced) || force)) {
+    state.briefingAttempts = { key: dueKey, count: attempts + 1, at: now.toISOString() };
     const briefing = await makeBriefing(days, allItems, now, due);
     const day = ensureDay(days, due.day);
     const previous = day.briefings.find((existing) => existing.slot === briefing.slot);

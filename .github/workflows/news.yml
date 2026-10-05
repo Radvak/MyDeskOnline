@@ -6,7 +6,11 @@ name: Actualité
 
 on:
   schedule:
-    - cron: '23 * * * *'
+    # 4 passages prévus par heure : GitHub retarde ou saute souvent les
+    # tâches planifiées (le 05/10, aucun passage entre 4 h et 9 h, donc pas
+    # de résumé du matin). Un passage sans rien de neuf ne coûte rien
+    # (dépôt public) et ne rappelle pas Gemini.
+    - cron: '8,23,38,53 * * * *'
   workflow_dispatch:
     inputs:
       briefing:

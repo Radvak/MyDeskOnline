@@ -4500,6 +4500,77 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .news-status.is-error { color: #b91c1c; }
 [data-theme="dark"] .news-status.is-error { color: #fca5a5; }
 
+/* Lancer le robot depuis l'app */
+.news-toolbar__meta { flex-wrap: wrap; }
+
+.news-toolbar__generate {
+  background: var(--primary);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.38rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.news-toolbar__generate:hover { background: var(--primary-light); }
+.news-toolbar__generate:disabled { opacity: 0.6; cursor: progress; }
+
+.news-robot__message {
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(78, 115, 223, 0.1);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.news-robot__message.is-error { background: rgba(220, 38, 38, 0.1); color: #b91c1c; }
+[data-theme="dark"] .news-robot__message.is-error { color: #fca5a5; }
+
+.news-robot {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.92rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.news-robot p { margin: 0; }
+.news-robot__title { margin: 0; font-size: 1.05rem; }
+.news-robot__steps { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.news-robot__form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.news-robot__link { text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 8px; }
+
+#news .news-robot__input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+}
+
+.news-robot__save {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.news-robot__once { color: var(--muted); font-size: 0.86rem; }
+.news-robot__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
+
 .news-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

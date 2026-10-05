@@ -19,6 +19,20 @@ const NEWS_MODE_KEY = 'mydesk-news-mode';
 const NEWS_REFRESH_MS = 15 * 60 * 1000;
 const NEWS_HEADLINES_STEP = 40;
 const NEWS_THEME_ORDER = ['monde', 'france', 'juridique'];
+// Lancer le robot depuis l'app (bouton « Générer le résumé » et rattrapage
+// automatique d'un résumé manquant) : jeton GitHub À PART de celui de la
+// synchro, limité au dépôt avec la seule permission Actions, gardé sur
+// l'appareil (jamais synchronisé).
+const NEWS_REPO_API = 'https://api.github.com/repos/Radvak/MyDeskOnline/actions/workflows/news.yml/dispatches';
+const NEWS_ACTIONS_PAGE = 'https://github.com/Radvak/MyDeskOnline/actions/workflows/news.yml';
+const NEWS_TOKEN_PAGE = 'https://github.com/settings/personal-access-tokens/new';
+const NEWS_ROBOT_TOKEN_KEY = 'mydesk-news-robot-token';
+const NEWS_AUTO_KEY = 'mydesk-news-auto-at';
+const NEWS_SLOT_HOURS = { matin: 6, soir: 18 };
+const NEWS_AUTO_DELAY_MS = 20 * 60 * 1000; // créneau ouvert depuis 20 min sans résumé
+const NEWS_AUTO_GAP_MS = 45 * 60 * 1000; // au plus une demande automatique / 45 min
+const NEWS_POLL_MS = 30 * 1000;
+const NEWS_POLL_MAX_MS = 8 * 60 * 1000;
 
 const NEWS_TRANSLATIONS = {
   fr: {
@@ -61,7 +75,27 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Mis à jour le {date} à {time}',
     weekNone: 'Pas encore de résumé pour cette semaine. Il est rédigé chaque soir.',
     weekNote: 'Les faits les plus importants de la semaine, résumés par IA à partir des briefings de chaque jour. En cas de doute, ouvre la source.',
-    fromOtherSlot: 'Résumé du {slot}'
+    fromOtherSlot: 'Résumé du {slot}',
+    generate: '✨ Générer le résumé',
+    generating: 'Résumé demandé au robot : il arrive d’ici 2 à 5 minutes…',
+    generated: 'Nouveau résumé arrivé.',
+    generateSlow: 'Le robot n’a pas encore publié. Réessaie « Actualiser » dans quelques minutes.',
+    autoRequested: 'Le résumé du {slot} manquait : je l’ai demandé au robot, il arrive d’ici quelques minutes.',
+    robotTitle: 'Lancer le robot depuis l’app',
+    robotIntro: 'Le robot tourne sur GitHub. Pour le lancer d’ici en un clic, il faut un jeton GitHub à part, limité à ce dépôt (le jeton de la synchro ne peut pas le faire, et c’est voulu).',
+    robotStep1: 'Ouvre la page de création de jeton (bouton ci-dessous), donne-lui un nom et une durée.',
+    robotStep2: '« Repository access » : Only select repositories → MyDeskOnline.',
+    robotStep3: '« Permissions » → Repository permissions → Actions : Read and write. Rien d’autre.',
+    robotStep4: 'Génère le jeton, copie-le et colle-le ici. Il reste sur cet appareil.',
+    robotCreate: 'Créer le jeton ↗',
+    robotPlaceholder: 'github_pat_…',
+    robotSave: 'Enregistrer',
+    robotOnce: 'Ou, sans jeton : ouvre la page du robot sur GitHub, « Run workflow », coche « Refaire le briefing » puis « Run workflow ».',
+    robotOpen: 'Ouvrir la page du robot ↗',
+    robotClose: 'Fermer',
+    robotForget: 'Oublier le jeton de cet appareil',
+    robotRefused: 'Jeton refusé par GitHub : il doit avoir accès au dépôt MyDeskOnline avec la permission Actions (lecture et écriture).',
+    robotError: 'Impossible de joindre GitHub ({message}).'
   },
   en: {
     tab: 'News',
@@ -103,7 +137,27 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Updated on {date} at {time}',
     weekNone: 'No summary for this week yet. It is written every evening.',
     weekNote: 'The most important stories of the week, summarised by AI (in French) from the daily briefings. When in doubt, open the source.',
-    fromOtherSlot: '{slot} summary'
+    fromOtherSlot: '{slot} summary',
+    generate: '✨ Generate summary',
+    generating: 'Summary requested from the bot: it should arrive within 2 to 5 minutes…',
+    generated: 'New summary arrived.',
+    generateSlow: 'The bot has not published yet. Try “Refresh” again in a few minutes.',
+    autoRequested: 'The {slot} summary was missing: I asked the bot for it, it should arrive within a few minutes.',
+    robotTitle: 'Run the bot from the app',
+    robotIntro: 'The bot runs on GitHub. To start it from here in one click you need a separate GitHub token limited to this repository (the sync token cannot do it, on purpose).',
+    robotStep1: 'Open the token page (button below), give it a name and an expiry.',
+    robotStep2: '“Repository access”: Only select repositories → MyDeskOnline.',
+    robotStep3: '“Permissions” → Repository permissions → Actions: Read and write. Nothing else.',
+    robotStep4: 'Generate the token, copy it and paste it here. It stays on this device.',
+    robotCreate: 'Create the token ↗',
+    robotPlaceholder: 'github_pat_…',
+    robotSave: 'Save',
+    robotOnce: 'Or, without a token: open the bot page on GitHub, “Run workflow”, tick “Refaire le briefing” then “Run workflow”.',
+    robotOpen: 'Open the bot page ↗',
+    robotClose: 'Close',
+    robotForget: 'Forget the token on this device',
+    robotRefused: 'GitHub refused the token: it needs access to the MyDeskOnline repository with the Actions permission (read and write).',
+    robotError: 'Cannot reach GitHub ({message}).'
   },
   vi: {
     tab: 'Tin tức',
@@ -145,7 +199,27 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Cập nhật ngày {date} lúc {time}',
     weekNone: 'Chưa có bản tóm tắt cho tuần này. Bản tóm tắt được viết mỗi tối.',
     weekNote: 'Những sự kiện quan trọng nhất trong tuần, do AI tóm tắt (bằng tiếng Pháp) từ các bản tin hằng ngày. Nếu nghi ngờ, hãy mở nguồn.',
-    fromOtherSlot: 'Bản tóm tắt {slot}'
+    fromOtherSlot: 'Bản tóm tắt {slot}',
+    generate: '✨ Tạo bản tóm tắt',
+    generating: 'Đã yêu cầu robot: bản tóm tắt sẽ có trong 2 đến 5 phút…',
+    generated: 'Đã có bản tóm tắt mới.',
+    generateSlow: 'Robot chưa xuất bản. Hãy bấm “Làm mới” lại sau vài phút.',
+    autoRequested: 'Thiếu bản tóm tắt {slot}: đã yêu cầu robot, sẽ có trong vài phút.',
+    robotTitle: 'Chạy robot từ ứng dụng',
+    robotIntro: 'Robot chạy trên GitHub. Để chạy từ đây chỉ với một cú nhấp, cần một token GitHub riêng, chỉ cho kho này.',
+    robotStep1: 'Mở trang tạo token (nút bên dưới), đặt tên và thời hạn.',
+    robotStep2: '“Repository access”: Only select repositories → MyDeskOnline.',
+    robotStep3: '“Permissions” → Repository permissions → Actions: Read and write. Không gì khác.',
+    robotStep4: 'Tạo token, sao chép và dán vào đây. Token chỉ lưu trên thiết bị này.',
+    robotCreate: 'Tạo token ↗',
+    robotPlaceholder: 'github_pat_…',
+    robotSave: 'Lưu',
+    robotOnce: 'Hoặc không cần token: mở trang robot trên GitHub, “Run workflow”, đánh dấu “Refaire le briefing” rồi “Run workflow”.',
+    robotOpen: 'Mở trang robot ↗',
+    robotClose: 'Đóng',
+    robotForget: 'Quên token trên thiết bị này',
+    robotRefused: 'GitHub từ chối token: token cần quyền truy cập kho MyDeskOnline với quyền Actions (đọc và ghi).',
+    robotError: 'Không thể kết nối GitHub ({message}).'
   }
 };
 
@@ -170,7 +244,11 @@ const newsState = {
   loadedAt: 0,
   headlinesShown: NEWS_HEADLINES_STEP,
   seenBefore: 0, // dernière visite : les articles plus récents sont « nouveaux »
-  timer: null
+  timer: null,
+  robotPanel: false, // explications pour lancer le robot depuis l'app
+  robotMessage: '', // retour du bouton « Générer le résumé »
+  robotError: false,
+  polling: null
 };
 
 /* ── Stockage local ────────────────────────────────────────── */
@@ -213,6 +291,160 @@ function newsLoadCache() {
   } catch (error) {
     return false;
   }
+}
+
+/* ── Lancer le robot ───────────────────────────────────────── */
+
+function newsRobotToken() {
+  return (newsReadLocal(NEWS_ROBOT_TOKEN_KEY) || '').trim();
+}
+
+// Jour (AAAA-MM-JJ) et heure à Paris, comme le robot.
+function newsParisNow() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date())
+      .map((part) => [part.type, part.value])
+  );
+  return { day: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour), minute: Number(parts.minute) };
+}
+
+// Créneau en cours (matin dès 6 h, soir dès 18 h) dont le résumé IA manque
+// depuis au moins NEWS_AUTO_DELAY_MS ; null sinon.
+function newsMissingSlot() {
+  const now = newsParisNow();
+  const slot = now.hour >= NEWS_SLOT_HOURS.soir ? 'soir' : now.hour >= NEWS_SLOT_HOURS.matin ? 'matin' : null;
+  if (!slot) return null;
+  const minutesOpen = (now.hour - NEWS_SLOT_HOURS[slot]) * 60 + now.minute;
+  if (minutesOpen * 60000 < NEWS_AUTO_DELAY_MS) return null;
+  const day = newsState.days[now.day];
+  if (newsState.index && newsState.index.days.includes(now.day) && !day) return null; // jour pas encore chargé
+  const done = day && (day.briefings || []).some((briefing) => briefing.slot === slot && !briefing.fallback);
+  return done ? null : slot;
+}
+
+async function newsDispatch() {
+  const token = newsRobotToken();
+  const response = await fetch(NEWS_REPO_API, {
+    method: 'POST',
+    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: 'main', inputs: { briefing: 'true' } })
+  });
+  if (response.status === 204) return;
+  const error = new Error(`HTTP ${response.status}`);
+  error.status = response.status;
+  throw error;
+}
+
+// Après une demande : relit l'actualité toutes les 30 s jusqu'à voir passer
+// le robot (index.updatedAt plus récent que la demande).
+function newsPollAfterRequest(requestedAt) {
+  clearInterval(newsState.polling);
+  const started = Date.now();
+  newsState.polling = setInterval(async () => {
+    if (newsState.status !== 'loading') await newsRefresh();
+    const updated = newsState.index && Date.parse(newsState.index.updatedAt);
+    if (updated && updated > requestedAt) {
+      clearInterval(newsState.polling);
+      newsState.polling = null;
+      newsState.robotMessage = t('news.generated');
+      renderNews();
+    } else if (Date.now() - started > NEWS_POLL_MAX_MS) {
+      clearInterval(newsState.polling);
+      newsState.polling = null;
+      newsState.robotMessage = t('news.generateSlow');
+      renderNews();
+    }
+  }, NEWS_POLL_MS);
+}
+
+async function newsGenerate(auto = false, slot = null) {
+  if (!newsRobotToken()) {
+    newsState.robotPanel = true;
+    renderNews();
+    return;
+  }
+  const requestedAt = Date.now() - 60000; // marge : horloges et passage en cours
+  try {
+    await newsDispatch();
+    newsWriteLocal(NEWS_AUTO_KEY, String(Date.now()));
+    newsState.robotError = false;
+    newsState.robotMessage = auto ? t('news.autoRequested', { slot: t(`news.slots.${slot}`).toLowerCase() }) : t('news.generating');
+    newsPollAfterRequest(requestedAt);
+  } catch (error) {
+    newsState.robotError = true;
+    newsState.robotMessage = [401, 403, 404, 422].includes(error.status)
+      ? t('news.robotRefused')
+      : t('news.robotError', { message: error.message });
+    if (!auto) newsState.robotPanel = [401, 403, 404].includes(error.status);
+  }
+  renderNews();
+}
+
+// Résumé du créneau manquant à l'ouverture de l'onglet : demandé tout seul
+// (si un jeton est enregistré), au plus une fois toutes les 45 min.
+function newsAutoCatchUp() {
+  if (!newsRobotToken() || newsState.polling || newsState.mode !== 'day') return;
+  const slot = newsMissingSlot();
+  if (!slot) return;
+  const last = Number(newsReadLocal(NEWS_AUTO_KEY)) || 0;
+  if (Date.now() - last < NEWS_AUTO_GAP_MS) return;
+  newsGenerate(true, slot);
+}
+
+function renderNewsRobotPanel(container) {
+  if (!newsState.robotPanel) return;
+  const panel = newsEl('div', 'news-robot');
+  panel.append(newsEl('h3', 'news-robot__title', t('news.robotTitle')), newsEl('p', '', t('news.robotIntro')));
+  const steps = newsEl('ol', 'news-robot__steps');
+  ['robotStep1', 'robotStep2', 'robotStep3', 'robotStep4'].forEach((key) => steps.append(newsEl('li', '', t(`news.${key}`))));
+  panel.append(steps);
+  const form = newsEl('form', 'news-robot__form');
+  const create = newsLink(NEWS_TOKEN_PAGE, t('news.robotCreate'), 'btn-secondary news-robot__link');
+  const input = newsEl('input', 'news-robot__input');
+  input.type = 'password';
+  input.autocomplete = 'off';
+  input.placeholder = t('news.robotPlaceholder');
+  input.setAttribute('aria-label', t('news.robotPlaceholder'));
+  const save = newsEl('button', 'news-robot__save', t('news.robotSave'));
+  save.type = 'submit';
+  form.append(create, input, save);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+    newsWriteLocal(NEWS_ROBOT_TOKEN_KEY, value);
+    newsState.robotPanel = false;
+    newsGenerate();
+  });
+  panel.append(form);
+  const once = newsEl('p', 'news-robot__once', t('news.robotOnce'));
+  once.append(' ', newsLink(NEWS_ACTIONS_PAGE, t('news.robotOpen')));
+  panel.append(once);
+  const actions = newsEl('div', 'news-robot__actions');
+  if (newsRobotToken()) {
+    const forget = newsEl('button', 'btn-secondary', t('news.robotForget'));
+    forget.type = 'button';
+    forget.addEventListener('click', () => {
+      try {
+        localStorage.removeItem(NEWS_ROBOT_TOKEN_KEY);
+      } catch (error) {
+        // ignoré
+      }
+      newsState.robotMessage = '';
+      renderNews();
+    });
+    actions.append(forget);
+  }
+  const close = newsEl('button', 'btn-secondary', t('news.robotClose'));
+  close.type = 'button';
+  close.addEventListener('click', () => {
+    newsState.robotPanel = false;
+    renderNews();
+  });
+  actions.append(close);
+  panel.append(actions);
+  container.append(panel);
 }
 
 /* ── Chargement ────────────────────────────────────────────── */
@@ -277,6 +509,7 @@ async function newsRefresh() {
     newsState.status = 'ok';
     newsState.loadedAt = Date.now();
     newsSaveCache();
+    setTimeout(newsAutoCatchUp, 0);
   } catch (error) {
     console.warn('Actualité indisponible', error);
     // 404 sur index.json : la branche « news » n'existe pas encore.
@@ -437,7 +670,11 @@ function renderNewsToolbar(container) {
   refresh.type = 'button';
   refresh.disabled = newsState.status === 'loading';
   refresh.addEventListener('click', () => newsRefresh());
-  meta.append(refresh);
+  const generate = newsEl('button', 'news-toolbar__generate', t('news.generate'));
+  generate.type = 'button';
+  generate.disabled = Boolean(newsState.polling);
+  generate.addEventListener('click', () => newsGenerate());
+  meta.append(generate, refresh);
 
   bar.append(group, meta);
   container.append(bar);
@@ -652,6 +889,12 @@ function renderNews() {
   if (!container) return;
   container.innerHTML = '';
   renderNewsToolbar(container);
+  renderNewsRobotPanel(container);
+  if (newsState.robotMessage) {
+    const robot = newsEl('p', 'news-robot__message', newsState.robotMessage);
+    robot.classList.toggle('is-error', newsState.robotError);
+    container.append(robot);
+  }
 
   const message = newsEl('p', 'news-status');
   message.setAttribute('aria-live', 'polite');
