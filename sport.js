@@ -116,7 +116,17 @@ const SPORT_TRANSLATIONS = {
     holdReached: 'Objectif atteint ! Tiens encore si tu peux.',
     holdStop: '✓ Stop',
     holdCancel: 'Annuler sans noter',
-    autoRest: 'Repos lancé tout seul après chaque série notée'
+    autoRest: 'Repos lancé tout seul après chaque série notée',
+    summaryTitle: '🎉 Séance terminée',
+    summarySets: 'séries',
+    summaryReps: 'répétitions',
+    summaryHeld: 'tenu au total',
+    summaryVsLast: 'vs la dernière fois',
+    summaryRecords: 'Records battus',
+    summaryRecord: '🏆 {name} : {value} (avant {before})',
+    summaryUnlocked: 'Variantes débloquées',
+    summaryFirst: 'Première fois sur ces variantes : ces chiffres seront ton objectif la prochaine fois.',
+    summaryDetail: 'Détail'
   },
   en: {
     sessionsTitle: 'Workouts',
@@ -221,7 +231,17 @@ const SPORT_TRANSLATIONS = {
     holdReached: 'Goal reached! Hold on longer if you can.',
     holdStop: '✓ Stop',
     holdCancel: 'Cancel without saving',
-    autoRest: 'Start the rest timer after each logged set'
+    autoRest: 'Start the rest timer after each logged set',
+    summaryTitle: '🎉 Workout complete',
+    summarySets: 'sets',
+    summaryReps: 'reps',
+    summaryHeld: 'held in total',
+    summaryVsLast: 'vs last time',
+    summaryRecords: 'Personal bests',
+    summaryRecord: '🏆 {name}: {value} (was {before})',
+    summaryUnlocked: 'Unlocked variations',
+    summaryFirst: 'First time on these variations: these numbers will be your goal next time.',
+    summaryDetail: 'Details'
   },
   vi: {
     sessionsTitle: 'Buổi tập',
@@ -326,7 +346,17 @@ const SPORT_TRANSLATIONS = {
     holdReached: 'Đạt mục tiêu! Cố giữ thêm nếu được.',
     holdStop: '✓ Dừng',
     holdCancel: 'Hủy, không ghi',
-    autoRest: 'Tự bắt đầu giờ nghỉ sau mỗi hiệp đã ghi'
+    autoRest: 'Tự bắt đầu giờ nghỉ sau mỗi hiệp đã ghi',
+    summaryTitle: '🎉 Hoàn thành buổi tập',
+    summarySets: 'hiệp',
+    summaryReps: 'lần lặp',
+    summaryHeld: 'tổng thời gian giữ',
+    summaryVsLast: 'so với lần trước',
+    summaryRecords: 'Kỷ lục mới',
+    summaryRecord: '🏆 {name}: {value} (trước: {before})',
+    summaryUnlocked: 'Biến thể đã mở khóa',
+    summaryFirst: 'Lần đầu với các biến thể này: các con số này sẽ là mục tiêu lần sau.',
+    summaryDetail: 'Chi tiết'
   }
 };
 
@@ -446,6 +476,20 @@ function getLastPerformance(sessionId, exercise, beforeKey) {
     }
   }
   return null;
+}
+
+// Meilleure série avant la date donnée, pour la même variante de l'exercice.
+function getBestSet(sessionId, exercise, beforeKey) {
+  let best = 0;
+  Object.keys(appData.sport.logs).forEach((key) => {
+    if (key >= beforeKey) return;
+    const entry = appData.sport.logs[key][sessionId] && appData.sport.logs[key][sessionId][exercise.id];
+    if (!entry || !Array.isArray(entry.sets) || (entry.variant && entry.variant !== exercise.name)) return;
+    entry.sets.forEach((value) => {
+      best = Math.max(best, Number(value) || 0);
+    });
+  });
+  return best;
 }
 
 // "8–12" → {min: 8, max: 12} ; "30–45 s" → {30, 45} ; "10 / jambe" → {10, 10}
@@ -1102,6 +1146,142 @@ function updateSportProgress(session, dateKey) {
   const label = document.getElementById('sport-progress-label');
   if (bar) bar.style.width = total ? `${(done / total) * 100}%` : '0%';
   if (label) label.textContent = done === total && total > 0 ? t('sport.allDone') : t('sport.progress', { done, total });
+  const slot = document.getElementById('sport-summary-slot');
+  if (!slot) return;
+  const finished = total > 0 && done === total;
+  const wasShown = slot.dataset.shown === '1';
+  slot.innerHTML = '';
+  slot.dataset.shown = finished ? '1' : '';
+  if (!finished) return;
+  renderSportSummary(slot, session, dateKey);
+  // On vient de finir (pas à l'ouverture d'une séance déjà finie) : on montre le bilan.
+  if (!wasShown && slot.dataset.ready === '1') slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Bilan de fin de séance ────────────────────────────────── */
+
+function sumSets(sets) {
+  return (sets || []).map(Number).filter((value) => value > 0).reduce((sum, value) => sum + value, 0);
+}
+
+// Séries, répétitions / secondes, écart avec la dernière fois (même
+// variante), records battus et variantes débloquées.
+function computeSportSummary(session, dateKey) {
+  const log = getSportLog(dateKey, session.id);
+  const summary = { rows: [], sets: 0, reps: 0, seconds: 0, deltaReps: null, deltaSeconds: null, records: [], unlocked: [] };
+  session.exercises.forEach((exercise) => {
+    const entry = log[exercise.id];
+    if (!entry) return;
+    const values = (Array.isArray(entry.sets) ? entry.sets : []).map(Number).filter((value) => value > 0);
+    if (!values.length && !entry.done) return;
+    const timed = isTimedExercise(exercise);
+    const total = sumSets(values);
+    summary.sets += values.length;
+    if (timed) summary.seconds += total;
+    else summary.reps += total;
+    const sameVariant = !entry.variant || entry.variant === exercise.name;
+    const last = sameVariant && values.length ? getLastPerformance(session.id, exercise, dateKey) : null;
+    let delta = null;
+    if (last) {
+      delta = total - sumSets(last.sets);
+      const field = timed ? 'deltaSeconds' : 'deltaReps';
+      summary[field] = (summary[field] || 0) + delta;
+    }
+    const before = sameVariant ? getBestSet(session.id, exercise, dateKey) : 0;
+    const todayBest = values.length ? Math.max(...values) : 0;
+    if (before > 0 && todayBest > before) summary.records.push({ exercise, value: todayBest, before, timed });
+    const advice = sameVariant && values.length ? getProgressionAdvice(exercise, values) : null;
+    if (advice && advice.kind === 'up') summary.unlocked.push({ exercise, step: advice.step });
+    summary.rows.push({ exercise, values, timed, delta });
+  });
+  return summary;
+}
+
+function formatSportAmount(value, timed) {
+  return timed ? formatRest(value) || '0 s' : String(value);
+}
+
+function formatSportDelta(delta, timed) {
+  if (delta === null) return '';
+  if (delta === 0) return '=';
+  const sign = delta > 0 ? '+' : '−';
+  return `${sign}${timed ? formatRest(Math.abs(delta)) : Math.abs(delta)}`;
+}
+
+function sportDeltaClass(delta) {
+  if (delta === null || delta === 0) return 'sport-delta';
+  return `sport-delta ${delta > 0 ? 'sport-delta--up' : 'sport-delta--down'}`;
+}
+
+function renderSportSummary(container, session, dateKey) {
+  const summary = computeSportSummary(session, dateKey);
+  const card = sportEl('div', 'sport-card sport-summary');
+  card.appendChild(sportEl('h3', 'sport-summary__title', t('sport.summaryTitle')));
+
+  const stats = sportEl('div', 'sport-summary__stats');
+  const tile = (value, label, delta, timed) => {
+    const box = sportEl('div', 'sport-summary__stat');
+    box.appendChild(sportEl('strong', '', value));
+    box.appendChild(sportEl('span', '', label));
+    if (delta !== null && delta !== undefined) {
+      box.appendChild(sportEl('small', sportDeltaClass(delta), `${formatSportDelta(delta, timed)} ${t('sport.summaryVsLast')}`));
+    }
+    stats.appendChild(box);
+  };
+  tile(String(summary.sets), t('sport.summarySets'));
+  if (summary.reps > 0) tile(String(summary.reps), t('sport.summaryReps'), summary.deltaReps, false);
+  if (summary.seconds > 0) tile(formatRest(summary.seconds), t('sport.summaryHeld'), summary.deltaSeconds, true);
+  card.appendChild(stats);
+
+  if (summary.records.length) {
+    card.appendChild(sportEl('h4', '', t('sport.summaryRecords')));
+    const list = sportEl('ul', 'sport-summary__list');
+    summary.records.forEach((record) => {
+      list.appendChild(sportEl('li', '', t('sport.summaryRecord', {
+        name: record.exercise.name,
+        value: formatSportAmount(record.value, record.timed),
+        before: formatSportAmount(record.before, record.timed)
+      })));
+    });
+    card.appendChild(list);
+  }
+
+  if (summary.unlocked.length) {
+    card.appendChild(sportEl('h4', '', t('sport.summaryUnlocked')));
+    const list = sportEl('ul', 'sport-summary__list');
+    summary.unlocked.forEach(({ exercise, step }) => {
+      const ladder = SPORT_LADDERS[exercise.ladder];
+      const item = sportEl('li', 'sport-summary__unlock');
+      item.appendChild(sportEl('span', '', `⬆️ ${exercise.name} → ${ladder.steps[step].name}`));
+      item.appendChild(
+        sportButton('sport-advice__btn', t('sport.switchVariant'), () => {
+          applyLadderStep(exercise, exercise.ladder, step);
+          saveData();
+          renderSportMain();
+        })
+      );
+      list.appendChild(item);
+    });
+    card.appendChild(list);
+  }
+
+  if (summary.deltaReps === null && summary.deltaSeconds === null) {
+    card.appendChild(sportEl('p', 'sport-help__muted', t('sport.summaryFirst')));
+  }
+
+  const details = sportEl('details', 'sport-summary__details');
+  details.appendChild(sportEl('summary', '', t('sport.summaryDetail')));
+  const table = sportEl('div', 'sport-summary__rows');
+  summary.rows.forEach((row) => {
+    const line = sportEl('div', 'sport-summary__row');
+    line.appendChild(sportEl('span', 'sport-summary__name', row.exercise.name || t('sport.exercise')));
+    line.appendChild(sportEl('span', 'sport-summary__values', row.values.length ? row.values.map((value) => formatSportAmount(value, row.timed)).join(' · ') : '✓'));
+    line.appendChild(sportEl('span', sportDeltaClass(row.delta), formatSportDelta(row.delta, row.timed)));
+    table.appendChild(line);
+  });
+  details.appendChild(table);
+  card.appendChild(details);
+  container.appendChild(card);
 }
 
 function renderSportWorkout(main, session, date) {
@@ -1163,6 +1343,10 @@ function renderSportWorkout(main, session, date) {
     main.appendChild(sportEl('p', 'sport-placeholder', t('sport.noExercises')));
     return;
   }
+
+  const summarySlot = sportEl('div', 'sport-summary-slot');
+  summarySlot.id = 'sport-summary-slot';
+  main.appendChild(summarySlot);
 
   const list = sportEl('ol', 'sport-workout');
   session.exercises.forEach((exercise, index) => {
@@ -1262,8 +1446,8 @@ function renderSportWorkout(main, session, date) {
         if (patch.done) {
           item.classList.add('done');
           check.textContent = '✓';
-          updateSportProgress(session, dateKey);
         }
+        updateSportProgress(session, dateKey);
         renderAdvice();
       }, {
         class: 'sport-set',
@@ -1329,6 +1513,7 @@ function renderSportWorkout(main, session, date) {
   });
   main.appendChild(list);
   updateSportProgress(session, dateKey);
+  summarySlot.dataset.ready = '1';
 }
 
 /* ── Mode modification ─────────────────────────────────────── */
