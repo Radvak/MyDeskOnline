@@ -221,9 +221,16 @@ const MenuEngine = (() => {
     return servingsBase / portions;
   }
 
+  // Un repas se mange en entier : 1 ou 2, jamais 1,5 (au moins 1 dès qu'il
+  // y a quelque chose). app.py : repas_entiers.
+  function repasEntiers(repas) {
+    if (repas === null || repas === undefined) return null;
+    return repas > 0 ? Math.max(1, Math.floor(repas + 0.5)) : 0;
+  }
+
   function repasDepuisParts(parts, ppr) {
     if (parts === null || parts === undefined) return null;
-    return Math.floor((ppr ? parts / ppr : parts) * 2 + 0.5) / 2;
+    return repasEntiers(ppr ? parts / ppr : parts);
   }
 
   function partsDepuisRepas(repas, ppr) {
@@ -232,7 +239,7 @@ const MenuEngine = (() => {
 
   function repasParDefaut(r, ppr) {
     const servingsBase = (r && r.servings_base) || 1;
-    return ppr ? Math.max(0.5, Math.floor((servingsBase / ppr) * 2 + 0.5) / 2) : servingsBase;
+    return repasEntiers(ppr ? servingsBase / ppr : servingsBase);
   }
 
   /* ── Mise à l'échelle ────────────────────────────────────── */
@@ -1111,7 +1118,8 @@ const MenuEngine = (() => {
           nb_ingredients_couverts: Object.keys(couverts).length,
           nb_ingredients_non_reconnus: r.nb_non_reconnus || 0,
           parts_realisables: partsMax,
-          repas_realisables: repasDepuisParts(partsMax, partsParRepas(r)),
+          // Arrondi vers le bas : le stock ne fait pas un repas de plus qu'il n'a.
+          repas_realisables: partsMax ? Math.floor((partsParRepas(r) ? partsMax / partsParRepas(r) : partsMax) + 1e-9) : 0,
           entierement_realisable: !Object.keys(manquants).length,
           limitants: Object.keys(limitants).sort((x, y) => limitants[x] - limitants[y]).slice(0, 3),
           appoints_a_verifier: appoints,
@@ -1236,7 +1244,7 @@ const MenuEngine = (() => {
         const ppr = partsParRepas(r);
         let repas = nombreOuNone(repasVoulus[url]);
         if (!repas || repas <= 0) repas = repasParDefaut(r, ppr);
-        repas = Math.floor(repas * 2 + 0.5) / 2;
+        repas = repasEntiers(repas);
         recettes.push({ url, nom: r.nom || url, parts: partsDepuisRepas(repas, ppr), repas });
       });
       if (!recettes.length) return erreur("Aucun des menus sélectionnés n'existe dans les recettes actuelles.");
@@ -1269,7 +1277,7 @@ const MenuEngine = (() => {
       const r = recette(url);
       if (!r) return erreur('Recette introuvable.', 404);
       const ppr = partsParRepas(r);
-      let repas = nombreOuNone(body.repas);
+      let repas = repasEntiers(nombreOuNone(body.repas));
       let parts;
       if (repas && repas > 0) {
         parts = partsDepuisRepas(repas, ppr);
