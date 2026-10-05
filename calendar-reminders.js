@@ -24,6 +24,10 @@ const REMINDER_TRANSLATIONS = {
     test: 'Tester',
     testTitle: 'Rappel MyDesk',
     testBody: 'Les rappels de l’agenda s’afficheront comme ceci.',
+    testSent: '✓ Envoyée à {via}. Rien dans le coin de l’écran ? Le blocage vient de Windows : 1) Paramètres Windows › Système › Notifications : « Notifications » activé, et ton navigateur (ou « MyDesk Online » si l’app est installée) activé avec « Afficher les bannières ». 2) « Ne pas déranger » désactivé (sinon elles vont seulement dans le centre de notifications, Win+N).',
+    testFailed: '✗ Le navigateur a refusé la notification : {error}',
+    viaWorker: 'Windows (via l’app)',
+    viaPage: 'Windows (via la page)',
     note: 'Les rappels partent tant que MyDesk est ouvert (même réduit ou dans un autre onglet).',
     eventLabel: 'Rappel',
     eventDefault: 'Par défaut ({lead})',
@@ -48,6 +52,10 @@ const REMINDER_TRANSLATIONS = {
     test: 'Test',
     testTitle: 'MyDesk reminder',
     testBody: 'Calendar reminders will look like this.',
+    testSent: '✓ Sent to {via}. Nothing in the corner of the screen? Your system is blocking it: 1) Windows Settings › System › Notifications: notifications on, and your browser (or "MyDesk Online" if installed) on with banners. 2) Do not disturb off (otherwise they only go to the notification center, Win+N).',
+    testFailed: '✗ The browser refused the notification: {error}',
+    viaWorker: 'the system (via the app)',
+    viaPage: 'the system (via the page)',
     note: 'Reminders are sent while MyDesk is open (even minimized or in another tab).',
     eventLabel: 'Reminder',
     eventDefault: 'Default ({lead})',
@@ -72,6 +80,10 @@ const REMINDER_TRANSLATIONS = {
     test: 'Thử',
     testTitle: 'Nhắc nhở MyDesk',
     testBody: 'Nhắc nhở lịch sẽ hiển thị như thế này.',
+    testSent: '✓ Đã gửi tới {via}. Không thấy gì ở góc màn hình? Hệ thống đang chặn: 1) Cài đặt Windows › Hệ thống › Thông báo: bật thông báo và bật trình duyệt (hoặc « MyDesk Online » nếu đã cài) có biểu ngữ. 2) Tắt « Không làm phiền » (nếu không, thông báo chỉ vào trung tâm thông báo, Win+N).',
+    testFailed: '✗ Trình duyệt từ chối thông báo: {error}',
+    viaWorker: 'hệ thống (qua ứng dụng)',
+    viaPage: 'hệ thống (qua trang)',
     note: 'Nhắc nhở được gửi khi MyDesk đang mở (kể cả khi thu nhỏ hoặc ở tab khác).',
     eventLabel: 'Nhắc nhở',
     eventDefault: 'Mặc định ({lead})',
@@ -196,7 +208,7 @@ async function reminderShow(title, options) {
       ]);
       if (registration && registration.showNotification) {
         await registration.showNotification(title, settings);
-        return;
+        return 'worker';
       }
     } catch (error) {
       // repli sur la notification simple ci-dessous
@@ -207,6 +219,7 @@ async function reminderShow(title, options) {
     window.focus();
     notification.close();
   };
+  return 'page';
 }
 
 function checkCalendarReminders() {
@@ -301,9 +314,22 @@ function renderRemindersPanel() {
     test.type = 'button';
     test.className = 'btn-secondary';
     test.textContent = t('reminders.test');
-    test.addEventListener('click', () => {
-      reminderShow(t('reminders.testTitle'), { body: t('reminders.testBody'), tag: 'mydesk-test' })
-        .catch((error) => console.warn('Rappel impossible', error));
+    test.addEventListener('click', async () => {
+      const result = panel.querySelector('.calendar-reminders__test-result') || document.createElement('p');
+      result.className = 'calendar-reminders__test-result';
+      row.after(result);
+      try {
+        // Étiquette unique : un 2e test s'affiche aussi (même étiquette = remplacée sans bannière).
+        const via = await reminderShow(t('reminders.testTitle'), {
+          body: t('reminders.testBody'),
+          tag: `mydesk-test-${Date.now()}`
+        });
+        result.classList.remove('is-warning');
+        result.textContent = t('reminders.testSent', { via: t(via === 'worker' ? 'reminders.viaWorker' : 'reminders.viaPage') });
+      } catch (error) {
+        result.classList.add('is-warning');
+        result.textContent = t('reminders.testFailed', { error: (error && error.message) || String(error) });
+      }
     });
     row.appendChild(test);
   }

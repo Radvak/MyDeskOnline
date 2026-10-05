@@ -4372,6 +4372,9 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .calendar-reminders__lead { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
 .calendar-reminders__lead select { flex: 1; min-width: 0; }
 .calendar-reminders__note { margin: 0; font-size: 0.78rem; color: var(--muted); }
+.calendar-reminders__test-result { margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--muted); }
+.calendar-reminders__test-result.is-warning { color: #b45309; }
+[data-theme="dark"] .calendar-reminders__test-result.is-warning { color: #fbbf24; }
 .goal-card {
   display: flex;
   flex-direction: column;
