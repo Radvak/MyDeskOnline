@@ -351,7 +351,7 @@ const SPORT_LADDERS = {
         name: 'Y-T-W allongé',
         reps: '6–8 par lettre',
         how: [
-          'Allongé sur le ventre, front sur une serviette roulée.',
+          'Sans matériel : allongé sur le ventre au sol (tapis ou serviette), front sur une serviette roulée, rien dans les mains.',
           'Y : bras tendus en diagonale au-dessus de la tête, pouces vers le haut, décolle-les du sol.',
           'T : bras tendus sur les côtés, décolle-les en serrant les omoplates.',
           'W : coudes pliés le long du corps, ramène les omoplates vers le bas et l’arrière.'
@@ -361,7 +361,7 @@ const SPORT_LADDERS = {
       {
         name: 'Y-T-W tenus 3 secondes',
         reps: '5–8 par lettre',
-        how: ['Même enchaînement, en tenant chaque position 3 secondes en haut.'],
+        how: ['Même enchaînement au sol, sans matériel, en tenant chaque position 3 secondes en haut.'],
         mistakes: ['Retenir sa respiration.']
       }
     ]
