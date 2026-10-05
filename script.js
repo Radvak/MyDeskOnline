@@ -1772,7 +1772,16 @@ function initTabs() {
   }
 }
 
+// Onglet réservé : Menu seulement pour un compte qui a accès au Gist Menu
+// (menu.js : menuAccesAutorise).
+function tabDisponible(tabId) {
+  return tabId !== 'menutool' || (typeof menuAccesAutorise === 'function' && menuAccesAutorise());
+}
+
 function getTabVisibility(tabId) {
+  if (!tabDisponible(tabId)) {
+    return false;
+  }
   if (!appData.tabs || !appData.tabs.visibility) {
     return true;
   }
@@ -1818,7 +1827,7 @@ function renderTabVisibilitySettings() {
 
   // Même ordre que la barre d'onglets (réglable en glissant ou avec ▲▼).
   const barOrder = Array.from(document.querySelectorAll('.tab-bar .tab-link')).map((link) => link.dataset.target);
-  const orderedTabs = OPTIONAL_TABS.slice().sort((a, b) => barOrder.indexOf(a.id) - barOrder.indexOf(b.id));
+  const orderedTabs = OPTIONAL_TABS.filter((tab) => tabDisponible(tab.id)).sort((a, b) => barOrder.indexOf(a.id) - barOrder.indexOf(b.id));
 
   orderedTabs.forEach((tab, index) => {
     const wrapper = document.createElement('label');

@@ -300,14 +300,15 @@ function onboardingRenderStyle(body) {
 }
 
 function onboardingRenderTabs(body) {
+  const tabs = OPTIONAL_TABS.filter((tab) => tabDisponible(tab.id));
   body.append(
     onboardingEl('h2', 'onboarding__title', t('onboarding.tabsTitle')),
     onboardingEl('p', 'onboarding__text', t('onboarding.tabsText'))
   );
   const presets = onboardingEl('div', 'onboarding__choices');
   [
-    ['tabsAll', () => OPTIONAL_TABS.forEach((tab) => onboardingSetTab(tab.id, true))],
-    ['tabsEssential', () => OPTIONAL_TABS.forEach((tab) => onboardingSetTab(tab.id, ONBOARDING_ESSENTIAL_TABS.includes(tab.id)))]
+    ['tabsAll', () => tabs.forEach((tab) => onboardingSetTab(tab.id, true))],
+    ['tabsEssential', () => tabs.forEach((tab) => onboardingSetTab(tab.id, ONBOARDING_ESSENTIAL_TABS.includes(tab.id)))]
   ].forEach(([key, action]) => {
     const button = onboardingEl('button', 'onboarding__choice', t(`onboarding.${key}`));
     button.type = 'button';
@@ -317,12 +318,12 @@ function onboardingRenderTabs(body) {
     });
     presets.append(button);
   });
-  const count = OPTIONAL_TABS.filter((tab) => getTabVisibility(tab.id)).length;
-  presets.append(onboardingEl('span', 'onboarding__count', t('onboarding.tabsCount', { n: count, total: OPTIONAL_TABS.length })));
+  const count = tabs.filter((tab) => getTabVisibility(tab.id)).length;
+  presets.append(onboardingEl('span', 'onboarding__count', t('onboarding.tabsCount', { n: count, total: tabs.length })));
   body.append(presets);
 
   const grid = onboardingEl('div', 'onboarding__tabs');
-  OPTIONAL_TABS.forEach((tab) => {
+  tabs.forEach((tab) => {
     const card = onboardingEl('label', 'onboarding__tab');
     const checkbox = onboardingEl('input');
     checkbox.type = 'checkbox';

@@ -94,6 +94,20 @@ async function menuCacheLire() {
   }
 }
 
+async function menuCacheEffacer() {
+  try {
+    const db = await menuDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('cache', 'readwrite');
+      tx.objectStore('cache').delete('donnees');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (error) {
+    // ignoré
+  }
+}
+
 async function menuCacheEcrire(donnees) {
   try {
     const db = await menuDb();
@@ -144,6 +158,55 @@ async function menuTrouverGist() {
     if (gists.length < 100) break;
   }
   return null;
+}
+
+/* ── Accès ─────────────────────────────────────────────────── */
+
+// L'onglet Menu n'existe que pour un compte qui a accès au Gist Menu : jeton
+// de synchronisation présent ET Gist Menu trouvé et lisible avec ce jeton.
+// Sans ça, ni l'onglet ni les données gardées en cache ne s'affichent.
+let menuJetonVerifie;
+
+function menuAccesAutorise() {
+  if (typeof isSyncEnabled !== 'function' || !isSyncEnabled()) return false;
+  try {
+    const memo = JSON.parse(localStorage.getItem(MENU_GIST_KEY) || 'null');
+    return Boolean(memo && memo.id);
+  } catch (error) {
+    return false;
+  }
+}
+
+async function menuOublierAcces() {
+  try {
+    localStorage.removeItem(MENU_GIST_KEY);
+  } catch (error) {
+    // ignoré
+  }
+  menuDonnees = null;
+  await menuCacheEffacer();
+}
+
+// Revérifié au démarrage et à chaque changement de jeton (sync.js).
+async function menuVerifierAcces() {
+  const jeton = typeof isSyncEnabled === 'function' && isSyncEnabled() ? syncSettings.token : null;
+  if (jeton === menuJetonVerifie) return;
+  menuJetonVerifie = jeton;
+  if (!jeton) {
+    await menuOublierAcces();
+  } else {
+    try {
+      const gistId = await menuTrouverGist();
+      if (gistId) await menuApi(`/gists/${gistId}/commits?per_page=1`);
+      else await menuOublierAcces();
+    } catch (error) {
+      // Jeton refusé ou Gist introuvable : plus d'accès. Hors ligne, on garde
+      // l'accès déjà vérifié (l'onglet marche sur le cache).
+      if ([401, 403, 404].includes(error.status)) await menuOublierAcces();
+    }
+  }
+  if (typeof applyTabVisibility === 'function') applyTabVisibility();
+  if (typeof renderTabVisibilitySettings === 'function') renderTabVisibilitySettings();
 }
 
 async function menuDezip(b64) {
@@ -417,6 +480,10 @@ async function menuCharger(forcer = false) {
   if (menuChargement) return menuChargement;
   menuChargement = (async () => {
     try {
+      if (!menuAccesAutorise()) {
+        menuStatut('menutool.noSync', 'error');
+        return;
+      }
       if (!menuDonnees) {
         const cache = await menuCacheLire();
         if (cache) {
@@ -477,5 +544,7 @@ function initMenuTool() {
     cancelAnimationFrame(attente);
     attente = requestAnimationFrame(menuAppliquerTheme);
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] });
-  if (document.querySelector('#menutool.tab-panel.active')) menuOnglet();
+  menuVerifierAcces().then(() => {
+    if (menuAccesAutorise() && document.querySelector('#menutool.tab-panel.active')) menuOnglet();
+  });
 }

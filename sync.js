@@ -145,6 +145,8 @@ function saveSyncSettings() {
   } catch (error) {
     console.warn('Impossible de stocker les réglages de synchronisation', error);
   }
+  // Jeton ajouté, changé ou retiré : l'onglet Menu suit (menu.js).
+  if (typeof menuVerifierAcces === 'function') menuVerifierAcces();
 }
 
 function loadSyncBase() {
