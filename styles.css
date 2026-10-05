@@ -545,7 +545,25 @@ main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Les heures d'abord : un titre sur deux lignes ne les cache plus dans un
+     créneau d'une heure (le bas du bloc est coupé, pas le haut). */
+  order: -1;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
+
+/* Créneau court (≤ 45 min) : heure et titre sur une seule ligne. */
+.calendar-grid .event.is-short {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+}
+
+.calendar-grid .event.is-short .event-header { flex: 1; min-width: 0; align-items: center; }
+.calendar-grid .event.is-short .title { white-space: nowrap; text-overflow: ellipsis; }
+.calendar-grid .event.is-short .event-location { display: none; }
 
 .calendar-grid .event .delete-event {
   flex-shrink: 0;
@@ -5351,7 +5369,7 @@ body.td-dragging * { cursor: grabbing !important; user-select: none; }
   border-radius: 6px;
   resize: none;
   overflow: hidden;
-  min-height: 0;
+  min-height: calc(1.4em + 0.4rem); /* une ligne, même avant la mesure */
   overflow-wrap: anywhere;
 }
 

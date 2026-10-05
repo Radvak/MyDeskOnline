@@ -2504,6 +2504,12 @@ function renderCalendarEvents() {
     );
     eventEl.style.top = `${topPx}px`;
     eventEl.style.height = `${(visibleDuration / 60) * calendarHourHeight}px`;
+    // Trop court pour heure + titre l'un sous l'autre : sur une seule ligne,
+    // avec l'heure de début seulement.
+    if (visibleDuration <= 45) {
+      eventEl.classList.add('is-short');
+      eventEl.querySelector('.time-range').textContent = formatTime(startDate);
+    }
 
     if (conflicts) {
       applyConflictPlacement(eventEl, conflicts.layout.get(occ), displayTitle);

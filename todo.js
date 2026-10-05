@@ -666,8 +666,24 @@ function renderTodoToolbar(container) {
 }
 
 function todoAutoGrow(textarea) {
+  // Onglet caché (rendu au démarrage ou après une synchro) : scrollHeight vaut
+  // 0 et la tâche se réduisait à une barre vide. On mesure à l'affichage.
+  if (!textarea.offsetParent) {
+    textarea.style.height = '';
+    return;
+  }
   textarea.style.height = 'auto';
   textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+// Recalcule la hauteur des tâches quand l'onglet devient visible.
+function todoWatchVisibility() {
+  const panel = document.getElementById('todo');
+  if (!panel || panel.dataset.tdWatch) return;
+  panel.dataset.tdWatch = '1';
+  new MutationObserver(() => {
+    if (panel.classList.contains('active')) panel.querySelectorAll('.td-task__text').forEach(todoAutoGrow);
+  }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 }
 
 function renderTodoItem(block, item) {
@@ -936,6 +952,7 @@ function renderTodo() {
   });
   if (!shown) container.append(todoEl('p', 'td-no-match', t('todo.noMatch')));
   container.querySelectorAll('.td-task__text').forEach(todoAutoGrow);
+  todoWatchVisibility();
   todoApplyFocus();
 }
 
