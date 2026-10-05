@@ -364,7 +364,7 @@ const SPORT_TAB_TRANSLATIONS = { fr: 'Sport', en: 'Sport', vi: 'Thể thao' };
 
 let sportSelectedDate = null;
 let sportPickerEvent = null;
-let sportView = 'workout'; // 'workout' | 'edit' | 'presets'
+let sportView = 'workout'; // 'workout' | 'edit' | 'presets' | 'history'
 let sportOpenHelp = null; // id de l'exercice dont la fiche est ouverte
 let sportTimer = null;
 
@@ -998,6 +998,11 @@ function renderSportMain() {
   const main = document.getElementById('sport-main');
   if (!main) return;
   main.innerHTML = '';
+
+  if (sportView === 'history' && typeof renderSportHistory === 'function') {
+    renderSportHistory(main);
+    return;
+  }
 
   const date = sportSelectedDate || new Date(new Date().setHours(0, 0, 0, 0));
   renderSportHeader(main, date);
@@ -1735,6 +1740,7 @@ function renderSport() {
   if (!document.getElementById('sport')) return;
   ensureSportData();
   renderSportList();
+  if (typeof renderSportWeekBadge === 'function') renderSportWeekBadge();
   renderSportMain();
 }
 
@@ -1986,6 +1992,8 @@ function initSport() {
     sportView = 'presets';
     renderSport();
   });
+  const historyButton = document.getElementById('sport-history');
+  if (historyButton && typeof openSportHistory === 'function') historyButton.addEventListener('click', openSportHistory);
   selectSessionForDate(new Date());
   renderSport();
 
