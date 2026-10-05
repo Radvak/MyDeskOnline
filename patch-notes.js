@@ -27,6 +27,7 @@ const PATCH_NOTES = [
       { area: 'menu', text: 'Menu réservé : l’onglet n’apparaît (onglets, Paramètres, assistant de démarrage) que sur un appareil synchronisé avec un compte GitHub qui a accès au Gist Menu. Sans ce jeton, ou s’il est retiré, l’onglet disparaît et la copie locale des données Menu est effacée.' },
       { area: 'menu', text: 'Courses : plus jamais d’œufs de poules en cage. Seuls les œufs qui annoncent plein air, sol, bio ou Label Rouge sont proposés (une boîte sans mode d’élevage indiqué est refusée), y compris pour un ancien choix manuel.' },
       { area: 'menu', text: 'Farines : sarrasin (blé noir), pois chiche, riz, châtaigne, épeautre, complète et maïs ne sont plus confondues avec la farine de blé — la farine de blé du stock ne couvre plus des galettes de sarrasin. (Après la prochaine publication depuis le PC.)' },
+      { area: 'menu', text: 'Liste de courses : « 🛒 Remplir mon panier U ». La liste s’ouvre sur coursesu.com et un favori « Remplir panier U » (à installer une fois) met tous les produits dans ton panier, avec les bonnes quantités, sur ton compte et ton drive. Recliquer ne double rien.' },
       { area: 'menu', text: 'Menu : 330 ingrédients de recettes mieux reconnus (crozets, passata, beaufort, poissons, pruneaux…) et des prix retrouvés pour la crème végétale, la pâte filo, les galettes de sarrasin, les cacahuètes, l’orange, le Tabasco ou les cèpes, qui comptaient 0 €. (Après la prochaine publication depuis le PC.)' }
     ]
   },
