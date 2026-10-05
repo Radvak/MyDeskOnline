@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=70">
+  <link rel="stylesheet" href="styles.css?v=71">
 </head>
 <body>
   <header class="app-header">
@@ -510,37 +510,41 @@
       </div>
     </section>
     <section id="snake" class="tab-panel">
-      <div class="snake-layout">
-        <div class="snake-header">
-          <div>
-            <h2 data-i18n="snake.title">Snake</h2>
-            <p class="hint" data-i18n="snake.subtitle">Attrapez les pommes et évitez les collisions.</p>
-          </div>
-          <div class="snake-controls">
-            <button id="snake-start" data-i18n="snake.start">Démarrer</button>
-            <button id="snake-pause" data-i18n="snake.pause">Pause</button>
-            <button id="snake-reset" data-i18n="snake.reset">Réinitialiser</button>
-          </div>
-        </div>
-        <div class="snake-panel">
-          <div class="snake-board">
-            <canvas id="snake-canvas" width="420" height="420" role="img" aria-label="Snake"></canvas>
-          </div>
-          <div class="snake-sidebar">
-            <div class="snake-scoreboard">
-              <div class="snake-score">
-                <span data-i18n="snake.score">Score</span>
-                <strong id="snake-score">0</strong>
-              </div>
-              <div class="snake-score">
-                <span data-i18n="snake.best">Meilleur score</span>
-                <strong id="snake-best">0</strong>
-              </div>
+      <div class="snake-app">
+        <div class="snake-main">
+          <div class="snake-hud">
+            <div class="snake-hud__title">
+              <h2 data-i18n="snake.title">Snake</h2>
+              <p class="hint" data-i18n="snake.subtitle">Mange, grandis, ne te mords pas la queue.</p>
             </div>
-            <div id="snake-status" class="snake-status" data-i18n="snake.status.ready">Prêt à jouer</div>
-            <p class="hint" data-i18n="snake.controls">Utilisez les flèches ou ZQSD pour diriger le serpent.</p>
+            <div class="snake-hud__stats">
+              <div class="snake-chip snake-chip--score" id="snake-score-chip"><span aria-hidden="true">🍎</span><strong id="snake-score">0</strong></div>
+              <div class="snake-chip" id="snake-best-chip"><span aria-hidden="true">🏆</span><strong id="snake-best">0</strong></div>
+              <div class="snake-chip snake-chip--timer" id="snake-timer-chip" hidden><span aria-hidden="true">⏱</span><strong id="snake-timer">60</strong></div>
+              <div class="snake-combo" id="snake-combo" aria-hidden="true"></div>
+            </div>
+            <div class="snake-hud__actions">
+              <button type="button" class="snake-icon-btn" id="snake-pause">⏸</button>
+              <button type="button" class="snake-icon-btn" id="snake-sound">🔊</button>
+              <button type="button" class="snake-icon-btn" id="snake-music">🎵</button>
+              <button type="button" class="snake-icon-btn" id="snake-menu">☰</button>
+            </div>
           </div>
+          <div class="snake-board-wrap" id="snake-board-wrap">
+            <div class="snake-stage" id="snake-stage">
+              <canvas id="snake-canvas" role="img" data-i18n-aria-label="snake.canvasLabel" aria-label="Snake"></canvas>
+              <div class="snake-overlay" id="snake-overlay"></div>
+            </div>
+          </div>
+          <div class="snake-dpad" id="snake-dpad">
+            <button type="button" class="snake-dpad__btn snake-dpad__btn--up" data-dir="up">▲</button>
+            <button type="button" class="snake-dpad__btn snake-dpad__btn--left" data-dir="left">◀</button>
+            <button type="button" class="snake-dpad__btn snake-dpad__btn--right" data-dir="right">▶</button>
+            <button type="button" class="snake-dpad__btn snake-dpad__btn--down" data-dir="down">▼</button>
+          </div>
+          <div class="snake-sr" id="snake-status" aria-live="polite"></div>
         </div>
+        <aside class="snake-side" id="snake-side"></aside>
       </div>
     </section>
     <section id="trackirigo" class="tab-panel">
@@ -673,30 +677,31 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=70" defer></script>
-  <script src="calendar-feed.js?v=70" defer></script>
-  <script src="restore.js?v=70" defer></script>
-  <script src="calendar-conflicts.js?v=70" defer></script>
-  <script src="calendar-goals.js?v=70" defer></script>
-  <script src="calendar-reminders.js?v=70" defer></script>
-  <script src="ical.js?v=70" defer></script>
-  <script src="print.js?v=70" defer></script>
-  <script src="undo.js?v=70" defer></script>
-  <script src="sport-library.js?v=70" defer></script>
-  <script src="sport.js?v=70" defer></script>
-  <script src="sport-guided.js?v=70" defer></script>
-  <script src="sport-history.js?v=70" defer></script>
-  <script src="menu-engine.js?v=70" defer></script>
-  <script src="menu.js?v=70" defer></script>
-  <script src="install.js?v=70" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=70" defer></script>
-  <script src="anki.js?v=70" defer></script>
-  <script src="news.js?v=70" defer></script>
-  <script src="tab-order.js?v=70" defer></script>
-  <script src="patch-notes.js?v=70" defer></script>
-  <script src="todo.js?v=70" defer></script>
-  <script src="onboarding.js?v=70" defer></script>
-  <script src="script.js?v=70" defer></script>
+  <script src="sync.js?v=71" defer></script>
+  <script src="calendar-feed.js?v=71" defer></script>
+  <script src="restore.js?v=71" defer></script>
+  <script src="calendar-conflicts.js?v=71" defer></script>
+  <script src="calendar-goals.js?v=71" defer></script>
+  <script src="calendar-reminders.js?v=71" defer></script>
+  <script src="ical.js?v=71" defer></script>
+  <script src="print.js?v=71" defer></script>
+  <script src="undo.js?v=71" defer></script>
+  <script src="sport-library.js?v=71" defer></script>
+  <script src="sport.js?v=71" defer></script>
+  <script src="sport-guided.js?v=71" defer></script>
+  <script src="sport-history.js?v=71" defer></script>
+  <script src="snake.js?v=71" defer></script>
+  <script src="menu-engine.js?v=71" defer></script>
+  <script src="menu.js?v=71" defer></script>
+  <script src="install.js?v=71" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=71" defer></script>
+  <script src="anki.js?v=71" defer></script>
+  <script src="news.js?v=71" defer></script>
+  <script src="tab-order.js?v=71" defer></script>
+  <script src="patch-notes.js?v=71" defer></script>
+  <script src="todo.js?v=71" defer></script>
+  <script src="onboarding.js?v=71" defer></script>
+  <script src="script.js?v=71" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

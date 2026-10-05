@@ -43,7 +43,7 @@ const ONBOARDING_TRANSLATIONS = {
       anki: 'Fiches de révision à répétition espacée.',
       news: 'Résumé quotidien de l’actualité : monde, France, justice.',
       gantt: 'Planning de projets en diagramme de Gantt.',
-      snake: 'Le jeu du serpent, pour une pause.',
+      snake: 'Le jeu du serpent pour une pause : 7 modes, défi du jour, trophées, sons.',
       trackirigo: 'Carte des bus et trams Irigo (Angers) en temps réel.',
       patchnotes: 'Toutes les nouveautés de MyDesk.'
     },
@@ -88,7 +88,7 @@ const ONBOARDING_TRANSLATIONS = {
       anki: 'Spaced-repetition flashcards.',
       news: 'Daily news summary: world, France, justice.',
       gantt: 'Project planning as a Gantt chart.',
-      snake: 'The snake game, for a break.',
+      snake: 'The snake game for a break: 7 modes, daily challenge, trophies, sound.',
       trackirigo: 'Live map of Irigo buses and trams (Angers).',
       patchnotes: 'Everything new in MyDesk.'
     },
@@ -133,7 +133,7 @@ const ONBOARDING_TRANSLATIONS = {
       anki: 'Thẻ ôn tập lặp lại ngắt quãng.',
       news: 'Tóm tắt tin tức hằng ngày.',
       gantt: 'Kế hoạch dự án dạng biểu đồ Gantt.',
-      snake: 'Trò chơi rắn săn mồi.',
+      snake: 'Trò chơi rắn săn mồi: 7 chế độ, thử thách hôm nay, cúp, âm thanh.',
       trackirigo: 'Bản đồ xe buýt và tàu điện Irigo (Angers).',
       patchnotes: 'Mọi điểm mới của MyDesk.'
     },

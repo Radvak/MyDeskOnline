@@ -24,7 +24,8 @@ const SYNC_LOCAL_ONLY_PATHS = [
   'mindmap.activeMapId',
   'notes.activePageId',
   'gantt.activeChartId',
-  'sport.activeSessionId'
+  'sport.activeSessionId',
+  'snake.settings'
 ];
 
 const SYNC_TRANSLATIONS = {
@@ -351,7 +352,8 @@ function syncMergeLeaf(base, local, remote, key, meta) {
   }
   const localFresh = syncIsFresh(key, meta.l, meta);
   if (!remoteChanged) return localFresh ? local : remote;
-  if (key === 'snake.bestScore') return Math.max(Number(local) || 0, Number(remote) || 0);
+  // Records, compteurs et défis du jour Snake : on garde le plus grand.
+  if (key === 'snake.bestScore' || /^snake\.(best|stats|daily)\./.test(key)) return Math.max(Number(local) || 0, Number(remote) || 0);
   const remoteFresh = syncIsFresh(key, meta.r, meta);
   if (localFresh !== remoteFresh) return localFresh ? local : remote;
   if (!localFresh) return remote; // aucun des deux n'est une vraie modification : le cloud fait foi
