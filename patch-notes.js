@@ -25,6 +25,8 @@ const PATCH_NOTES = [
       { area: 'menu', text: 'Menu : « 👤 Mon profil » (sexe, âge, taille, poids, activité) fixe ce que vaut un repas pour toi ; le nombre de repas de chaque recette et ce que la liste achète suivent. Chaque compte garde le sien.' },
       { area: 'menu', text: 'Listes de courses : bouton « 🔄 Recalculer avec le stock » (et recalcul en revenant sur l’onglet), bouton « 🗑️ Supprimer la liste », et quantités arrondies au-dessus — 2 saucisses ou 2 œufs plutôt que 1,5.' },
       { area: 'menu', text: 'Menu réservé : l’onglet n’apparaît (onglets, Paramètres, assistant de démarrage) que sur un appareil synchronisé avec un compte GitHub qui a accès au Gist Menu. Sans ce jeton, ou s’il est retiré, l’onglet disparaît et la copie locale des données Menu est effacée.' },
+      { area: 'menu', text: 'Courses : plus jamais d’œufs de poules en cage. Seuls les œufs qui annoncent plein air, sol, bio ou Label Rouge sont proposés (une boîte sans mode d’élevage indiqué est refusée), y compris pour un ancien choix manuel.' },
+      { area: 'menu', text: 'Farines : sarrasin (blé noir), pois chiche, riz, châtaigne, épeautre, complète et maïs ne sont plus confondues avec la farine de blé — la farine de blé du stock ne couvre plus des galettes de sarrasin. (Après la prochaine publication depuis le PC.)' },
       { area: 'menu', text: 'Menu : 330 ingrédients de recettes mieux reconnus (crozets, passata, beaufort, poissons, pruneaux…) et des prix retrouvés pour la crème végétale, la pâte filo, les galettes de sarrasin, les cacahuètes, l’orange, le Tabasco ou les cèpes, qui comptaient 0 €. (Après la prochaine publication depuis le PC.)' }
     ]
   },

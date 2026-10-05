@@ -64,6 +64,19 @@ const MenuEngine = (() => {
     dictionnaire = new Set(base ? base.dictionnaire || [] : []);
   }
 
+  // Mots qu'un produit doit porter pour cet ingrédient (œufs : mode
+  // d'élevage annoncé, jamais de cage). scrape_marmiton.respecte_mots_requis.
+  function respecteMotsRequis(c, produit) {
+    const infos = base && base.canoniques ? base.canoniques[c] : null;
+    const requis = infos && infos.mots_requis_produit;
+    if (!requis || !requis.length || !produit) return true;
+    const nom = normaliserTexte(produit.nom);
+    return requis.some((mot) => {
+      const m = normaliserTexte(mot).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`\\b${m}s?\\b`).test(nom);
+    });
+  }
+
   function candidatsDe(infos) {
     return (infos.candidats || [])
       .map((c) => (Array.isArray(c) ? produitsParLigne.get(cleLigne(c[0], c[1])) : produitsParId.get(c)))
@@ -850,7 +863,9 @@ const MenuEngine = (() => {
         return;
       }
 
-      const idManuel = choixManuels[c];
+      // Un ancien choix manuel qui ne respecte plus les règles du canonique
+      // (œufs de cage) est ignoré : retour au choix automatique.
+      const idManuel = respecteMotsRequis(c, produitsParId.get(choixManuels[c])) ? choixManuels[c] : undefined;
       const candidats = candidatsDe(infos);
       if (!achatAutomatique(c, modesParIngredient[c], candidats)) {
         const options = optionsAChoisir(candidats, c);
@@ -1426,6 +1441,9 @@ const MenuEngine = (() => {
       if (!Number.isFinite(grammes)) return erreur('Grammage manquant.');
       const p = produitsParId && produitsParId.get(produitId);
       if (!p) return erreur('Produit introuvable dans le catalogue.', 404);
+      if (!respecteMotsRequis(ingredient, p)) {
+        return erreur('Produit refusé : pour les œufs, seulement plein air, sol, bio ou Label Rouge (jamais de cage).');
+      }
       const resultat = choixDepuisProduit(p, grammes, ingredient);
       if (!resultat) return erreur('Prix ou poids introuvable pour ce produit (conditionnement non détecté).');
       const coutReel = resultat.cout_total_sans_carte_u ?? resultat.cout_total;
