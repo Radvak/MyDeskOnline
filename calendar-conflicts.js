@@ -7,6 +7,9 @@
      permet de changer d'avis). « Les deux sont vrais » garde tout.
    - Le choix est propre à ce jour et à ces évènements
      (appData.calendar.conflictChoices), donc synchronisé.
+   - Les écartés peuvent être supprimés (✕ sur la bande, bouton dans
+     la fenêtre, ou tous ceux de la semaine depuis le bandeau) : pour
+     un évènement répété, seule l'occurrence de ce jour part.
    ═══════════════════════════════════════════════════════════ */
 
 const CONFLICT_TRANSLATIONS = {
@@ -20,7 +23,12 @@ const CONFLICT_TRANSLATIONS = {
     later: 'Plus tard',
     reset: 'Redemander (afficher côte à côte)',
     badgeTitle: 'Chevauchement : cliquer pour choisir le vrai',
-    dimmedTitle: '{title} : écarté (cliquer pour changer)'
+    dimmedTitle: '{title} : écarté (cliquer pour changer)',
+    deleteSetAside: '🗑 Supprimer l’écarté',
+    deleteSetAsideMany: '🗑 Supprimer les {count} écartés',
+    weekSetAside: '{count} évènement(s) écarté(s) cette semaine',
+    deleteWeekSetAside: '🗑 Les supprimer',
+    deleted: 'Évènement(s) écarté(s) supprimé(s).'
   },
   en: {
     banner: '⚠ {count} overlap(s) this week',
@@ -32,7 +40,12 @@ const CONFLICT_TRANSLATIONS = {
     later: 'Later',
     reset: 'Ask again (show side by side)',
     badgeTitle: 'Overlap: click to choose the real one',
-    dimmedTitle: '{title}: set aside (click to change)'
+    dimmedTitle: '{title}: set aside (click to change)',
+    deleteSetAside: '🗑 Delete the set-aside event',
+    deleteSetAsideMany: '🗑 Delete the {count} set-aside events',
+    weekSetAside: '{count} set-aside event(s) this week',
+    deleteWeekSetAside: '🗑 Delete them',
+    deleted: 'Set-aside event(s) deleted.'
   }
 };
 
@@ -166,19 +179,59 @@ function applyConflictPlacement(eventEl, place, title) {
   }
 }
 
+function setAsideOccurrences(groups) {
+  return groups.flatMap((group) => (group.choice && group.choice !== 'both'
+    ? group.items.filter((occurrence) => String(occurrence.sourceEvent.id) !== group.choice)
+    : []));
+}
+
+// Supprime les occurrences écartées : l'évènement entier s'il est unique,
+// seulement ce jour-là (exception) s'il est répété.
+function deleteSetAsideOccurrences(groups) {
+  const occurrences = setAsideOccurrences(groups);
+  if (!occurrences.length) return;
+  const removedIds = new Set();
+  occurrences.forEach((occurrence) => {
+    const event = occurrence.sourceEvent;
+    if (!event.recurrence || event.recurrence === 'none') {
+      removedIds.add(event.id);
+    } else {
+      const exceptions = Array.isArray(event.exceptions) ? event.exceptions : [];
+      event.exceptions = Array.from(new Set([...exceptions, toISODateString(occurrence.start)]));
+    }
+  });
+  appData.calendar.events = appData.calendar.events.filter((event) => !removedIds.has(event.id));
+  saveData();
+  renderCalendar();
+  if (typeof showUndoToast === 'function') showUndoToast('conflicts.deleted');
+}
+
 function renderConflictBanner(groups) {
   const banner = document.getElementById('calendar-conflicts');
   if (!banner) return;
   const unresolved = groups.filter((group) => !group.choice);
+  const setAside = setAsideOccurrences(groups);
   banner.innerHTML = '';
-  banner.hidden = unresolved.length === 0;
-  if (!unresolved.length) return;
-  banner.appendChild(document.createTextNode(t('conflicts.banner', { count: unresolved.length })));
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = t('conflicts.choose');
-  button.addEventListener('click', () => openConflictChooser(unresolved[0], unresolved.slice(1)));
-  banner.appendChild(button);
+  banner.hidden = unresolved.length === 0 && setAside.length === 0;
+  banner.classList.toggle('is-calm', unresolved.length === 0);
+  if (unresolved.length) {
+    banner.appendChild(document.createTextNode(t('conflicts.banner', { count: unresolved.length })));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = t('conflicts.choose');
+    button.addEventListener('click', () => openConflictChooser(unresolved[0], unresolved.slice(1)));
+    banner.appendChild(button);
+  }
+  if (setAside.length) {
+    const label = document.createElement('span');
+    label.className = 'calendar-conflicts__set-aside';
+    label.textContent = t('conflicts.weekSetAside', { count: setAside.length });
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = t('conflicts.deleteWeekSetAside');
+    button.addEventListener('click', () => deleteSetAsideOccurrences(groups));
+    banner.append(label, button);
+  }
 }
 
 function setConflictChoice(group, value) {
@@ -250,6 +303,20 @@ function openConflictChooser(group, queue = []) {
 
   const actions = document.createElement('div');
   actions.className = 'conflict-actions';
+  const setAside = setAsideOccurrences([group]);
+  if (setAside.length) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'danger';
+    remove.textContent = setAside.length > 1
+      ? t('conflicts.deleteSetAsideMany', { count: setAside.length })
+      : t('conflicts.deleteSetAside');
+    remove.addEventListener('click', () => {
+      closeConflictChooser();
+      deleteSetAsideOccurrences([group]);
+    });
+    actions.appendChild(remove);
+  }
   const both = document.createElement('button');
   both.type = 'button';
   both.className = 'btn-secondary';

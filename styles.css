@@ -4197,6 +4197,8 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 
 .calendar-conflicts[hidden] { display: none; }
 [data-theme="dark"] .calendar-conflicts { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+/* Plus rien à choisir : seulement des écartés à supprimer, bandeau neutre. */
+.calendar-conflicts.is-calm { color: var(--muted); background: rgba(148, 163, 184, 0.14); font-weight: 500; }
 
 .calendar-conflicts button {
   padding: 0.3rem 0.8rem;
@@ -4216,7 +4218,6 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 
 .calendar-grid .event.is-dimmed .title,
 .calendar-grid .event.is-dimmed .time-range { text-decoration: line-through; }
-.calendar-grid .event.is-dimmed .delete-event { display: none; }
 
 .conflict-badge {
   flex-shrink: 0;
