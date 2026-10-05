@@ -95,7 +95,13 @@ const NEWS_TRANSLATIONS = {
     robotClose: 'Fermer',
     robotForget: 'Oublier le jeton de cet appareil',
     robotRefused: 'Jeton refusé par GitHub : il doit avoir accès au dépôt MyDeskOnline avec la permission Actions (lecture et écriture).',
-    robotError: 'Impossible de joindre GitHub ({message}).'
+    robotError: 'Impossible de joindre GitHub ({message}).',
+    fetchNew: '📰 Nouveaux articles',
+    fetchNewTitle: 'Demander au robot de relire tout de suite les médias (sans refaire le résumé)',
+    fetching: 'Le robot va chercher les nouveaux articles : ils arrivent d’ici 1 à 3 minutes…',
+    fetchedSome: '{count} nouvel(s) article(s) aujourd’hui.',
+    fetchedNone: 'Aucun nouvel article depuis le dernier passage du robot.',
+    fetchedDone: 'Articles à jour.'
   },
   en: {
     tab: 'News',
@@ -157,7 +163,13 @@ const NEWS_TRANSLATIONS = {
     robotClose: 'Close',
     robotForget: 'Forget the token on this device',
     robotRefused: 'GitHub refused the token: it needs access to the MyDeskOnline repository with the Actions permission (read and write).',
-    robotError: 'Cannot reach GitHub ({message}).'
+    robotError: 'Cannot reach GitHub ({message}).',
+    fetchNew: '📰 New articles',
+    fetchNewTitle: 'Ask the bot to read the news outlets right now (without redoing the summary)',
+    fetching: 'The bot is fetching new articles: they arrive within 1 to 3 minutes…',
+    fetchedSome: '{count} new article(s) today.',
+    fetchedNone: 'No new article since the bot’s last run.',
+    fetchedDone: 'Articles up to date.'
   },
   vi: {
     tab: 'Tin tức',
@@ -219,7 +231,13 @@ const NEWS_TRANSLATIONS = {
     robotClose: 'Đóng',
     robotForget: 'Quên token trên thiết bị này',
     robotRefused: 'GitHub từ chối token: token cần quyền truy cập kho MyDeskOnline với quyền Actions (đọc và ghi).',
-    robotError: 'Không thể kết nối GitHub ({message}).'
+    robotError: 'Không thể kết nối GitHub ({message}).',
+    fetchNew: '📰 Bài mới',
+    fetchNewTitle: 'Yêu cầu robot đọc lại các báo ngay (không viết lại tóm tắt)',
+    fetching: 'Robot đang tìm bài mới: sẽ có trong 1 đến 3 phút…',
+    fetchedSome: '{count} bài mới hôm nay.',
+    fetchedNone: 'Không có bài mới kể từ lần chạy trước của robot.',
+    fetchedDone: 'Bài viết đã được cập nhật.'
   }
 };
 
@@ -323,12 +341,14 @@ function newsMissingSlot() {
   return done ? null : slot;
 }
 
-async function newsDispatch() {
+// briefing : false = le robot relit seulement les flux (le résumé suit son
+// rythme habituel).
+async function newsDispatch(briefing = true) {
   const token = newsRobotToken();
   const response = await fetch(NEWS_REPO_API, {
     method: 'POST',
     headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ref: 'main', inputs: { briefing: 'true' } })
+    body: JSON.stringify({ ref: 'main', inputs: { briefing: briefing ? 'true' : 'false' } })
   });
   if (response.status === 204) return;
   const error = new Error(`HTTP ${response.status}`);
@@ -337,8 +357,9 @@ async function newsDispatch() {
 }
 
 // Après une demande : relit l'actualité toutes les 30 s jusqu'à voir passer
-// le robot (index.updatedAt plus récent que la demande).
-function newsPollAfterRequest(requestedAt) {
+// le robot (index.updatedAt plus récent que la demande ; il change à chaque
+// passage, même sans rien de neuf). onArrived donne le message à afficher.
+function newsPollAfterRequest(requestedAt, onArrived = async () => t('news.generated')) {
   clearInterval(newsState.polling);
   const started = Date.now();
   newsState.polling = setInterval(async () => {
@@ -347,7 +368,7 @@ function newsPollAfterRequest(requestedAt) {
     if (updated && updated > requestedAt) {
       clearInterval(newsState.polling);
       newsState.polling = null;
-      newsState.robotMessage = t('news.generated');
+      newsState.robotMessage = await onArrived();
       renderNews();
     } else if (Date.now() - started > NEWS_POLL_MAX_MS) {
       clearInterval(newsState.polling);
@@ -358,8 +379,49 @@ function newsPollAfterRequest(requestedAt) {
   }, NEWS_POLL_MS);
 }
 
+function newsRobotFailed(error, auto) {
+  newsState.robotError = true;
+  newsState.robotMessage = [401, 403, 404, 422].includes(error.status)
+    ? t('news.robotRefused')
+    : t('news.robotError', { message: error.message });
+  if (!auto) newsState.robotPanel = [401, 403, 404].includes(error.status);
+}
+
+// Bouton « Nouveaux articles » : le robot relit les flux tout de suite, puis
+// on compte les articles du jour arrivés entre-temps.
+async function newsFetchArticles() {
+  if (!newsRobotToken()) {
+    newsState.robotAction = 'fetch';
+    newsState.robotPanel = true;
+    renderNews();
+    return;
+  }
+  const today = newsParisNow().day;
+  const before = newsState.days[today] ? (newsState.days[today].items || []).length : null;
+  const requestedAt = Date.now() - 60000; // marge : horloges et passage en cours
+  try {
+    await newsDispatch(false);
+    newsState.robotError = false;
+    newsState.robotMessage = t('news.fetching');
+    newsPollAfterRequest(requestedAt, async () => {
+      if (before === null || !newsState.index.days.includes(today)) return t('news.fetchedDone');
+      try {
+        const day = await newsLoadDay(today);
+        const added = (day.items || []).length - before;
+        return added > 0 ? t('news.fetchedSome', { count: added }) : t('news.fetchedNone');
+      } catch (error) {
+        return t('news.fetchedDone');
+      }
+    });
+  } catch (error) {
+    newsRobotFailed(error, false);
+  }
+  renderNews();
+}
+
 async function newsGenerate(auto = false, slot = null) {
   if (!newsRobotToken()) {
+    newsState.robotAction = 'generate';
     newsState.robotPanel = true;
     renderNews();
     return;
@@ -372,11 +434,7 @@ async function newsGenerate(auto = false, slot = null) {
     newsState.robotMessage = auto ? t('news.autoRequested', { slot: t(`news.slots.${slot}`).toLowerCase() }) : t('news.generating');
     newsPollAfterRequest(requestedAt);
   } catch (error) {
-    newsState.robotError = true;
-    newsState.robotMessage = [401, 403, 404, 422].includes(error.status)
-      ? t('news.robotRefused')
-      : t('news.robotError', { message: error.message });
-    if (!auto) newsState.robotPanel = [401, 403, 404].includes(error.status);
+    newsRobotFailed(error, auto);
   }
   renderNews();
 }
@@ -415,7 +473,8 @@ function renderNewsRobotPanel(container) {
     if (!value) return;
     newsWriteLocal(NEWS_ROBOT_TOKEN_KEY, value);
     newsState.robotPanel = false;
-    newsGenerate();
+    if (newsState.robotAction === 'fetch') newsFetchArticles();
+    else newsGenerate();
   });
   panel.append(form);
   const once = newsEl('p', 'news-robot__once', t('news.robotOnce'));
@@ -674,7 +733,12 @@ function renderNewsToolbar(container) {
   generate.type = 'button';
   generate.disabled = Boolean(newsState.polling);
   generate.addEventListener('click', () => newsGenerate());
-  meta.append(generate, refresh);
+  const fetchNew = newsEl('button', 'btn-secondary news-toolbar__fetch', t('news.fetchNew'));
+  fetchNew.type = 'button';
+  fetchNew.title = t('news.fetchNewTitle');
+  fetchNew.disabled = Boolean(newsState.polling);
+  fetchNew.addEventListener('click', () => newsFetchArticles());
+  meta.append(fetchNew, generate, refresh);
 
   bar.append(group, meta);
   container.append(bar);
