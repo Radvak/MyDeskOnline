@@ -393,6 +393,7 @@ function ensureSportData() {
   migrerProgrammeV3();
   migrerProgrammeV4();
   migrerProgrammeV5();
+  migrerProgrammeV6();
   renommerSeancesPrefaites();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
@@ -597,7 +598,9 @@ function migrerProgrammeV4() {
 // le nom et les consignes aussi, s'ils n'ont pas été modifiés à la main.
 function migrerProgrammeV5() {
   if ((appData.sport.migration || 0) >= 5) return;
-  const aRemplacer = { 0: { 1: 'row', 3: 'wide' }, 1: { 3: 'hinge' }, 2: { 1: 'row' } }; // séance -> position -> ancienne échelle
+  // Le rowing sac à dos (position 1 de A et C) n'est plus remplacé : le
+  // programme v6 l'a remis à la place du rowing à la barre.
+  const aRemplacer = { 0: { 3: 'wide' }, 1: { 3: 'hinge' } }; // séance -> position -> ancienne échelle
   appData.sport.sessions.forEach((session) => {
     if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 4) return;
     const index = Number.isInteger(session.templateIndex)
@@ -628,6 +631,37 @@ function migrerProgrammeV5() {
     session.templateVersion = 5;
   });
   appData.sport.migration = 5;
+}
+
+// v6 (05/10/2026) : sans barre de traction. Le rowing à la barre de A et C
+// redevient un rowing avec sac à dos, à la dernière variante faite (sinon
+// celle du programme). Consignes sans la barre si elles n'ont pas été modifiées.
+function migrerProgrammeV6() {
+  if ((appData.sport.migration || 0) >= 6) return;
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 5) return;
+    const index = Number.isInteger(session.templateIndex)
+      ? session.templateIndex
+      : sportProgramIndexByName(session.name);
+    const template = SPORT_PROGRAM[index];
+    if (!template) return;
+    const exercise = session.exercises[1];
+    if ((index === 0 || index === 2) && exercise && exercise.ladder === 'invrow') {
+      const [ladderId, stepIndex, sets, rest] = template.exercises[1];
+      const names = SPORT_LADDERS[ladderId].steps.map((step) => step.name);
+      const lastKey = Object.keys(appData.sport.logs).sort().reverse().find((key) => {
+        const entry = appData.sport.logs[key][session.id] && appData.sport.logs[key][session.id][exercise.id];
+        return entry && names.includes(entry.variant);
+      });
+      const lastStep = lastKey ? names.indexOf(appData.sport.logs[lastKey][session.id][exercise.id].variant) : -1;
+      applyLadderStep(exercise, ladderId, lastStep !== -1 ? lastStep : stepIndex);
+      exercise.sets = sets;
+      exercise.rest = rest;
+    }
+    if (session.description === SPORT_PROGRAM_V5_DESCRIPTIONS[index]) session.description = template.description;
+    session.templateVersion = 6;
+  });
+  appData.sport.migration = 6;
 }
 
 function isExcludedName(name) {

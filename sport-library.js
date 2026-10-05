@@ -650,12 +650,12 @@ const SPORT_LADDERS = {
   }
 };
 
-// Programme v5 : 3 séances full body, accent pecs + abdos, sans meuble solide
-// (barre de traction à pression posée bas pour le rowing inversé).
+// Programme v6 : 3 séances full body, accent pecs + abdos, sans matériel
+// à installer ni meuble solide (tirage au sac à dos et au sol).
 // Par semaine : ≈ 11 séries de poussée horizontale + 3 d'épaules (pompes
-// piquées), 13 de tirage (rowings + Y-T-W), 12 de jambes (dont arrière des
-// cuisses), abdos en flexion + gainage. [échelle, étape de départ, séries, repos en s]
-const SPORT_PROGRAM_VERSION = 5;
+// piquées), 13 de tirage (rowings sac à dos + Y-T-W), 12 de jambes (dont
+// arrière des cuisses), abdos en flexion + gainage. [échelle, étape de départ, séries, repos en s]
+const SPORT_PROGRAM_VERSION = 6;
 // Anciens noms (avec la lettre), pour reconnaître et renommer les séances existantes.
 const SPORT_PROGRAM_OLD_NAMES = ['A — Pecs & abdos', 'B — Dos, jambes & gainage', 'C — Pecs & abdos (volume)'];
 // Programme v4, pour reconnaître les séances jamais modifiées à la main.
@@ -668,17 +668,27 @@ const SPORT_PROGRAM_V4_DESCRIPTIONS = [
   'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
     'Séance la plus orientée pecs de la semaine : soigne l’amplitude et la descente lente.'
 ];
+// Consignes du programme v5 (avec la barre) des séances A et C.
+const SPORT_PROGRAM_V5_DESCRIPTIONS = {
+  0:
+    'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules dans chaque sens, 10 squats lents, 10 pompes faciles (contre un mur).\n' +
+      'Barre de traction dans l’encadrement d’une porte, à hauteur de hanches, caoutchouc ou feutre sous les embouts : serre-la et teste-la avant de commencer.\n' +
+      'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
+  2:
+    'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
+      'Barre de traction à hauteur de hanches, bien serrée (teste-la avant).\n' +
+      'Pompes piquées : hanches hautes, la tête descend devant les mains. C’est l’exercice des épaules de la semaine.'
+};
 const SPORT_PROGRAM = [
   {
     weekday: 1,
     name: 'Pecs & abdos',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules dans chaque sens, 10 squats lents, 10 pompes faciles (contre un mur).\n' +
-      'Barre de traction dans l’encadrement d’une porte, à hauteur de hanches, caoutchouc ou feutre sous les embouts : serre-la et teste-la avant de commencer.\n' +
       'Note tes répétitions série par série : le site te dira quand passer à la variante suivante.',
     exercises: [
       ['push', 2, 4, 90],
-      ['invrow', 1, 3, 90],
+      ['row', 0, 3, 90],
       ['squat', 1, 3, 60],
       ['back', 1, 3, 45],
       ['revcrunch', 0, 3, 45],
@@ -706,11 +716,10 @@ const SPORT_PROGRAM = [
     name: 'Pecs, épaules & abdos',
     description:
       'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
-      'Barre de traction à hauteur de hanches, bien serrée (teste-la avant).\n' +
       'Pompes piquées : hanches hautes, la tête descend devant les mains. C’est l’exercice des épaules de la semaine.',
     exercises: [
       ['push', 2, 4, 90],
-      ['invrow', 1, 3, 90],
+      ['row', 0, 3, 90],
       ['squat', 1, 3, 60],
       ['pike', 0, 3, 75],
       ['hollow', 1, 3, 45],
