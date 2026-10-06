@@ -75,7 +75,6 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Mis à jour le {date} à {time}',
     weekNone: 'Pas encore de résumé pour cette semaine. Il est rédigé chaque soir.',
     weekNote: 'Les faits les plus importants de la semaine, résumés par IA à partir des briefings de chaque jour. En cas de doute, ouvre la source.',
-    fromOtherSlot: 'Résumé du {slot}',
     briefingMissing: 'Aucun résumé généré.',
     read: 'Lu',
     readSlot: 'Résumé du {slot} lu',
@@ -146,7 +145,6 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Updated on {date} at {time}',
     weekNone: 'No summary for this week yet. It is written every evening.',
     weekNote: 'The most important stories of the week, summarised by AI (in French) from the daily briefings. When in doubt, open the source.',
-    fromOtherSlot: '{slot} summary',
     briefingMissing: 'No summary generated.',
     read: 'Read',
     readSlot: '{slot} summary read',
@@ -217,7 +215,6 @@ const NEWS_TRANSLATIONS = {
     weekUpdated: 'Cập nhật ngày {date} lúc {time}',
     weekNone: 'Chưa có bản tóm tắt cho tuần này. Bản tóm tắt được viết mỗi tối.',
     weekNote: 'Những sự kiện quan trọng nhất trong tuần, do AI tóm tắt (bằng tiếng Pháp) từ các bản tin hằng ngày. Nếu nghi ngờ, hãy mở nguồn.',
-    fromOtherSlot: 'Bản tóm tắt {slot}',
     briefingMissing: 'Chưa có bản tóm tắt nào.',
     read: 'Đã đọc',
     readSlot: 'Đã đọc bản tóm tắt {slot}',
@@ -896,25 +893,14 @@ function renderNewsBriefing(container, day) {
     return;
   }
 
-  // Un thème absent de ce briefing (ex. Justice, rédigé une fois par jour)
-  // est repris d'un autre briefing du même jour.
+  // Un thème absent de ce créneau (ex. Justice, rédigé une fois par jour) :
+  // « Aucun résumé généré », jamais le contenu de l'autre créneau.
   NEWS_THEME_ORDER.filter((theme) => newsState.theme === 'all' || newsState.theme === theme).forEach((theme) => {
-    let data = current.themes && current.themes[theme];
-    let origin = null;
-    if (!data) {
-      origin = briefings.find((briefing) => briefing !== current && briefing.themes && briefing.themes[theme]);
-      data = origin ? origin.themes[theme] : null;
-    }
-    if (!data) return;
+    const data = current.themes && current.themes[theme];
     const block = newsEl('div', `news-theme news-theme--${theme}`);
-    const title = newsEl('h4', 'news-theme__title', newsThemeLabel(theme));
-    if (origin) {
-      title.append(
-        newsEl('span', 'news-theme__origin', t('news.fromOtherSlot', { slot: t(`news.slots.${origin.slot}`).toLowerCase() }))
-      );
-    }
-    block.append(title);
-    renderNewsPoints(block, data);
+    block.append(newsEl('h4', 'news-theme__title', newsThemeLabel(theme)));
+    if (data) renderNewsPoints(block, data);
+    else block.append(newsEl('p', 'news-empty', t('news.briefingMissing')));
     section.append(block);
   });
   section.append(newsEl('p', 'news-note', t('news.briefingNote')));

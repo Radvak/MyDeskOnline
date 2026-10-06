@@ -5901,15 +5901,6 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   vertical-align: 0.1em;
 }
 
-.news-theme__origin {
-  margin-left: 0.5rem;
-  font-size: 0.72rem;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--muted);
-  font-weight: 400;
-}
-
 /* ── To Do List ────────────────────────────────────────── */
 .td-btn {
   background: none;
