@@ -17,6 +17,14 @@ on:
         description: 'Refaire le briefing maintenant'
         type: boolean
         default: false
+      day:
+        description: 'Jour d’un briefing passé à refaire (AAAA-MM-JJ, vide = créneau en cours)'
+        type: string
+        default: ''
+      slot:
+        description: 'Créneau de ce jour (matin ou soir)'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -45,6 +53,8 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FORCE_BRIEFING: ${{ inputs.briefing }}
+          FORCE_DAY: ${{ inputs.day }}
+          FORCE_SLOT: ${{ inputs.slot }}
 
       - name: Publier dans la branche news
         env:

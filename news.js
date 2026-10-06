@@ -81,6 +81,8 @@ const NEWS_TRANSLATIONS = {
     generate: '✨ Générer le résumé',
     generating: 'Résumé demandé au robot : il arrive d’ici 2 à 5 minutes…',
     generated: 'Nouveau résumé arrivé.',
+    generatingPast: 'Résumé du {slot} du {date} demandé au robot : il arrive d’ici 2 à 5 minutes…',
+    generateTitle: 'Refait le résumé affiché (jour et créneau choisis).',
     generateSlow: 'Le robot n’a pas encore publié. Réessaie « Actualiser » dans quelques minutes.',
     autoRequested: 'Le résumé du {slot} manquait : je l’ai demandé au robot, il arrive d’ici quelques minutes.',
     robotTitle: 'Lancer le robot depuis l’app',
@@ -151,6 +153,8 @@ const NEWS_TRANSLATIONS = {
     generate: '✨ Generate summary',
     generating: 'Summary requested from the bot: it should arrive within 2 to 5 minutes…',
     generated: 'New summary arrived.',
+    generatingPast: '{slot} summary of {date} requested from the bot: it should arrive within 2 to 5 minutes…',
+    generateTitle: 'Rewrites the summary shown (chosen day and time slot).',
     generateSlow: 'The bot has not published yet. Try “Refresh” again in a few minutes.',
     autoRequested: 'The {slot} summary was missing: I asked the bot for it, it should arrive within a few minutes.',
     robotTitle: 'Run the bot from the app',
@@ -221,6 +225,8 @@ const NEWS_TRANSLATIONS = {
     generate: '✨ Tạo bản tóm tắt',
     generating: 'Đã yêu cầu robot: bản tóm tắt sẽ có trong 2 đến 5 phút…',
     generated: 'Đã có bản tóm tắt mới.',
+    generatingPast: 'Đã yêu cầu robot viết lại bản tóm tắt {slot} ngày {date}: sẽ có trong 2 đến 5 phút…',
+    generateTitle: 'Viết lại bản tóm tắt đang hiển thị (ngày và buổi đã chọn).',
     generateSlow: 'Robot chưa xuất bản. Hãy bấm “Làm mới” lại sau vài phút.',
     autoRequested: 'Thiếu bản tóm tắt {slot}: đã yêu cầu robot, sẽ có trong vài phút.',
     robotTitle: 'Chạy robot từ ứng dụng',
@@ -349,12 +355,15 @@ function newsMissingSlot() {
 
 // briefing : false = le robot relit seulement les flux (le résumé suit son
 // rythme habituel).
-async function newsDispatch(briefing = true) {
+// target { day, slot } : créneau passé à refaire (sinon le créneau en cours).
+async function newsDispatch(briefing = true, target = null) {
   const token = newsRobotToken();
+  const inputs = { briefing: briefing ? 'true' : 'false' };
+  if (target) Object.assign(inputs, { day: target.day, slot: target.slot });
   const response = await fetch(NEWS_REPO_API, {
     method: 'POST',
     headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ref: 'main', inputs: { briefing: briefing ? 'true' : 'false' } })
+    body: JSON.stringify({ ref: 'main', inputs })
   });
   if (response.status === 204) return;
   const error = new Error(`HTTP ${response.status}`);
@@ -425,6 +434,18 @@ async function newsFetchArticles() {
   renderNews();
 }
 
+// Créneau visé par le bouton : celui affiché s'il est déjà terminé (jour
+// passé, ou matin d'aujourd'hui une fois le soir commencé) ; sinon le
+// créneau en cours. Renvoie { day, slot, past }.
+function newsGenerateTarget() {
+  const now = newsParisNow();
+  const current = now.hour >= NEWS_SLOT_HOURS.soir ? 'soir' : 'matin';
+  if (newsState.mode !== 'day' || !newsState.date) return { day: now.day, slot: current, past: false };
+  const slot = newsState.slot && NEWS_SLOT_HOURS[newsState.slot] !== undefined ? newsState.slot : newsDefaultSlot();
+  const past = newsState.date < now.day || (newsState.date === now.day && slot === 'matin' && current === 'soir');
+  return past ? { day: newsState.date, slot, past: true } : { day: now.day, slot: current, past: false };
+}
+
 async function newsGenerate(auto = false, slot = null) {
   if (!newsRobotToken()) {
     newsState.robotAction = 'generate';
@@ -432,13 +453,33 @@ async function newsGenerate(auto = false, slot = null) {
     renderNews();
     return;
   }
+  const target = auto ? null : newsGenerateTarget();
   const requestedAt = Date.now() - 60000; // marge : horloges et passage en cours
   try {
-    await newsDispatch();
+    await newsDispatch(true, target && target.past ? target : null);
     newsWriteLocal(NEWS_AUTO_KEY, String(Date.now()));
     newsState.robotError = false;
-    newsState.robotMessage = auto ? t('news.autoRequested', { slot: t(`news.slots.${slot}`).toLowerCase() }) : t('news.generating');
-    newsPollAfterRequest(requestedAt);
+    if (auto) newsState.robotMessage = t('news.autoRequested', { slot: t(`news.slots.${slot}`).toLowerCase() });
+    else if (target.past) {
+      newsState.robotMessage = t('news.generatingPast', {
+        slot: t(`news.slots.${target.slot}`).toLowerCase(),
+        date: newsDayLabel(target.day).toLowerCase()
+      });
+    } else newsState.robotMessage = t('news.generating');
+    // À l'arrivée, on affiche le résumé demandé (jour et créneau).
+    newsPollAfterRequest(requestedAt, async () => {
+      if (target && newsState.index && newsState.index.days.includes(target.day)) {
+        newsState.mode = 'day';
+        newsState.date = target.day;
+        newsState.slot = target.slot;
+        try {
+          await newsLoadDay(target.day);
+        } catch (error) {
+          // l'affichage reprendra au prochain rafraîchissement
+        }
+      }
+      return t('news.generated');
+    });
   } catch (error) {
     newsRobotFailed(error, auto);
   }
@@ -737,6 +778,7 @@ function renderNewsToolbar(container) {
   refresh.addEventListener('click', () => newsRefresh());
   const generate = newsEl('button', 'news-toolbar__generate', t('news.generate'));
   generate.type = 'button';
+  generate.title = t('news.generateTitle');
   generate.disabled = Boolean(newsState.polling);
   generate.addEventListener('click', () => newsGenerate());
   const fetchNew = newsEl('button', 'btn-secondary news-toolbar__fetch', t('news.fetchNew'));

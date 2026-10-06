@@ -62,6 +62,19 @@ const parisParts = (date) => {
   return { day: `${get('year')}-${get('month')}-${get('day')}`, hour: Number(get('hour')) };
 };
 
+// Instant correspondant à « jour à telle heure » à Paris (heure d'été comprise).
+const parisDate = (day, hour) => {
+  const [y, m, d] = day.split('-').map(Number);
+  const wanted = Date.UTC(y, m - 1, d, hour);
+  let guess = wanted;
+  for (let i = 0; i < 2; i++) {
+    const shown = parisParts(new Date(guess));
+    const [sy, sm, sd] = shown.day.split('-').map(Number);
+    guess += wanted - Date.UTC(sy, sm - 1, sd, shown.hour);
+  }
+  return new Date(guess);
+};
+
 const parisTime = (date) =>
   new Intl.DateTimeFormat('fr-FR', {
     timeZone: TIME_ZONE,
@@ -428,16 +441,40 @@ const cleanPoints = (data, items) => {
     .slice(0, 8);
 };
 
-const lastBriefingTime = (days, due) => {
+const lastBriefingTime = (days, due, now) => {
   let last = 0;
   days.forEach((day) => {
     day.briefings.forEach((briefing) => {
-      // Le briefing qu'on refait ne compte pas.
+      // Le briefing qu'on refait ne compte pas, ni ceux d'après (créneau passé refait).
       if (day.date === due.day && briefing.slot === due.slot) return;
-      last = Math.max(last, Date.parse(briefing.generatedAt) || 0);
+      const time = Date.parse(briefing.generatedAt) || 0;
+      if (time < now.getTime()) last = Math.max(last, time);
     });
   });
   return last;
+};
+
+// Créneau passé demandé depuis l'app (FORCE_DAY + FORCE_SLOT) : on le refait
+// à son heure d'origine (même fenêtre d'articles), ou, s'il n'a jamais été
+// rédigé, jusqu'au début du créneau suivant. null si c'est le créneau en cours
+// ou une demande invalide (le passage normal s'en occupe).
+const requestedPastSlot = (days, now) => {
+  const day = String(process.env.FORCE_DAY || '').trim();
+  const slot = String(process.env.FORCE_SLOT || '').trim();
+  const index = BRIEFING_SLOTS.findIndex((candidate) => candidate.id === slot);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || index < 0 || !days.has(day)) return null;
+  const start = parisDate(day, BRIEFING_SLOTS[index].hour);
+  const next = BRIEFING_SLOTS[index + 1];
+  let end;
+  if (next) end = parisDate(day, next.hour);
+  else {
+    const following = new Date(parisDate(day, 12).getTime() + 24 * 3600 * 1000);
+    end = parisDate(parisParts(following).day, BRIEFING_SLOTS[0].hour);
+  }
+  if (start > now || end > now) return null;
+  const existing = days.get(day).briefings.find((briefing) => briefing.slot === slot);
+  const at = existing && Date.parse(existing.generatedAt) ? new Date(existing.generatedAt) : end;
+  return { day, slot, at };
 };
 
 const dueSlot = (days, now) => {
@@ -453,7 +490,7 @@ const dueSlot = (days, now) => {
 };
 
 const makeBriefing = async (days, allItems, now, due) => {
-  const last = lastBriefingTime(days, due);
+  const last = lastBriefingTime(days, due, now);
   const hour = 3600 * 1000;
   let from = now.getTime() - BRIEFING_MAX_WINDOW_H * hour;
   if (last > from) from = Math.min(last, now.getTime() - BRIEFING_MIN_WINDOW_H * hour);
@@ -669,7 +706,10 @@ const main = async () => {
   // rapprochés échouaient tous (05/10). Le briefing de secours reste en
   // attendant. Une demande depuis l'app (FORCE_BRIEFING) passe toujours.
   const force = process.env.FORCE_BRIEFING === 'true';
-  const due = dueSlot(days, now);
+  const past = force ? requestedPastSlot(days, now) : null;
+  const due = past ? { day: past.day, slot: past.slot } : dueSlot(days, now);
+  const briefingNow = past ? past.at : now;
+  if (past) console.log(`Briefing refait : ${past.day} ${past.slot} (à ${parisTime(past.at)})`);
   const dueKey = due ? `${due.day}-${due.slot}` : '';
   const previousAttempt = state.briefingAttempts && state.briefingAttempts.key === dueKey ? state.briefingAttempts : null;
   const attempts = previousAttempt ? previousAttempt.count : 0;
@@ -677,7 +717,7 @@ const main = async () => {
   let newEvening = false;
   if (due && ((attempts < 6 && spaced) || force)) {
     state.briefingAttempts = { key: dueKey, count: attempts + 1, at: now.toISOString() };
-    const briefing = await makeBriefing(days, allItems, now, due);
+    const briefing = await makeBriefing(days, allItems, briefingNow, due);
     const day = ensureDay(days, due.day);
     const previous = day.briefings.find((existing) => existing.slot === briefing.slot);
     // Un nouvel essai raté ne remplace pas un briefing déjà rédigé par l'IA.
