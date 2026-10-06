@@ -33,6 +33,7 @@ const PATCH_NOTES = [
       { area: 'menu', text: 'Menu : un plat se retire de « À cuisiner » sans être cuisiné (✕ sur sa carte, ou « Retirer sans cuisiner » dans la recette) ; le stock et le journal ne changent pas. (Après la prochaine publication depuis le PC.)' },
       { area: 'menu', text: 'Menu : la préparation de la box du midi suit le nombre de box choisi — « pour 7 box : 1,26 kg de poulet… 840 g de pâtes (environ 1,7 paquet de 500 g) » — et se recalcule quand on change le nombre de repas. (Après la prochaine publication depuis le PC.)' },
       { area: 'snake', text: 'Snake entièrement refait : 7 modes (Classique, Sans bords, Murs, Portails, Poison, Chrono 60 s, Zen), défi du jour (même tirage toute la journée, objectif, série de jours 🔥), réglages de vitesse (dont Turbo qui accélère), taille du plateau, 1/3/5 pommes, 7 couleurs de serpent et 4 terrains. Mouvement fluide, serpent qui regarde la pomme et ouvre la bouche, pomme dorée +3, combos, particules ; bruitages et musique synthétisés (la musique accélère avec le serpent), volume réglable. Records par mode, 15 trophées, statistiques ; démo jouée par l’ordi dans le menu ; au téléphone, glisser ou croix directionnelle.' },
+      { area: 'news', text: 'L’onglet « Actualité » s’appelle maintenant « Actualités ».' },
       { area: 'news', text: 'Robot plus fiable : 4 passages prévus par heure (GitHub en sautait beaucoup) et nouveaux essais espacés quand Gemini est saturé.' },
       { area: 'menu', text: 'Menu : les repas se comptent en entiers (1 ou 2, jamais 1,5), au choix comme à l’affichage. « Combien de repas ? » reprend le nombre de ta dernière liste pour chaque recette (la box du midi prise pour 7 revient à 7), et un bouton « ✕ Retirer » enlève une recette de la sélection sans quitter la fenêtre.' },
       { area: 'menu', text: 'Menu : « 👤 Mon profil » (sexe, âge, taille, poids, activité) fixe ce que vaut un repas pour toi ; le nombre de repas de chaque recette et ce que la liste achète suivent. Chaque compte garde le sien.' },
@@ -130,7 +131,7 @@ const PATCH_NOTES_TRANSLATIONS = {
     isNew: 'Nouveau',
     newBadge: 'Nouveautés depuis ta dernière visite',
     empty: 'Aucune mise à jour pour ce filtre.',
-    areas: { app: 'Application', sync: 'Synchro', calendar: 'Agenda', anki: 'Révisions', sport: 'Sport', news: 'Actualité', todo: 'To Do', menu: 'Menu', snake: 'Snake' }
+    areas: { app: 'Application', sync: 'Synchro', calendar: 'Agenda', anki: 'Révisions', sport: 'Sport', news: 'Actualités', todo: 'To Do', menu: 'Menu', snake: 'Snake' }
   },
   en: {
     tab: 'Patch Notes',

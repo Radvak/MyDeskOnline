@@ -36,7 +36,7 @@ const NEWS_POLL_MAX_MS = 8 * 60 * 1000;
 
 const NEWS_TRANSLATIONS = {
   fr: {
-    tab: 'Actualité',
+    tab: 'Actualités',
     refresh: '↻ Actualiser',
     updated: 'Mis à jour à {time}',
     updatedDay: 'Mis à jour le {date} à {time}',
