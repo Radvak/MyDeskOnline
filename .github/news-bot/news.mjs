@@ -4,9 +4,10 @@
    1. lit les flux RSS de sources.mjs ;
    2. range les articles par jour (heure de Paris), garde 14 jours ;
    3. deux fois par jour (matin, soir), rédige un briefing par thème
-      avec Gemini (clé GEMINI_API_KEY dans les secrets du dépôt), à
-      partir des titres et chapôs uniquement. Sans clé ou si Gemini ne
-      répond pas : sélection automatique des sujets les plus repris.
+      avec Gemini (clé GEMINI_API_KEY dans les secrets du dépôt) : choix
+      des sujets sur les titres et chapôs, puis réécriture à partir du
+      texte complet des articles cités (lu, jamais enregistré). Sans clé
+      ou si Gemini ne répond pas : sujets les plus repris.
    Sortie (branche « news », lue par l'onglet Actualité) :
      index.json             { updatedAt, days: ['2026-10-04', …], weeks: […], themes }
      days/AAAA-MM-JJ.json   { date, items: […], briefings: […] }
@@ -362,6 +363,208 @@ const callModel = async (prompt, systemPrompt = SYSTEM_PROMPT) => {
   throw lastError || new Error('aucun modèle');
 };
 
+/* ── Texte complet des articles retenus ────────────────────── */
+// Deuxième temps du briefing : pour les sujets choisis à partir des titres
+// et chapôs, on lit le texte des articles cités (ceux que les sites laissent
+// lire : robots.txt respecté, paywall = début seulement) et l'IA réécrit
+// résumé et « Pour comprendre ». Le texte lu n'est jamais enregistré (la
+// branche « news » est publique) : seul le résumé est gardé.
+
+const ARTICLE_TIMEOUT_MS = 15000;
+const ARTICLE_MAX_CHARS = 6000;
+const ARTICLE_MIN_CHARS = 400;
+const ARTICLES_PER_POINT = 2;
+const ARTICLE_CONCURRENCY = 4;
+const DEEPEN_MAX_PROMPT_CHARS = 70000;
+
+const DEEPEN_PROMPT = `Tu complètes une revue de presse pour un étudiant en droit qui veut entretenir sa culture générale.
+On te donne des sujets déjà retenus, numérotés, chacun avec le texte des articles sources (ou, à défaut, leur titre et chapô).
+
+Pour chaque sujet, réécris à partir de ces textes :
+  • "titre" : court et factuel, 12 mots maximum (garde celui fourni s'il convient) ;
+  • "resume" : 2 à 4 phrases simples : les faits (qui, quoi, où, quand, chiffres clés) et ce qui est nouveau ;
+  • "contexte" : 1 ou 2 phrases qui donnent les clés pour comprendre : origine de l'affaire, enjeu, notion juridique ou institution en jeu, prochaine étape.
+
+Règles :
+- N'utilise que les informations des textes fournis ; dans "contexte", tu peux ajouter une définition générale. N'invente aucun fait, chiffre ou nom.
+- Si les sources divergent ou si une information est incertaine, dis-le.
+- Ignore ce qui n'est pas l'article (publicités, liens « à lire aussi », mentions d'abonnement).
+- Ton neutre, sans opinion. Écris en français.
+
+Réponds uniquement avec un objet JSON : {"points":[{"n":1,"titre":"…","resume":"…","contexte":"…"}]}`;
+
+const fetchText = async (url, timeoutMs, accept) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: accept }, signal: controller.signal, redirect: 'follow' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return { text: await response.text(), type: response.headers.get('content-type') || '' };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+// robots.txt : règles du groupe qui nomme ce robot, sinon du groupe « * ».
+const robotsCache = new Map();
+
+const loadRobots = async (origin) => {
+  try {
+    const { text } = await fetchText(`${origin}/robots.txt`, 10000, 'text/plain, */*');
+    const groups = [];
+    let current = null;
+    let readingAgents = false;
+    text.split(/\r?\n/).forEach((raw) => {
+      const match = raw.replace(/#.*/, '').trim().match(/^([a-z-]+)\s*:\s*(.*)$/i);
+      if (!match) return;
+      const field = match[1].toLowerCase();
+      const value = match[2].trim();
+      if (field === 'user-agent') {
+        if (!current || !readingAgents) {
+          current = { agents: [], rules: [] };
+          groups.push(current);
+        }
+        current.agents.push(value.toLowerCase());
+        readingAgents = true;
+        return;
+      }
+      readingAgents = false;
+      if (current && (field === 'allow' || field === 'disallow') && value) {
+        current.rules.push({ allow: field === 'allow', path: value });
+      }
+    });
+    const name = 'mydeskonline-news-bot';
+    const mine = groups.filter((group) => group.agents.some((agent) => agent !== '*' && name.includes(agent)));
+    return (mine.length ? mine : groups.filter((group) => group.agents.includes('*'))).flatMap((group) => group.rules);
+  } catch {
+    return []; // pas de robots.txt lisible : rien d'interdit
+  }
+};
+
+const robotsPattern = (rulePath) =>
+  new RegExp(
+    `^${rulePath
+      .replace(/[.+?^{}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\\\$$|\$$/, '$')}`
+  );
+
+const robotsAllows = async (url) => {
+  const { origin, pathname, search } = new URL(url);
+  if (!robotsCache.has(origin)) robotsCache.set(origin, loadRobots(origin));
+  const rules = await robotsCache.get(origin);
+  const target = pathname + search;
+  let verdict = { allow: true, length: -1 };
+  rules.forEach((rule) => {
+    if (rule.path.length > verdict.length && robotsPattern(rule.path).test(target)) {
+      verdict = { allow: rule.allow, length: rule.path.length };
+    }
+  });
+  return verdict.allow;
+};
+
+// Phrases courtes de service (cookies, compte, abonnement) à écarter.
+const BOILERPLATE = /cookie|connectez-vous|créez un compte|abonnez-vous|déjà abonné|newsletter|pour afficher ce contenu|javascript/i;
+
+const collectArticleBodies = (node, out) => {
+  if (Array.isArray(node)) node.forEach((child) => collectArticleBodies(child, out));
+  else if (node && typeof node === 'object') {
+    if (typeof node.articleBody === 'string') out.push(node.articleBody);
+    Object.values(node).forEach((child) => {
+      if (child && typeof child === 'object') collectArticleBodies(child, out);
+    });
+  }
+};
+
+// Texte d'un article : articleBody (données structurées) ou paragraphes
+// de la page, le plus long des deux. '' si trop court (page bloquée…).
+const extractArticle = (html) => {
+  const bodies = [];
+  for (const match of html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      collectArticleBodies(JSON.parse(match[1].trim()), bodies);
+    } catch {
+      // bloc illisible : ignoré
+    }
+  }
+  const structured = bodies.map((body) => cleanText(body)).sort((a, b) => b.length - a.length)[0] || '';
+  let zone = html.replace(/<(script|style|noscript|svg|nav|header|footer|aside|form|figure|button)\b[\s\S]*?<\/\1>/gi, ' ');
+  const article = zone.match(/<article\b[\s\S]*<\/article>/i);
+  if (article) zone = article[0];
+  const paragraphs = [...zone.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((match) => cleanText(match[1]))
+    .filter((text, index, all) => text.length >= 60 && all.indexOf(text) === index)
+    .filter((text) => text.length > 220 || !BOILERPLATE.test(text));
+  const fromPage = paragraphs.join('\n');
+  const best = structured.length >= fromPage.length ? structured : fromPage;
+  return best.length >= ARTICLE_MIN_CHARS ? shorten(best, ARTICLE_MAX_CHARS) : '';
+};
+
+const fetchArticleText = async (link) => {
+  try {
+    if (!/^https?:\/\//.test(link) || !(await robotsAllows(link))) return '';
+    const { text, type } = await fetchText(link, ARTICLE_TIMEOUT_MS, 'text/html, application/xhtml+xml');
+    return /html/i.test(type) ? extractArticle(text) : '';
+  } catch {
+    return '';
+  }
+};
+
+const mapLimit = async (list, limit, worker) => {
+  const results = new Array(list.length);
+  let next = 0;
+  const run = async () => {
+    while (next < list.length) {
+      const index = next;
+      next += 1;
+      results[index] = await worker(list[index], index);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, run));
+  return results;
+};
+
+const deepenPoints = async (theme, points, items, from, to) => {
+  const byLink = new Map(items.map((item) => [item.link, item]));
+  const wanted = [];
+  points.forEach((point, index) => {
+    point.sources.slice(0, ARTICLES_PER_POINT).forEach((source) => wanted.push({ index, source }));
+  });
+  const texts = await mapLimit(wanted, ARTICLE_CONCURRENCY, ({ source }) => fetchArticleText(source.link));
+  const read = texts.filter(Boolean).length;
+  if (!read) return { points, read };
+
+  const perArticle = Math.min(ARTICLE_MAX_CHARS, Math.floor((DEEPEN_MAX_PROMPT_CHARS - 3000) / Math.max(1, wanted.length)));
+  let prompt = `${THEME_HINTS[theme]}\nPériode : du ${parisTime(from)} au ${parisTime(to)} (heure de Paris).\n\n`;
+  points.forEach((point, index) => {
+    prompt += `## Sujet ${index + 1} : ${point.title}\nRésumé provisoire : ${point.summary}\n`;
+    wanted.forEach((entry, k) => {
+      if (entry.index !== index) return;
+      const item = byLink.get(entry.source.link);
+      const body = texts[k]
+        ? shorten(texts[k], perArticle)
+        : `(texte complet indisponible) ${item && item.summary ? item.summary : ''}`;
+      prompt += `### ${entry.source.source} — ${entry.source.title}\n${body}\n`;
+    });
+    prompt += '\n';
+  });
+  const { data } = await callModel(prompt, DEEPEN_PROMPT);
+  const rewritten = Array.isArray(data && data.points) ? data.points : [];
+  return {
+    read,
+    points: points.map((point, index) => {
+      const update = rewritten.find((candidate) => Number(candidate.n) === index + 1);
+      if (!update) return point;
+      return {
+        ...point,
+        title: String(update.titre || '').trim() || point.title,
+        summary: String(update.resume || '').trim() || point.summary,
+        context: String(update.contexte || '').trim() || point.context
+      };
+    })
+  };
+};
+
 /* ── Secours sans IA : sujets les plus repris ──────────────── */
 
 const STOP_WORDS = new Set(
@@ -518,7 +721,18 @@ const makeBriefing = async (days, allItems, now, due) => {
       console.log(`Briefing ${theme} : ${used} dépêches`);
       const { model, data } = await callModel(prompt);
       briefing.model = model;
-      briefing.themes[theme] = { points: cleanPoints(data, items.slice(0, used)), count: used };
+      const entry = { points: cleanPoints(data, items.slice(0, used)), count: used };
+      if (entry.points.length) {
+        try {
+          const deep = await deepenPoints(theme, entry.points, items.slice(0, used), new Date(from), now);
+          entry.points = deep.points;
+          entry.read = deep.read;
+          console.log(`Texte complet ${theme} : ${deep.read} article(s) lu(s)`);
+        } catch (error) {
+          reportError(`Texte complet ${theme} : ${error.message} (résumé sur titres et chapôs gardé)`);
+        }
+      }
+      briefing.themes[theme] = entry;
     } catch (error) {
       reportError(`Briefing ${theme} impossible : ${error.message}`);
       briefing.themes[theme] = { points: autoPoints(items), count: items.length, auto: true };

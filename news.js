@@ -5,7 +5,8 @@
      index.json            jours disponibles, heure de mise à jour
      days/AAAA-MM-JJ.json  articles (titre, chapô, lien) et briefings
      weeks/AAAA-MM-JJ.json résumé de la semaine (date du lundi)
-   Le briefing est rédigé par IA à partir des titres et chapôs ; les
+   Le briefing est rédigé par IA à partir des articles (texte complet quand
+   le site le permet, sinon titre et chapô) ; les
    articles renvoient vers le site de la source.
    Rien n'est synchronisé : seul un cache local (dernier jour lu, heure
    de dernière visite) est gardé sur l'appareil.
@@ -57,7 +58,7 @@ const NEWS_TRANSLATIONS = {
     briefingEmptyTheme: 'Rien de marquant sur la période.',
     briefingErrorTheme: 'Résumé indisponible cette fois-ci.',
     briefingAuto: 'IA indisponible : voici les sujets les plus repris par les médias.',
-    briefingNote: 'Résumé rédigé par IA à partir des titres et chapôs des articles. En cas de doute, ouvre la source.',
+    briefingNote: 'Résumé rédigé par IA à partir des articles (texte complet quand le site le permet, sinon titre et chapô). En cas de doute, ouvre la source.',
     context: 'Pour comprendre',
     headlinesTitle: 'Tous les titres',
     headlinesCount: '{count} articles',
@@ -129,7 +130,7 @@ const NEWS_TRANSLATIONS = {
     briefingEmptyTheme: 'Nothing major over this period.',
     briefingErrorTheme: 'Summary unavailable this time.',
     briefingAuto: 'AI unavailable: here are the stories most covered by the media.',
-    briefingNote: 'AI-written summary (in French) based on article headlines and leads. When in doubt, open the source.',
+    briefingNote: 'AI-written summary (in French) based on the articles (full text when the site allows it, otherwise headline and lead). When in doubt, open the source.',
     context: 'Background',
     headlinesTitle: 'All headlines',
     headlinesCount: '{count} articles',
@@ -201,7 +202,7 @@ const NEWS_TRANSLATIONS = {
     briefingEmptyTheme: 'Không có gì nổi bật trong khoảng thời gian này.',
     briefingErrorTheme: 'Lần này không có bản tóm tắt.',
     briefingAuto: 'AI không khả dụng: đây là các chủ đề được báo chí đưa tin nhiều nhất.',
-    briefingNote: 'Bản tóm tắt do AI viết (bằng tiếng Pháp) từ tiêu đề và phần mở đầu bài báo. Nếu nghi ngờ, hãy mở nguồn.',
+    briefingNote: 'Bản tóm tắt do AI viết (bằng tiếng Pháp) từ các bài báo (toàn văn khi trang cho phép, nếu không thì tiêu đề và phần mở đầu). Nếu nghi ngờ, hãy mở nguồn.',
     context: 'Bối cảnh',
     headlinesTitle: 'Tất cả tiêu đề',
     headlinesCount: '{count} bài',
