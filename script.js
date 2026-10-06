@@ -29,6 +29,9 @@ const defaultData = {
   snake: {
     bestScore: 0
   },
+  news: {
+    read: {}
+  },
   sport: {
     sessions: [],
     logs: {},
@@ -1285,6 +1288,7 @@ function renderAllViews() {
     renderTabVisibilitySettings,
     applyTabVisibility,
     typeof refreshSnake === 'function' ? refreshSnake : null,
+    typeof renderNews === 'function' ? renderNews : null,
     typeof renderSport === 'function' ? renderSport : null,
     typeof renderAnki === 'function' ? renderAnki : null
   ].forEach((render) => {

@@ -56,6 +56,7 @@ function registerUndoTranslations() {
 function undoSnapshot() {
   const data = typeof syncExtractData === 'function' ? syncExtractData(appData) : JSON.parse(JSON.stringify(appData));
   delete data.snake;
+  delete data.news;
   delete data.menu;
   delete data.anki;
   delete data.syncMeta;
@@ -91,6 +92,7 @@ function resetUndoBaseline() {
 function undoRestore(serialized) {
   const data = JSON.parse(serialized);
   data.snake = appData.snake;
+  data.news = appData.news;
   data.menu = appData.menu;
   data.anki = appData.anki;
   data.syncMeta = appData.syncMeta;

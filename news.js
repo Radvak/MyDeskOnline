@@ -76,6 +76,9 @@ const NEWS_TRANSLATIONS = {
     weekNone: 'Pas encore de résumé pour cette semaine. Il est rédigé chaque soir.',
     weekNote: 'Les faits les plus importants de la semaine, résumés par IA à partir des briefings de chaque jour. En cas de doute, ouvre la source.',
     fromOtherSlot: 'Résumé du {slot}',
+    briefingMissing: 'Aucun résumé généré.',
+    read: 'Lu',
+    readSlot: 'Résumé du {slot} lu',
     generate: '✨ Générer le résumé',
     generating: 'Résumé demandé au robot : il arrive d’ici 2 à 5 minutes…',
     generated: 'Nouveau résumé arrivé.',
@@ -144,6 +147,9 @@ const NEWS_TRANSLATIONS = {
     weekNone: 'No summary for this week yet. It is written every evening.',
     weekNote: 'The most important stories of the week, summarised by AI (in French) from the daily briefings. When in doubt, open the source.',
     fromOtherSlot: '{slot} summary',
+    briefingMissing: 'No summary generated.',
+    read: 'Read',
+    readSlot: '{slot} summary read',
     generate: '✨ Generate summary',
     generating: 'Summary requested from the bot: it should arrive within 2 to 5 minutes…',
     generated: 'New summary arrived.',
@@ -212,6 +218,9 @@ const NEWS_TRANSLATIONS = {
     weekNone: 'Chưa có bản tóm tắt cho tuần này. Bản tóm tắt được viết mỗi tối.',
     weekNote: 'Những sự kiện quan trọng nhất trong tuần, do AI tóm tắt (bằng tiếng Pháp) từ các bản tin hằng ngày. Nếu nghi ngờ, hãy mở nguồn.',
     fromOtherSlot: 'Bản tóm tắt {slot}',
+    briefingMissing: 'Chưa có bản tóm tắt nào.',
+    read: 'Đã đọc',
+    readSlot: 'Đã đọc bản tóm tắt {slot}',
     generate: '✨ Tạo bản tóm tắt',
     generating: 'Đã yêu cầu robot: bản tóm tắt sẽ có trong 2 đến 5 phút…',
     generated: 'Đã có bản tóm tắt mới.',
@@ -778,7 +787,7 @@ function renderNewsPoints(block, data) {
     item.append(newsEl('p', 'news-point__summary', point.summary));
     if (point.context) {
       const context = newsEl('p', 'news-point__context');
-      context.append(newsEl('strong', null, `${t('news.context')} : `), document.createTextNode(point.context));
+      context.append(newsEl('span', 'news-point__context-label', `💡 ${t('news.context')}`), document.createTextNode(point.context));
       item.append(context);
     }
     if (Array.isArray(point.sources) && point.sources.length) {
@@ -796,6 +805,56 @@ function renderNewsPoints(block, data) {
   block.append(list);
 }
 
+// Créneau affiché par défaut : celui en cours aujourd'hui, le soir pour un jour passé.
+function newsDefaultSlot() {
+  const now = newsParisNow();
+  if (newsState.date && newsState.date !== now.day) return 'soir';
+  return now.hour >= NEWS_SLOT_HOURS.soir ? 'soir' : 'matin';
+}
+
+// Résumés lus : appData.news.read[jour] = { matin: true, soir: true },
+// synchronisé entre appareils (60 derniers jours gardés).
+function newsReadMap() {
+  if (!appData.news || typeof appData.news !== 'object') appData.news = {};
+  if (!appData.news.read || typeof appData.news.read !== 'object') appData.news.read = {};
+  return appData.news.read;
+}
+
+function newsSetRead(date, slot, read) {
+  const map = newsReadMap();
+  const entry = { ...(map[date] || {}) };
+  if (read) entry[slot] = true;
+  else delete entry[slot];
+  if (Object.keys(entry).length) map[date] = entry;
+  else delete map[date];
+  const days = Object.keys(map).sort();
+  days.slice(0, Math.max(0, days.length - 60)).forEach((key) => delete map[key]);
+  saveData();
+}
+
+function renderNewsReadBoxes(bySlot) {
+  const box = newsEl('div', 'news-read');
+  box.append(newsEl('span', 'news-read__label', t('news.read')));
+  const date = newsState.date;
+  const read = (date && newsReadMap()[date]) || {};
+  Object.keys(NEWS_SLOT_HOURS).forEach((slot) => {
+    const label = newsEl('label', 'news-read__box');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = Boolean(read[slot]);
+    input.disabled = !date || (!bySlot(slot) && !read[slot]);
+    input.setAttribute('aria-label', t('news.readSlot', { slot: t(`news.slots.${slot}`).toLowerCase() }));
+    input.addEventListener('change', () => {
+      newsSetRead(date, slot, input.checked);
+      label.classList.toggle('is-checked', input.checked);
+    });
+    label.classList.toggle('is-checked', input.checked);
+    label.append(input, document.createTextNode(t(`news.slots.${slot}`)));
+    box.append(label);
+  });
+  return box;
+}
+
 function renderNewsBriefing(container, day) {
   const section = newsEl('section', 'news-briefing');
   const head = newsEl('div', 'news-section__head');
@@ -804,43 +863,38 @@ function renderNewsBriefing(container, day) {
   const briefings = (day && Array.isArray(day.briefings) ? day.briefings : [])
     .slice()
     .sort((a, b) => Date.parse(b.generatedAt) - Date.parse(a.generatedAt));
-  if (!briefings.length) {
-    section.append(head, newsEl('p', 'news-empty', t('news.briefingNone')));
+  const slots = Object.keys(NEWS_SLOT_HOURS);
+  const bySlot = (slot) => briefings.find((briefing) => briefing.slot === slot) || null;
+  const slot = newsState.slot && slots.includes(newsState.slot) ? newsState.slot : newsDefaultSlot();
+  const current = bySlot(slot);
+  head.append(renderNewsReadBoxes(bySlot));
+
+  const switcher = newsEl('div', 'news-slots');
+  slots.forEach((value) => {
+    const briefing = bySlot(value);
+    const label = briefing
+      ? t('news.briefingAt', { slot: t(`news.slots.${value}`), time: formatTime(new Date(briefing.generatedAt)) })
+      : t(`news.slots.${value}`);
+    const button = newsEl('button', 'news-slot', label);
+    button.type = 'button';
+    button.classList.toggle('is-active', value === slot);
+    button.classList.toggle('is-missing', !briefing);
+    button.setAttribute('aria-pressed', value === slot ? 'true' : 'false');
+    button.addEventListener('click', () => {
+      newsState.slot = value;
+      renderNews();
+    });
+    switcher.append(button);
+  });
+  head.append(switcher);
+  section.append(head);
+
+  // Pas de résumé pour ce créneau : on le dit, sans afficher l'autre à la place.
+  if (!current) {
+    section.append(newsEl('p', 'news-empty', t('news.briefingMissing')));
     container.append(section);
     return;
   }
-  const current = briefings.find((briefing) => briefing.slot === newsState.slot) || briefings[0];
-  if (briefings.length > 1) {
-    const switcher = newsEl('div', 'news-slots');
-    briefings
-      .slice()
-      .reverse()
-      .forEach((briefing) => {
-        const button = newsEl(
-          'button',
-          'news-slot',
-          t('news.briefingAt', { slot: t(`news.slots.${briefing.slot}`), time: formatTime(new Date(briefing.generatedAt)) })
-        );
-        button.type = 'button';
-        button.classList.toggle('is-active', briefing === current);
-        button.setAttribute('aria-pressed', briefing === current ? 'true' : 'false');
-        button.addEventListener('click', () => {
-          newsState.slot = briefing.slot;
-          renderNews();
-        });
-        switcher.append(button);
-      });
-    head.append(switcher);
-  } else {
-    head.append(
-      newsEl(
-        'span',
-        'news-section__meta',
-        t('news.briefingAt', { slot: t(`news.slots.${current.slot}`), time: formatTime(new Date(current.generatedAt)) })
-      )
-    );
-  }
-  section.append(head);
 
   // Un thème absent de ce briefing (ex. Justice, rédigé une fois par jour)
   // est repris d'un autre briefing du même jour.
