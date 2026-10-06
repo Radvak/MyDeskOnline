@@ -180,7 +180,7 @@ function renderDailyTodayList() {
     nameInput.className = 'daily-inline-input';
     nameInput.addEventListener('input', () => {
       challenge.name = nameInput.value;
-      saveData();
+      saveDataSoon();
       renderDailyHistory();
     });
 

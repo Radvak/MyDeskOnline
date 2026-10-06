@@ -539,8 +539,10 @@ window.addEventListener('storage', (event) => {
   if (event.key === DATA_KEY) adoptDataFromOtherTab();
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && appData) adoptDataFromOtherTab();
+  if (document.visibilityState === 'hidden') flushPendingSave();
+  else if (appData) adoptDataFromOtherTab();
 });
+window.addEventListener('pagehide', () => flushPendingSave());
 
 function scheduleFileSave() {
   if (!folderHandle) return;
@@ -563,6 +565,10 @@ function scheduleFileSave() {
 }
 
 function saveData() {
+  if (saveSoonTimer) {
+    clearTimeout(saveSoonTimer);
+    saveSoonTimer = null;
+  }
   if (typeof syncRecordChanges === 'function') {
     syncRecordChanges(lastPersistedRaw);
   }
@@ -574,6 +580,22 @@ function saveData() {
   if (typeof onLocalDataChanged === 'function') {
     onLocalDataChanged();
   }
+}
+
+// Frappe dans un champ : saveData réécrit toute la base (et la compare pour
+// la synchro, et la photographie pour Ctrl+Z) ; on attend donc une courte
+// pause dans la frappe. Enregistré quoi qu'il arrive en quittant la page,
+// avant une annulation et avant une synchro (flushPendingSave).
+const SAVE_SOON_MS = 400;
+let saveSoonTimer = null;
+
+function saveDataSoon() {
+  if (saveSoonTimer) clearTimeout(saveSoonTimer);
+  saveSoonTimer = setTimeout(saveData, SAVE_SOON_MS);
+}
+
+function flushPendingSave() {
+  if (saveSoonTimer) saveData();
 }
 
 function renderAllViews() {
@@ -1258,7 +1280,7 @@ function initStorageControls() {
   pathInput.value = appData.storagePath ? appData.storagePath : '';
   pathInput.addEventListener('input', () => {
     appData.storagePath = pathInput.value;
-    saveData();
+    saveDataSoon();
   });
 
   chooseBtn.addEventListener('click', async () => {

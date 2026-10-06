@@ -723,7 +723,7 @@ function renderTodoItem(block, item) {
     if (/\n/.test(text.value)) text.value = text.value.replace(/\s*\n+\s*/g, ' ');
     item.text = text.value;
     todoAutoGrow(text);
-    saveData();
+    saveDataSoon();
   });
   text.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.isComposing) {
@@ -813,7 +813,7 @@ function renderTodoBlock(block) {
   title.placeholder = t('todo.listNamePlaceholder');
   title.addEventListener('input', () => {
     block.title = title.value;
-    saveData();
+    saveDataSoon();
   });
   title.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {

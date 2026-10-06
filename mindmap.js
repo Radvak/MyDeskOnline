@@ -114,7 +114,7 @@ function initMindmap() {
     const node = map.nodes.find((n) => n.id === selectedNodeId);
     if (!node) return;
     node.color = colorInput.value;
-    saveData();
+    saveDataSoon();
     renderMindmap();
   });
 

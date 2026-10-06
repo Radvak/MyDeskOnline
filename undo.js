@@ -120,6 +120,7 @@ function undoRestore(serialized) {
 }
 
 function undo() {
+  if (typeof flushPendingSave === 'function') flushPendingSave(); // frappe pas encore enregistrée
   if (undoStack.length === 0) return false;
   redoStack.push(undoCurrent);
   undoRestore(undoStack.pop());
@@ -128,6 +129,7 @@ function undo() {
 }
 
 function redo() {
+  if (typeof flushPendingSave === 'function') flushPendingSave();
   if (redoStack.length === 0) return false;
   undoStack.push(undoCurrent);
   undoRestore(redoStack.pop());

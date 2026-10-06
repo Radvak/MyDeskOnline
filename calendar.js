@@ -185,7 +185,7 @@ function renderEventTypes() {
         const previousColor = type.color;
         type.color = colorInput.value;
         updateEventsForTypeColor(type, previousColor);
-        saveData();
+        saveDataSoon();
         renderCalendarEvents();
       });
 
@@ -195,7 +195,7 @@ function renderEventTypes() {
       nameInput.addEventListener('input', () => {
         type.name = nameInput.value;
         updateEventTypeSelect(type.id);
-        saveData();
+        saveDataSoon();
       });
       nameInput.addEventListener('blur', () => {
         const trimmed = nameInput.value.trim();

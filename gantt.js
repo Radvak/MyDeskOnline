@@ -82,7 +82,7 @@ function renderGanttBoard() {
       nameInput.value = task.name || '';
       nameInput.addEventListener('input', () => {
         task.name = nameInput.value;
-        saveData();
+        saveDataSoon();
         renderGanttTimeline(getActiveGanttChart());
       });
 

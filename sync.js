@@ -535,6 +535,7 @@ function syncUserIsEditing() {
 
 async function syncRun({ manual = false, firstConnect = false } = {}) {
   if (!isSyncEnabled()) return;
+  if (typeof flushPendingSave === 'function') flushPendingSave(); // dates de modification à jour
   if (syncInFlight) {
     syncQueued = true;
     return;

@@ -153,7 +153,7 @@ function initNotesToolbar() {
   if (editor) {
     editor.addEventListener('input', () => {
       syncActiveNoteContent();
-      saveData();
+      saveDataSoon();
     });
   }
 }
