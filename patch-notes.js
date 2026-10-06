@@ -16,6 +16,7 @@ const PATCH_NOTES = [
     title: 'Actualités plus précises, données mieux protégées',
     items: [
       { area: 'app', text: 'Alerte si la mémoire du navigateur est presque pleine (orange) ou pleine (rouge) : avant, les modifications cessaient d’être enregistrées sans prévenir. Bouton « Exporter une sauvegarde » dans l’alerte ; dans Accueil, place utilisée et plus gros postes (Anki, Agenda…).' },
+      { area: 'menu', text: 'Menu : une recette qui fait presque un nombre rond de repas compte pour ce nombre (ex. 4 galettes = 1,9 repas → 2 repas). « 2 repas » donne la recette telle qu’écrite et « 1 repas » la moitié pile, au lieu de 526,3 g d’eau et 5 œufs.' },
       { area: 'news', text: 'L’onglet « Actualité » s’appelle maintenant « Actualités ».' },
       { area: 'news', text: 'Actualités : cases « Lu » Matin et Soir à droite de « L’essentiel », synchronisées entre appareils.' },
       { area: 'news', text: 'Actualités : Matin et Soir toujours proposés ; s’il n’y a pas de résumé du soir, l’app affiche « Aucun résumé généré » au lieu de remettre celui du matin.' },

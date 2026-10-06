@@ -291,10 +291,17 @@ const MenuEngine = (() => {
     return r.portions_reelles ?? null;
   }
 
+  // Recette qui fait presque un nombre rond de repas (4 galettes = 1,9 repas) :
+  // on la compte pour ce nombre rond, sinon « 2 repas » donnerait 526,3 g d'eau
+  // et 5 œufs au lieu de la recette telle qu'écrite.
+  const TOLERANCE_REPAS_ROND = 0.15;
+
   function partsParRepas(r) {
     const servingsBase = Number(r && r.servings_base);
-    const portions = Number(portionsDe(r));
+    let portions = Number(portionsDe(r));
     if (!servingsBase || !portions) return null;
+    const rond = Math.round(portions);
+    if (rond >= 1 && Math.abs(portions - rond) <= rond * TOLERANCE_REPAS_ROND) portions = rond;
     return servingsBase / portions;
   }
 
