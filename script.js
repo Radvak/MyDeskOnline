@@ -284,6 +284,8 @@ function refreshStorageStatus() {
     const { messageKey, type, variables } = lastStorageStatus;
     updateStorageStatus(messageKey, type, variables);
   }
+  renderStorageAlert();
+  renderStorageUsage();
 }
 
 function setLanguage(language) {
@@ -509,10 +511,119 @@ async function loadFromFileSystem() {
   }
 }
 
+// Le navigateur garde environ 5 Mo par site (comptés en caractères, toutes
+// clés confondues, copie de synchro comprise). Au-delà, l'écriture échoue :
+// on le signale au lieu de perdre les modifications sans rien dire.
+const STORAGE_LIMIT_CHARS = 5 * 1024 * 1024;
+const STORAGE_WARN_RATIO = 0.8;
+const STORAGE_CHECK_MS = 60 * 1000;
+let storageAlert = null; // null | 'almost' | 'full'
+let storageAlertClosed = false;
+let storageAlertUsed = 0;
+let storageCheckedAt = 0;
+
 function persistToLocalStorage() {
   const raw = JSON.stringify(appData);
-  localStorage.setItem(DATA_KEY, raw);
+  try {
+    localStorage.setItem(DATA_KEY, raw);
+  } catch (error) {
+    // Rien n'est écrit : lastPersistedRaw reste la dernière version vraiment
+    // enregistrée (la synchro datera bien ces modifications).
+    console.warn('Enregistrement dans le navigateur impossible', error);
+    setStorageAlert('full');
+    return false;
+  }
   lastPersistedRaw = raw;
+  if (storageAlert === 'full' || Date.now() - storageCheckedAt > STORAGE_CHECK_MS) {
+    checkStorageUsage();
+  }
+  return true;
+}
+
+// Taille de chaque clé du stockage du navigateur, en caractères.
+function storageUsage() {
+  const keys = {};
+  let total = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const size = key.length + (localStorage.getItem(key) || '').length;
+      keys[key] = size;
+      total += size;
+    }
+  } catch (error) {
+    return null;
+  }
+  return { total, keys };
+}
+
+function formatStorageSize(chars) {
+  const locale = getCurrentLocale();
+  if (chars < 100 * 1024) {
+    return t('storage.kb', { n: Math.max(1, Math.round(chars / 1024)).toLocaleString(locale) });
+  }
+  const mb = (chars / (1024 * 1024)).toLocaleString(locale, { maximumFractionDigits: 1 });
+  return t('storage.mb', { n: mb });
+}
+
+function checkStorageUsage() {
+  storageCheckedAt = Date.now();
+  const usage = storageUsage();
+  if (!usage) return;
+  storageAlertUsed = usage.total;
+  setStorageAlert(usage.total > STORAGE_LIMIT_CHARS * STORAGE_WARN_RATIO ? 'almost' : null);
+  renderStorageUsage(usage);
+}
+
+function setStorageAlert(level) {
+  if (level !== storageAlert) storageAlertClosed = false;
+  storageAlert = level;
+  renderStorageAlert();
+}
+
+function renderStorageAlert() {
+  const box = document.getElementById('storage-alert');
+  if (!box) return;
+  const show = Boolean(storageAlert) && !(storageAlert === 'almost' && storageAlertClosed);
+  box.hidden = !show;
+  if (!show) return;
+  box.classList.toggle('is-full', storageAlert === 'full');
+  document.getElementById('storage-alert-text').textContent =
+    storageAlert === 'full'
+      ? t('storage.alertFull')
+      : t('storage.alertAlmost', { used: formatStorageSize(storageAlertUsed), limit: formatStorageSize(STORAGE_LIMIT_CHARS) });
+  document.getElementById('storage-alert-close').hidden = storageAlert === 'full';
+}
+
+// Accueil : place utilisée et les trois plus gros postes (calculés seulement
+// quand l'onglet est affiché).
+function renderStorageUsage(usage = null) {
+  const line = document.getElementById('storage-usage');
+  const panel = document.getElementById('home');
+  if (!line || !panel || !panel.classList.contains('active')) return;
+  const current = usage || storageUsage();
+  if (!current) {
+    line.textContent = '';
+    return;
+  }
+  const sizes = Object.keys(appData || {}).map((key) => [key, JSON.stringify(appData[key] ?? null).length]);
+  const syncBase = current.keys['mydesk-sync-base'];
+  if (syncBase) sizes.push(['syncBase', syncBase]);
+  const parts = sizes
+    .filter(([key, size]) => size >= 10 * 1024 && translationExists(`storage.parts.${key}`))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([key, size]) => `${t(`storage.parts.${key}`)} ${formatStorageSize(size)}`);
+  let text = t('storage.usage', { used: formatStorageSize(current.total), limit: formatStorageSize(STORAGE_LIMIT_CHARS) });
+  if (parts.length) text += ` ${t('storage.usageParts', { parts: parts.join(', ') })}`;
+  line.textContent = text;
+  line.classList.toggle('is-high', current.total > STORAGE_LIMIT_CHARS * STORAGE_WARN_RATIO);
+}
+
+function translationExists(key) {
+  const read = (language) =>
+    key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), translations[language]);
+  return typeof (read(currentLanguage) ?? read(LANGUAGE_FALLBACK)) === 'string';
 }
 
 // Un autre onglet a enregistré des données plus récentes : on les reprend.
@@ -995,6 +1106,8 @@ function initTabs() {
         renderCalendar();
         renderEventTypes();
       });
+    } else if (targetId === 'home') {
+      renderStorageUsage();
     } else if (targetId === 'gantt') {
       requestAnimationFrame(() => {
         renderGantt();
@@ -1308,6 +1421,13 @@ function initStorageControls() {
       }
     }
   });
+
+  document.getElementById('storage-alert-export').addEventListener('click', () => exportBtn.click());
+  document.getElementById('storage-alert-close').addEventListener('click', () => {
+    storageAlertClosed = true;
+    renderStorageAlert();
+  });
+  checkStorageUsage();
 
   exportBtn.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });

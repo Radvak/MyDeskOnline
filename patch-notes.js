@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-06',
+    title: 'Données mieux protégées',
+    items: [
+      { area: 'app', text: 'Alerte si la mémoire du navigateur est presque pleine (orange) ou pleine (rouge) : avant, les modifications cessaient d’être enregistrées sans prévenir. Bouton « Exporter une sauvegarde » dans l’alerte ; dans Accueil, place utilisée et plus gros postes (Anki, Agenda…).' }
+    ]
+  },
+  {
     date: '2026-10-05',
     title: 'Résumé de l’actualité à la demande',
     items: [

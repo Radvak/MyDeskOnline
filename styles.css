@@ -300,6 +300,53 @@ main {
   color: var(--muted);
 }
 
+.storage-usage {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.storage-usage.is-high {
+  color: #d97706;
+}
+
+/* Mémoire du navigateur presque pleine (orange) ou pleine (rouge). */
+.storage-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
+  margin: 0.6rem auto 0;
+  width: min(100% - 1rem, 1600px);
+  box-sizing: border-box;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #f59e0b 60%, transparent);
+  background: color-mix(in srgb, #f59e0b 14%, var(--surface));
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.storage-alert.is-full {
+  border-color: color-mix(in srgb, #ef4444 65%, transparent);
+  background: color-mix(in srgb, #ef4444 14%, var(--surface));
+}
+
+.storage-alert[hidden],
+.storage-alert__close[hidden] {
+  display: none;
+}
+
+.storage-alert__text {
+  flex: 1 1 16rem;
+}
+
+.storage-alert__close {
+  background: transparent;
+  color: var(--muted);
+  padding: 0.2rem 0.45rem;
+}
+
 .sync-panel {
   margin-top: 2rem;
   padding-top: 1.5rem;
