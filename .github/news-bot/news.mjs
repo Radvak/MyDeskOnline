@@ -46,8 +46,6 @@ const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 const GEMINI_MAX_MODELS = 5;
 const GEMINI_BUSY_WAITS_MS = [8000, 20000]; // modèle saturé (503) : on réessaie après ces pauses
-// L'actu juridique est plus lente : un seul briefing par jour, sur 24 h.
-const DAILY_THEMES = ['juridique'];
 
 /* ── Dates ─────────────────────────────────────────────────── */
 
@@ -454,15 +452,6 @@ const dueSlot = (days, now) => {
   return { day, slot: slot.id };
 };
 
-// Un briefing du jour (autre que celui qu'on refait) contient déjà ce thème.
-const dayHasTheme = (day, theme, exceptSlot) =>
-  Boolean(
-    day &&
-      day.briefings.some(
-        (briefing) => briefing.slot !== exceptSlot && !briefing.fallback && briefing.themes && briefing.themes[theme]
-      )
-  );
-
 const makeBriefing = async (days, allItems, now, due) => {
   const last = lastBriefingTime(days, due);
   const hour = 3600 * 1000;
@@ -472,12 +461,9 @@ const makeBriefing = async (days, allItems, now, due) => {
 
   const briefing = { slot: due.slot, generatedAt: now.toISOString(), from: fromDate.toISOString(), themes: {} };
   for (const theme of Object.keys(THEMES)) {
-    const daily = DAILY_THEMES.includes(theme);
-    if (daily && due.slot !== BRIEFING_SLOTS[0].id && dayHasTheme(days.get(due.day), theme, due.slot)) continue;
-    const themeFrom = daily ? now.getTime() - 24 * hour : from;
     const seenTitles = new Set();
     const items = allItems
-      .filter((item) => item.theme === theme && Date.parse(item.date) >= themeFrom)
+      .filter((item) => item.theme === theme && Date.parse(item.date) >= from)
       .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
       .filter((item) => {
         const key = item.title.toLowerCase();
@@ -490,7 +476,7 @@ const makeBriefing = async (days, allItems, now, due) => {
       briefing.themes[theme] = { points: [], count: items.length };
       continue;
     }
-    const { prompt, used } = buildPrompt(theme, items, new Date(themeFrom), now);
+    const { prompt, used } = buildPrompt(theme, items, fromDate, now);
     try {
       console.log(`Briefing ${theme} : ${used} dépêches`);
       const { model, data } = await callModel(prompt);

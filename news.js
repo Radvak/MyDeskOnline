@@ -893,7 +893,7 @@ function renderNewsBriefing(container, day) {
     return;
   }
 
-  // Un thème absent de ce créneau (ex. Justice, rédigé une fois par jour) :
+  // Un thème absent de ce créneau (robot en panne, ancien résumé) :
   // « Aucun résumé généré », jamais le contenu de l'autre créneau.
   NEWS_THEME_ORDER.filter((theme) => newsState.theme === 'all' || newsState.theme === theme).forEach((theme) => {
     const data = current.themes && current.themes[theme];
