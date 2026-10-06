@@ -13,9 +13,17 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-10-06',
-    title: 'Données mieux protégées',
+    title: 'Actualités plus précises, données mieux protégées',
     items: [
-      { area: 'app', text: 'Alerte si la mémoire du navigateur est presque pleine (orange) ou pleine (rouge) : avant, les modifications cessaient d’être enregistrées sans prévenir. Bouton « Exporter une sauvegarde » dans l’alerte ; dans Accueil, place utilisée et plus gros postes (Anki, Agenda…).' }
+      { area: 'app', text: 'Alerte si la mémoire du navigateur est presque pleine (orange) ou pleine (rouge) : avant, les modifications cessaient d’être enregistrées sans prévenir. Bouton « Exporter une sauvegarde » dans l’alerte ; dans Accueil, place utilisée et plus gros postes (Anki, Agenda…).' },
+      { area: 'news', text: 'L’onglet « Actualité » s’appelle maintenant « Actualités ».' },
+      { area: 'news', text: 'Actualités : cases « Lu » Matin et Soir à droite de « L’essentiel », synchronisées entre appareils.' },
+      { area: 'news', text: 'Actualités : Matin et Soir toujours proposés ; s’il n’y a pas de résumé du soir, l’app affiche « Aucun résumé généré » au lieu de remettre celui du matin.' },
+      { area: 'news', text: 'Actualités : « 💡 Pour comprendre » mis en valeur dans un encadré discret.' },
+      { area: 'news', text: 'Actualités : un thème absent du résumé choisi (ex. Justice le soir) affiche « Aucun résumé généré » au lieu de reprendre celui de l’autre créneau.' },
+      { area: 'news', text: 'Actualités : Justice & droit est rédigé matin et soir, comme International et France (avant : une seule fois par jour, le matin).' },
+      { area: 'news', text: 'Actualités : « ✨ Générer le résumé » refait le résumé affiché — un soir ou un matin passé est réécrit avec les articles de l’époque — et l’app l’affiche dès qu’il arrive (avant : il refaisait toujours le créneau en cours et restait sur la page ouverte).' },
+      { area: 'news', text: 'Actualités : les résumés sont réécrits à partir du texte complet des articles cités (quand le site le permet : franceinfo, RFI, France 24, sources juridiques… ; sinon titre et chapô). Résumés plus précis et « Pour comprendre » plus fourni. Le texte lu n’est jamais conservé.' }
     ]
   },
   {
@@ -40,14 +48,6 @@ const PATCH_NOTES = [
       { area: 'menu', text: 'Menu : un plat se retire de « À cuisiner » sans être cuisiné (✕ sur sa carte, ou « Retirer sans cuisiner » dans la recette) ; le stock et le journal ne changent pas. (Après la prochaine publication depuis le PC.)' },
       { area: 'menu', text: 'Menu : la préparation de la box du midi suit le nombre de box choisi — « pour 7 box : 1,26 kg de poulet… 840 g de pâtes (environ 1,7 paquet de 500 g) » — et se recalcule quand on change le nombre de repas. (Après la prochaine publication depuis le PC.)' },
       { area: 'snake', text: 'Snake entièrement refait : 7 modes (Classique, Sans bords, Murs, Portails, Poison, Chrono 60 s, Zen), défi du jour (même tirage toute la journée, objectif, série de jours 🔥), réglages de vitesse (dont Turbo qui accélère), taille du plateau, 1/3/5 pommes, 7 couleurs de serpent et 4 terrains. Mouvement fluide, serpent qui regarde la pomme et ouvre la bouche, pomme dorée +3, combos, particules ; bruitages et musique synthétisés (la musique accélère avec le serpent), volume réglable. Records par mode, 15 trophées, statistiques ; démo jouée par l’ordi dans le menu ; au téléphone, glisser ou croix directionnelle.' },
-      { area: 'news', text: 'L’onglet « Actualité » s’appelle maintenant « Actualités ».' },
-      { area: 'news', text: 'Actualités : cases « Lu » Matin et Soir à droite de « L’essentiel », synchronisées entre appareils.' },
-      { area: 'news', text: 'Actualités : Matin et Soir toujours proposés ; s’il n’y a pas de résumé du soir, l’app affiche « Aucun résumé généré » au lieu de remettre celui du matin.' },
-      { area: 'news', text: 'Actualités : « 💡 Pour comprendre » mis en valeur dans un encadré discret.' },
-      { area: 'news', text: 'Actualités : un thème absent du résumé choisi (ex. Justice le soir) affiche « Aucun résumé généré » au lieu de reprendre celui de l’autre créneau.' },
-      { area: 'news', text: 'Actualités : Justice & droit est rédigé matin et soir, comme International et France (avant : une seule fois par jour, le matin).' },
-      { area: 'news', text: 'Actualités : « ✨ Générer le résumé » refait le résumé affiché — un soir ou un matin passé est réécrit avec les articles de l’époque — et l’app l’affiche dès qu’il arrive (avant : il refaisait toujours le créneau en cours et restait sur la page ouverte).' },
-      { area: 'news', text: 'Actualités : les résumés sont réécrits à partir du texte complet des articles cités (quand le site le permet : franceinfo, RFI, France 24, sources juridiques… ; sinon titre et chapô). Résumés plus précis et « Pour comprendre » plus fourni. Le texte lu n’est jamais conservé.' },
       { area: 'news', text: 'Robot plus fiable : 4 passages prévus par heure (GitHub en sautait beaucoup) et nouveaux essais espacés quand Gemini est saturé.' },
       { area: 'menu', text: 'Menu : les repas se comptent en entiers (1 ou 2, jamais 1,5), au choix comme à l’affichage. « Combien de repas ? » reprend le nombre de ta dernière liste pour chaque recette (la box du midi prise pour 7 revient à 7), et un bouton « ✕ Retirer » enlève une recette de la sélection sans quitter la fenêtre.' },
       { area: 'menu', text: 'Menu : « 👤 Mon profil » (sexe, âge, taille, poids, activité) fixe ce que vaut un repas pour toi ; le nombre de repas de chaque recette et ce que la liste achète suivent. Chaque compte garde le sien.' },
