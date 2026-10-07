@@ -77,6 +77,7 @@ const ANKI_TRANSLATIONS = {
     suspendCard: '⏸ Suspendre',
     unsuspendCard: '▶ Réactiver',
     unsuspendedStatus: '{count} carte(s) réactivée(s) : de retour dans les révisions.',
+    suspendedStatus: '{count} carte(s) suspendue(s) : elles n’apparaîtront plus en révision (▶ Réactiver pour les remettre).',
     deleteNote: '🗑 Supprimer',
     deleteNoteConfirm: 'Supprimer cette note et ses {count} carte(s) ? (Annulable avec Ctrl+Z)',
     endSession: 'Terminer',
@@ -292,6 +293,7 @@ const ANKI_TRANSLATIONS = {
     suspendCard: '⏸ Suspend',
     unsuspendCard: '▶ Unsuspend',
     unsuspendedStatus: '{count} card(s) unsuspended: back in reviews.',
+    suspendedStatus: '{count} card(s) suspended: they will no longer show up in reviews (▶ Unsuspend to bring them back).',
     deleteNote: '🗑 Delete',
     deleteNoteConfirm: 'Delete this note and its {count} card(s)? (Ctrl+Z to undo)',
     endSession: 'End',
@@ -2526,10 +2528,16 @@ function renderAnkiBrowse(main) {
   // Barre d'actions sur la sélection : changer le paquet et/ou le tag.
   let bulkBuilt = false;
   let unsuspendBtn = null;
-  const selectedSuspended = () =>
+  let suspendBtn = null;
+  const selectedCards = (suspended) =>
     ankiData()
-      .cards.filter((c) => c.suspended && ankiBrowseSelected.has(c.noteId))
+      .cards.filter((c) => Boolean(c.suspended) === suspended && ankiBrowseSelected.has(c.noteId))
       .map((c) => c.id);
+  const selectedSuspended = () => selectedCards(true);
+  const showSuspendButtons = () => {
+    unsuspendBtn.hidden = !selectedSuspended().length;
+    suspendBtn.hidden = !selectedCards(false).length;
+  };
   const renderBulk = () => {
     const count = ankiBrowseSelected.size;
     bulkBar.hidden = count === 0;
@@ -2539,7 +2547,7 @@ function renderAnkiBrowse(main) {
     }
     if (bulkBuilt) {
       bulkBar.querySelector('.anki-bulk__count').textContent = t('anki.bulkSelected', { count });
-      unsuspendBtn.hidden = !selectedSuspended().length;
+      showSuspendButtons();
       return;
     }
     bulkBuilt = true;
@@ -2588,7 +2596,13 @@ function renderAnkiBrowse(main) {
       const ids = selectedSuspended();
       if (ids.length) ankiUnsuspend(ids);
     });
-    unsuspendBtn.hidden = !selectedSuspended().length;
+    suspendBtn = ankiButton('anki-btn anki-btn--ghost', t('anki.suspendCard'), () => {
+      const ids = selectedCards(false);
+      if (!ids.length) return;
+      ankiToggleSuspend(ids, true);
+      ankiStatus(t('anki.suspendedStatus', { count: ids.length }), 'success');
+    });
+    showSuspendButtons();
     deckSel.addEventListener('change', fillBulkTags);
     tagSel.addEventListener('change', () => {
       if (tagSel.value !== '__new__') return;
@@ -2620,6 +2634,7 @@ function renderAnkiBrowse(main) {
       deckSel,
       tagSel,
       ankiButton('anki-btn', t('anki.bulkApply'), apply),
+      suspendBtn,
       unsuspendBtn,
       ankiButton('anki-link', t('anki.bulkClear'), () => {
         ankiBrowseSelected.clear();

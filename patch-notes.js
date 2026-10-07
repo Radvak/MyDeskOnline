@@ -13,8 +13,9 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-10-07',
-    title: 'Réactiver une carte suspendue',
+    title: 'Suspendre et réactiver des cartes en lot',
     items: [
+      { area: 'anki', text: 'Révisions : dans Parcourir, bouton « ⏸ Suspendre » sur les cartes cochées — par exemple chercher « cession », tout cocher, Suspendre : elles sortent des révisions d’un coup (annulable avec ↶ Annuler).' },
       { area: 'anki', text: 'Révisions : bouton « ▶ Réactiver » pour remettre une carte suspendue dans les révisions — dans la fiche (✏️ Modifier) ou dans Parcourir après avoir coché les cartes (astuce : chercher is:suspended). Avant, une suspension ne s’annulait qu’avec Ctrl+Z.' }
     ]
   },
