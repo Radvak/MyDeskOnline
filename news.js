@@ -27,11 +27,18 @@ const NEWS_SOURCE_LEAN = {
   franceinfo: 'public',
   RFI: 'public',
   'France 24': 'public',
-  'Courrier international': 'centreGauche',
   'Libération': 'gauche',
-  'Le Point': 'centreDroit',
+  Mediapart: 'gauche',
+  "L'Humanité": 'gaucheMarquee',
+  Politis: 'gaucheMarquee',
+  "L'Obs": 'centreGauche',
+  'Courrier international': 'centreGauche',
   'Le Figaro': 'droite',
+  'Europe 1': 'droite',
   'Valeurs actuelles': 'droiteMarquee',
+  CNews: 'droiteMarquee',
+  'Le Point': 'centreDroit',
+  Contrepoints: 'centreDroit',
   'Public Sénat': 'parlement',
   LCP: 'parlement',
   'Conseil constitutionnel': 'officiel',
@@ -44,8 +51,9 @@ const NEWS_SOURCE_LEAN = {
   'Jus Politicum': 'juridique',
   'Revue des droits et libertés fondamentaux': 'juridique'
 };
-const NEWS_LEAN_ORDER = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'droiteMarquee', 'parlement', 'officiel', 'juridique'];
-const NEWS_LEAN_POLITICAL = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'droiteMarquee'];
+const NEWS_LEAN_ORDER = ['gaucheMarquee', 'gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'droiteMarquee', 'parlement', 'officiel', 'juridique'];
+const NEWS_LEAN_LEFT = ['gaucheMarquee', 'gauche', 'centreGauche'];
+const NEWS_LEAN_RIGHT = ['centreDroit', 'droite', 'droiteMarquee'];
 
 function newsSourceLean(name) {
   return NEWS_SOURCE_LEAN[String(name || '').replace(/’/g, "'").trim()] || null;
@@ -68,8 +76,10 @@ function newsLeanSummary(names) {
   });
   const parts = NEWS_LEAN_ORDER.filter((lean) => counts[lean]).map((lean) => `${counts[lean]} ${t(`news.lean.${lean}`)}`);
   if (!parts.length) return null;
-  const political = NEWS_LEAN_POLITICAL.some((lean) => counts[lean]);
-  if (political && !counts.droite && !counts.centreDroit && !counts.droiteMarquee) parts.push(t('news.leanNoRight'));
+  const left = NEWS_LEAN_LEFT.some((lean) => counts[lean]);
+  const right = NEWS_LEAN_RIGHT.some((lean) => counts[lean]);
+  if (left && !right) parts.push(t('news.leanNoRight'));
+  if (right && !left) parts.push(t('news.leanNoLeft'));
   return newsEl('p', 'news-lean-summary', t('news.leanSummary', { list: parts.join(' · ') }));
 }
 // Lancer le robot depuis l'app (bouton « Générer le résumé » et rattrapage
@@ -120,7 +130,9 @@ const NEWS_TRANSLATIONS = {
     sources: 'Sources : {list}',
     leanSummary: 'Ligne éditoriale des sources : {list}',
     leanNoRight: 'aucune source de droite',
+    leanNoLeft: 'aucune source de gauche',
     lean: {
+      gaucheMarquee: 'gauche marquée',
       gauche: 'gauche',
       centreGauche: 'centre gauche',
       public: 'service public',
@@ -132,6 +144,7 @@ const NEWS_TRANSLATIONS = {
       juridique: 'juridique'
     },
     leanInfo: {
+      gaucheMarquee: 'Gauche radicale ou antilibérale, ligne plus tranchée que Libération.',
       gauche: 'Ligne éditoriale de gauche.',
       centreGauche: 'Plutôt centre gauche (groupe Le Monde) ; traduit des journaux étrangers de toutes tendances.',
       public: 'Média public : obligation de neutralité et de pluralisme. Classé au centre ; ses critiques le jugent parfois un peu à gauche.',
@@ -216,7 +229,9 @@ const NEWS_TRANSLATIONS = {
     sources: 'Sources: {list}',
     leanSummary: 'Editorial line of the sources: {list}',
     leanNoRight: 'no right-leaning source',
+    leanNoLeft: 'no left-leaning source',
     lean: {
+      gaucheMarquee: 'hard left',
       gauche: 'left',
       centreGauche: 'centre-left',
       public: 'public service',
@@ -228,6 +243,7 @@ const NEWS_TRANSLATIONS = {
       juridique: 'legal'
     },
     leanInfo: {
+      gaucheMarquee: 'Radical or anti-liberal left; a sharper line than Libération.',
       gauche: 'Left-leaning editorial line.',
       centreGauche: 'Rather centre-left (Le Monde group); translates foreign papers of all leanings.',
       public: 'Public broadcaster: required to be neutral and pluralistic. Rated centre; critics sometimes see it as slightly left-leaning.',
@@ -312,7 +328,9 @@ const NEWS_TRANSLATIONS = {
     sources: 'Nguồn: {list}',
     leanSummary: 'Khuynh hướng của các nguồn: {list}',
     leanNoRight: 'không có nguồn cánh hữu',
+    leanNoLeft: 'không có nguồn cánh tả',
     lean: {
+      gaucheMarquee: 'cánh tả rõ rệt',
       gauche: 'cánh tả',
       centreGauche: 'trung tả',
       public: 'truyền thông công',
@@ -324,6 +342,7 @@ const NEWS_TRANSLATIONS = {
       juridique: 'pháp lý'
     },
     leanInfo: {
+      gaucheMarquee: 'Cánh tả cấp tiến, lập trường gay gắt hơn Libération.',
       gauche: 'Khuynh hướng biên tập cánh tả.',
       centreGauche: 'Khá trung tả (tập đoàn Le Monde); dịch báo nước ngoài thuộc mọi khuynh hướng.',
       public: 'Truyền thông công: bắt buộc trung lập và đa nguyên. Được xếp ở trung tâm; đôi khi bị chê là hơi thiên tả.',
