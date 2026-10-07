@@ -353,6 +353,27 @@ main {
   border-top: 1px solid var(--border);
 }
 
+.eco-panel {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.eco-panel__month {
+  font-weight: 600;
+}
+
+.eco-panel__parts {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+
+.eco-panel__note {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
 .storage-controls[hidden] {
   display: none;
 }

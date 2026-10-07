@@ -1,12 +1,13 @@
 /* Service worker : rend l'app installable et utilisable hors ligne.
    Stratégie « réseau d'abord » pour toujours servir la dernière version,
    avec repli sur le cache hors connexion. */
-const CACHE_NAME = 'mydesk-shell-v84';
+const CACHE_NAME = 'mydesk-shell-v85';
 const APP_SHELL = [
   './',
   'index.html',
   'styles.css',
   'script.js',
+  'eco.js',
   'translations.js',
   'calendar.js',
   'mindmap.js',

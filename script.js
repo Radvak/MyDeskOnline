@@ -286,6 +286,7 @@ function refreshStorageStatus() {
   }
   renderStorageAlert();
   renderStorageUsage();
+  if (typeof renderEco === 'function') renderEco();
 }
 
 function setLanguage(language) {
@@ -1108,6 +1109,7 @@ function initTabs() {
       });
     } else if (targetId === 'home') {
       renderStorageUsage();
+      if (typeof renderEco === 'function') renderEco();
     } else if (targetId === 'gantt') {
       requestAnimationFrame(() => {
         renderGantt();
@@ -1565,6 +1567,9 @@ async function bootstrap() {
   if (typeof registerOnboardingTranslations === 'function') {
     registerOnboardingTranslations();
   }
+  if (typeof registerEcoTranslations === 'function') {
+    registerEcoTranslations();
+  }
   await initData();
   initAppearance();
   initTabs();
@@ -1622,6 +1627,9 @@ async function bootstrap() {
   }
   if (typeof initOnboarding === 'function') {
     initOnboarding(firstVisit);
+  }
+  if (typeof initEco === 'function') {
+    initEco();
   }
 }
 

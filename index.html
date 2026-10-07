@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=84">
+  <link rel="stylesheet" href="styles.css?v=85">
 </head>
 <body>
   <header class="app-header">
@@ -87,6 +87,14 @@
         <input type="file" id="import-input" accept="application/json" hidden>
         <p class="storage-status" id="storage-status"></p>
         <p class="storage-usage" id="storage-usage"></p>
+      </div>
+
+      <div class="eco-panel" id="eco-panel">
+        <h2 data-i18n="eco.heading">🌱 Impact écologique (estimation)</h2>
+        <p class="eco-panel__month" id="eco-month"></p>
+        <ul class="eco-panel__parts" id="eco-parts"></ul>
+        <p id="eco-year"></p>
+        <p class="eco-panel__note" data-i18n="eco.note"></p>
       </div>
 
       <div class="sync-panel" id="sync-panel">
@@ -684,38 +692,39 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=84" defer></script>
-  <script src="calendar-feed.js?v=84" defer></script>
-  <script src="restore.js?v=84" defer></script>
-  <script src="calendar-conflicts.js?v=84" defer></script>
-  <script src="calendar-goals.js?v=84" defer></script>
-  <script src="calendar-reminders.js?v=84" defer></script>
-  <script src="ical.js?v=84" defer></script>
-  <script src="print.js?v=84" defer></script>
-  <script src="undo.js?v=84" defer></script>
-  <script src="sport-library.js?v=84" defer></script>
-  <script src="sport.js?v=84" defer></script>
-  <script src="sport-guided.js?v=84" defer></script>
-  <script src="sport-history.js?v=84" defer></script>
-  <script src="snake.js?v=84" defer></script>
-  <script src="menu-engine.js?v=84" defer></script>
-  <script src="menu.js?v=84" defer></script>
-  <script src="install.js?v=84" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=84" defer></script>
-  <script src="anki.js?v=84" defer></script>
-  <script src="news.js?v=84" defer></script>
-  <script src="tab-order.js?v=84" defer></script>
-  <script src="patch-notes.js?v=84" defer></script>
-  <script src="todo.js?v=84" defer></script>
-  <script src="onboarding.js?v=84" defer></script>
-  <script src="translations.js?v=84" defer></script>
-  <script src="calendar.js?v=84" defer></script>
-  <script src="mindmap.js?v=84" defer></script>
-  <script src="gantt.js?v=84" defer></script>
-  <script src="notes.js?v=84" defer></script>
-  <script src="daily-challenges.js?v=84" defer></script>
-  <script src="appearance.js?v=84" defer></script>
-  <script src="script.js?v=84" defer></script>
+  <script src="sync.js?v=85" defer></script>
+  <script src="calendar-feed.js?v=85" defer></script>
+  <script src="restore.js?v=85" defer></script>
+  <script src="calendar-conflicts.js?v=85" defer></script>
+  <script src="calendar-goals.js?v=85" defer></script>
+  <script src="calendar-reminders.js?v=85" defer></script>
+  <script src="ical.js?v=85" defer></script>
+  <script src="print.js?v=85" defer></script>
+  <script src="undo.js?v=85" defer></script>
+  <script src="sport-library.js?v=85" defer></script>
+  <script src="sport.js?v=85" defer></script>
+  <script src="sport-guided.js?v=85" defer></script>
+  <script src="sport-history.js?v=85" defer></script>
+  <script src="snake.js?v=85" defer></script>
+  <script src="menu-engine.js?v=85" defer></script>
+  <script src="menu.js?v=85" defer></script>
+  <script src="install.js?v=85" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=85" defer></script>
+  <script src="anki.js?v=85" defer></script>
+  <script src="news.js?v=85" defer></script>
+  <script src="tab-order.js?v=85" defer></script>
+  <script src="patch-notes.js?v=85" defer></script>
+  <script src="todo.js?v=85" defer></script>
+  <script src="onboarding.js?v=85" defer></script>
+  <script src="eco.js?v=85" defer></script>
+  <script src="translations.js?v=85" defer></script>
+  <script src="calendar.js?v=85" defer></script>
+  <script src="mindmap.js?v=85" defer></script>
+  <script src="gantt.js?v=85" defer></script>
+  <script src="notes.js?v=85" defer></script>
+  <script src="daily-challenges.js?v=85" defer></script>
+  <script src="appearance.js?v=85" defer></script>
+  <script src="script.js?v=85" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

@@ -13,8 +13,9 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-10-07',
-    title: 'Suspendre et réactiver des cartes en lot',
+    title: 'Cartes en lot et impact écologique',
     items: [
+      { area: 'app', text: 'Accueil : estimation de l’impact écologique de MyDesk ce mois-ci et sur un an (CO₂e et équivalent en km de voiture), détaillée entre le robot Actualités, l’écran de ton appareil pendant que MyDesk est ouvert et les données échangées. Hypothèses affichées sous le calcul.' },
       { area: 'anki', text: 'Révisions : dans Parcourir, bouton « ⏸ Suspendre » sur les cartes cochées — par exemple chercher « cession », tout cocher, Suspendre : elles sortent des révisions d’un coup (annulable avec ↶ Annuler).' },
       { area: 'anki', text: 'Révisions : bouton « ▶ Réactiver » pour remettre une carte suspendue dans les révisions — dans la fiche (✏️ Modifier) ou dans Parcourir après avoir coché les cartes (astuce : chercher is:suspended). Avant, une suspension ne s’annulait qu’avec Ctrl+Z.' }
     ]
