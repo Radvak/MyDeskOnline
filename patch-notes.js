@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-07',
+    title: 'Réactiver une carte suspendue',
+    items: [
+      { area: 'anki', text: 'Révisions : bouton « ▶ Réactiver » pour remettre une carte suspendue dans les révisions — dans la fiche (✏️ Modifier) ou dans Parcourir après avoir coché les cartes (astuce : chercher is:suspended). Avant, une suspension ne s’annulait qu’avec Ctrl+Z.' }
+    ]
+  },
+  {
     date: '2026-10-06',
     title: 'Actualités plus précises, données mieux protégées',
     items: [

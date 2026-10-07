@@ -76,6 +76,7 @@ const ANKI_TRANSLATIONS = {
     editCard: '✏️ Modifier',
     suspendCard: '⏸ Suspendre',
     unsuspendCard: '▶ Réactiver',
+    unsuspendedStatus: '{count} carte(s) réactivée(s) : de retour dans les révisions.',
     deleteNote: '🗑 Supprimer',
     deleteNoteConfirm: 'Supprimer cette note et ses {count} carte(s) ? (Annulable avec Ctrl+Z)',
     endSession: 'Terminer',
@@ -290,6 +291,7 @@ const ANKI_TRANSLATIONS = {
     editCard: '✏️ Edit',
     suspendCard: '⏸ Suspend',
     unsuspendCard: '▶ Unsuspend',
+    unsuspendedStatus: '{count} card(s) unsuspended: back in reviews.',
     deleteNote: '🗑 Delete',
     deleteNoteConfirm: 'Delete this note and its {count} card(s)? (Ctrl+Z to undo)',
     endSession: 'End',
@@ -1852,6 +1854,12 @@ function ankiToggleSuspend(cardIds, suspend) {
   else renderAnki();
 }
 
+// Hors révision : renderAnki() ne vide pas un formulaire en cours de saisie.
+function ankiUnsuspend(cardIds) {
+  ankiToggleSuspend(cardIds, false);
+  ankiStatus(t('anki.unsuspendedStatus', { count: cardIds.length }), 'success');
+}
+
 function ankiDeleteNote(noteId) {
   const data = ankiData();
   const cards = data.cards.filter((card) => card.noteId === noteId);
@@ -2116,7 +2124,19 @@ function renderAnkiEditor(main) {
       renderAnki(true);
     })
   );
-  if (editing) actions.appendChild(ankiButton('anki-btn anki-btn--danger', t('anki.deleteNote'), () => ankiDeleteNote(editing.id)));
+  if (editing) {
+    const suspendedIds = ankiData()
+      .cards.filter((c) => c.noteId === editing.id && c.suspended)
+      .map((c) => c.id);
+    if (suspendedIds.length) {
+      const unsuspend = ankiButton('anki-btn anki-btn--ghost', t('anki.unsuspendCard'), () => {
+        ankiUnsuspend(suspendedIds);
+        unsuspend.remove();
+      });
+      actions.appendChild(unsuspend);
+    }
+    actions.appendChild(ankiButton('anki-btn anki-btn--danger', t('anki.deleteNote'), () => ankiDeleteNote(editing.id)));
+  }
   form.appendChild(actions);
 
   form.addEventListener('keydown', (event) => {
@@ -2505,6 +2525,11 @@ function renderAnkiBrowse(main) {
 
   // Barre d'actions sur la sélection : changer le paquet et/ou le tag.
   let bulkBuilt = false;
+  let unsuspendBtn = null;
+  const selectedSuspended = () =>
+    ankiData()
+      .cards.filter((c) => c.suspended && ankiBrowseSelected.has(c.noteId))
+      .map((c) => c.id);
   const renderBulk = () => {
     const count = ankiBrowseSelected.size;
     bulkBar.hidden = count === 0;
@@ -2514,6 +2539,7 @@ function renderAnkiBrowse(main) {
     }
     if (bulkBuilt) {
       bulkBar.querySelector('.anki-bulk__count').textContent = t('anki.bulkSelected', { count });
+      unsuspendBtn.hidden = !selectedSuspended().length;
       return;
     }
     bulkBuilt = true;
@@ -2558,6 +2584,11 @@ function renderAnkiBrowse(main) {
       tagSel.value = kept && previous !== '__new__' ? previous : '__keep__';
     };
     fillBulkTags();
+    unsuspendBtn = ankiButton('anki-btn anki-btn--ghost', t('anki.unsuspendCard'), () => {
+      const ids = selectedSuspended();
+      if (ids.length) ankiUnsuspend(ids);
+    });
+    unsuspendBtn.hidden = !selectedSuspended().length;
     deckSel.addEventListener('change', fillBulkTags);
     tagSel.addEventListener('change', () => {
       if (tagSel.value !== '__new__') return;
@@ -2589,6 +2620,7 @@ function renderAnkiBrowse(main) {
       deckSel,
       tagSel,
       ankiButton('anki-btn', t('anki.bulkApply'), apply),
+      unsuspendBtn,
       ankiButton('anki-link', t('anki.bulkClear'), () => {
         ankiBrowseSelected.clear();
         updateSelection();

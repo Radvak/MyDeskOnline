@@ -4663,7 +4663,8 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
   background: var(--surface, #fff);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
 }
-.anki-bulk[hidden] { display: none; }
+.anki-bulk[hidden],
+.anki-bulk .anki-btn[hidden] { display: none; }
 .anki-export__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .anki-export__tags {
   display: flex;
