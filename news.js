@@ -29,6 +29,9 @@ const NEWS_SOURCE_LEAN = {
   'France 24': 'public',
   'Courrier international': 'centreGauche',
   'Libération': 'gauche',
+  'Le Point': 'centreDroit',
+  'Le Figaro': 'droite',
+  'Valeurs actuelles': 'droiteMarquee',
   'Public Sénat': 'parlement',
   LCP: 'parlement',
   'Conseil constitutionnel': 'officiel',
@@ -41,8 +44,8 @@ const NEWS_SOURCE_LEAN = {
   'Jus Politicum': 'juridique',
   'Revue des droits et libertés fondamentaux': 'juridique'
 };
-const NEWS_LEAN_ORDER = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'parlement', 'officiel', 'juridique'];
-const NEWS_LEAN_POLITICAL = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite'];
+const NEWS_LEAN_ORDER = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'droiteMarquee', 'parlement', 'officiel', 'juridique'];
+const NEWS_LEAN_POLITICAL = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'droiteMarquee'];
 
 function newsSourceLean(name) {
   return NEWS_SOURCE_LEAN[String(name || '').replace(/’/g, "'").trim()] || null;
@@ -66,7 +69,7 @@ function newsLeanSummary(names) {
   const parts = NEWS_LEAN_ORDER.filter((lean) => counts[lean]).map((lean) => `${counts[lean]} ${t(`news.lean.${lean}`)}`);
   if (!parts.length) return null;
   const political = NEWS_LEAN_POLITICAL.some((lean) => counts[lean]);
-  if (political && !counts.droite && !counts.centreDroit) parts.push(t('news.leanNoRight'));
+  if (political && !counts.droite && !counts.centreDroit && !counts.droiteMarquee) parts.push(t('news.leanNoRight'));
   return newsEl('p', 'news-lean-summary', t('news.leanSummary', { list: parts.join(' · ') }));
 }
 // Lancer le robot depuis l'app (bouton « Générer le résumé » et rattrapage
@@ -123,6 +126,7 @@ const NEWS_TRANSLATIONS = {
       public: 'service public',
       centreDroit: 'centre droit',
       droite: 'droite',
+      droiteMarquee: 'droite marquée',
       parlement: 'parlementaire',
       officiel: 'officiel',
       juridique: 'juridique'
@@ -133,6 +137,7 @@ const NEWS_TRANSLATIONS = {
       public: 'Média public : obligation de neutralité et de pluralisme. Classé au centre ; ses critiques le jugent parfois un peu à gauche.',
       centreDroit: 'Ligne éditoriale de centre droit.',
       droite: 'Ligne éditoriale de droite.',
+      droiteMarquee: 'Droite conservatrice et identitaire, ligne plus tranchée que Le Figaro.',
       parlement: 'Chaîne du Parlement : temps de parole réparti entre les groupes politiques. Neutre.',
       officiel: 'Institution publique : communiqués et décisions officielles. Neutre.',
       juridique: 'Revue, éditeur ou site juridique : analyse du droit, sans ligne partisane affichée.'
@@ -217,6 +222,7 @@ const NEWS_TRANSLATIONS = {
       public: 'public service',
       centreDroit: 'centre-right',
       droite: 'right',
+      droiteMarquee: 'hard right',
       parlement: 'parliamentary',
       officiel: 'official',
       juridique: 'legal'
@@ -227,6 +233,7 @@ const NEWS_TRANSLATIONS = {
       public: 'Public broadcaster: required to be neutral and pluralistic. Rated centre; critics sometimes see it as slightly left-leaning.',
       centreDroit: 'Centre-right editorial line.',
       droite: 'Right-leaning editorial line.',
+      droiteMarquee: 'Conservative, identity-focused right; a sharper line than Le Figaro.',
       parlement: 'Parliament channel: speaking time shared between political groups. Neutral.',
       officiel: 'Public institution: official releases and decisions. Neutral.',
       juridique: 'Law journal, publisher or site: legal analysis, no stated political line.'
@@ -311,6 +318,7 @@ const NEWS_TRANSLATIONS = {
       public: 'truyền thông công',
       centreDroit: 'trung hữu',
       droite: 'cánh hữu',
+      droiteMarquee: 'cánh hữu rõ rệt',
       parlement: 'kênh quốc hội',
       officiel: 'chính thức',
       juridique: 'pháp lý'
@@ -321,6 +329,7 @@ const NEWS_TRANSLATIONS = {
       public: 'Truyền thông công: bắt buộc trung lập và đa nguyên. Được xếp ở trung tâm; đôi khi bị chê là hơi thiên tả.',
       centreDroit: 'Khuynh hướng biên tập trung hữu.',
       droite: 'Khuynh hướng biên tập cánh hữu.',
+      droiteMarquee: 'Cánh hữu bảo thủ, đề cao bản sắc; lập trường gay gắt hơn Le Figaro.',
       parlement: 'Kênh của Quốc hội: thời lượng chia cho các nhóm chính trị. Trung lập.',
       officiel: 'Cơ quan nhà nước: thông cáo và quyết định chính thức. Trung lập.',
       juridique: 'Tạp chí, nhà xuất bản hoặc trang pháp lý: phân tích luật, không có khuynh hướng đảng phái.'

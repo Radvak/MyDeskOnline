@@ -5614,11 +5614,13 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .news-lean--public { background: rgba(124, 58, 237, 0.12); color: #6d28d9; }
 .news-lean--centreDroit { background: rgba(14, 165, 233, 0.14); color: #0369a1; }
 .news-lean--droite { background: rgba(37, 99, 235, 0.14); color: #1d4ed8; }
+.news-lean--droiteMarquee { background: rgba(30, 58, 138, 0.16); color: #1e3a8a; }
 [data-theme="dark"] .news-lean--gauche { color: #fca5a5; }
 [data-theme="dark"] .news-lean--centreGauche { color: #f9a8d4; }
 [data-theme="dark"] .news-lean--public { color: #c4b5fd; }
 [data-theme="dark"] .news-lean--centreDroit { color: #7dd3fc; }
 [data-theme="dark"] .news-lean--droite { color: #93c5fd; }
+[data-theme="dark"] .news-lean--droiteMarquee { color: #a5b4fc; }
 
 .news-lean-summary {
   margin: 0.5rem 0 0;

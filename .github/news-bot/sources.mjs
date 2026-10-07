@@ -1,7 +1,11 @@
 /* Sources de l'onglet Actualité (flux RSS publics).
-   Le Monde, Le Figaro et Les Affiches parisiennes ne sont pas repris :
-   leurs flux sont réservés à un usage personnel, or les données du
-   robot sont publiques. */
+   Le Monde et Les Affiches parisiennes ne sont pas repris : leurs flux
+   sont réservés à un usage personnel, or les données du robot sont
+   publiques.
+   titleOnly : seuls le titre et le lien sont publiés (pas le chapô du
+   flux). Le Figaro, Le Point et Valeurs actuelles (ajoutés pour avoir
+   aussi des médias de droite) sont repris ainsi ; le robot lit quand
+   même l'article quand robots.txt le permet, sans jamais le garder. */
 
 export const THEMES = {
   monde: 'International',
@@ -19,6 +23,8 @@ export const SOURCES = [
   { id: 'f24-asie', name: 'France 24', theme: 'monde', home: 'https://www.france24.com/fr/asie-pacifique/', url: 'https://www.france24.com/fr/asie-pacifique/rss' },
   { id: 'fi-monde', name: 'franceinfo', theme: 'monde', home: 'https://www.francetvinfo.fr/monde/', url: 'https://www.francetvinfo.fr/monde.rss' },
   { id: 'courrier-international', name: 'Courrier international', theme: 'monde', home: 'https://www.courrierinternational.com/', url: 'https://www.courrierinternational.com/feed/all/rss.xml' },
+  { id: 'figaro-international', name: 'Le Figaro', theme: 'monde', home: 'https://www.lefigaro.fr/international', url: 'https://www.lefigaro.fr/rss/figaro_international.xml', titleOnly: true },
+  { id: 'lepoint-monde', name: 'Le Point', theme: 'monde', home: 'https://www.lepoint.fr/monde/', url: 'https://www.lepoint.fr/arc/outboundfeeds/rss/category/monde/?outputType=xml', titleOnly: true },
 
   // France : politique et économie
   { id: 'fi-politique', name: 'franceinfo', theme: 'france', home: 'https://www.francetvinfo.fr/politique/', url: 'https://www.francetvinfo.fr/politique.rss' },
@@ -27,6 +33,11 @@ export const SOURCES = [
   { id: 'rfi-france', name: 'RFI', theme: 'france', home: 'https://www.rfi.fr/fr/france/', url: 'https://www.rfi.fr/fr/france/rss' },
   { id: 'public-senat', name: 'Public Sénat', theme: 'france', home: 'https://www.publicsenat.fr/', url: 'https://www.publicsenat.fr/feed' },
   { id: 'lcp', name: 'LCP', theme: 'france', home: 'https://www.lcp.fr/', url: 'https://www.lcp.fr/rss.xml' },
+  { id: 'figaro-france', name: 'Le Figaro', theme: 'france', home: 'https://www.lefigaro.fr/actualite-france', url: 'https://www.lefigaro.fr/rss/figaro_actualite-france.xml', titleOnly: true },
+  { id: 'figaro-politique', name: 'Le Figaro', theme: 'france', home: 'https://www.lefigaro.fr/politique', url: 'https://www.lefigaro.fr/rss/figaro_politique.xml', titleOnly: true },
+  { id: 'lepoint-politique', name: 'Le Point', theme: 'france', home: 'https://www.lepoint.fr/politique/', url: 'https://www.lepoint.fr/arc/outboundfeeds/rss/category/politique/?outputType=xml', titleOnly: true },
+  // Flux général (politique, société, monde) : rangé en France, où il publie le plus.
+  { id: 'valeurs-actuelles', name: 'Valeurs actuelles', theme: 'france', home: 'https://www.valeursactuelles.com/', url: 'https://www.valeursactuelles.com/feed', titleOnly: true },
 
   // Justice et droit
   { id: 'conseil-constitutionnel', name: 'Conseil constitutionnel', theme: 'juridique', home: 'https://www.conseil-constitutionnel.fr/', url: 'https://www.conseil-constitutionnel.fr/flux/rss.xml' },

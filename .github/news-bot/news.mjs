@@ -888,7 +888,7 @@ const main = async () => {
       const item = {
         id,
         title: entry.title,
-        summary: shorten(entry.summary === entry.title ? '' : entry.summary, SUMMARY_MAX),
+        summary: source.titleOnly ? '' : shorten(entry.summary === entry.title ? '' : entry.summary, SUMMARY_MAX),
         link: entry.link,
         source: source.name,
         theme: source.theme,

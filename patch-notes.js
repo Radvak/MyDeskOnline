@@ -15,6 +15,7 @@ const PATCH_NOTES = [
     date: '2026-10-07',
     title: 'Cartes en lot, impact écologique, ligne éditoriale',
     items: [
+      { area: 'news', text: 'Actualités : nouvelles sources de droite — Le Figaro (France, politique, international), Le Point (politique, monde) et Valeurs actuelles. Seuls leurs titres et liens sont repris dans les données publiques du robot.' },
       { area: 'news', text: 'Actualités : étiquette de ligne éditoriale à côté de chaque source (gauche, centre gauche, service public, parlementaire, officiel, juridique… détail au survol), et sous chaque thème un bilan du type « 11 service public · 1 centre gauche · aucune source de droite ».' },
       { area: 'app', text: 'Accueil : estimation de l’impact écologique de MyDesk ce mois-ci et sur un an (CO₂e et équivalent en km de voiture), détaillée entre le robot Actualités, l’écran de ton appareil pendant que MyDesk est ouvert et les données échangées. Hypothèses affichées sous le calcul.' },
       { area: 'anki', text: 'Révisions : dans Parcourir, bouton « ⏸ Suspendre » sur les cartes cochées — par exemple chercher « cession », tout cocher, Suspendre : elles sortent des révisions d’un coup (annulable avec ↶ Annuler).' },
