@@ -20,6 +20,55 @@ const NEWS_MODE_KEY = 'mydesk-news-mode';
 const NEWS_REFRESH_MS = 15 * 60 * 1000;
 const NEWS_HEADLINES_STEP = 40;
 const NEWS_THEME_ORDER = ['monde', 'france', 'juridique'];
+// Ligne éditoriale de chaque source du robot (.github/news-bot/sources.mjs),
+// pour voir si un résumé penche d'un côté. Une source ajoutée au robot doit
+// aussi être classée ici, sinon elle s'affiche sans étiquette.
+const NEWS_SOURCE_LEAN = {
+  franceinfo: 'public',
+  RFI: 'public',
+  'France 24': 'public',
+  'Courrier international': 'centreGauche',
+  'Libération': 'gauche',
+  'Public Sénat': 'parlement',
+  LCP: 'parlement',
+  'Conseil constitutionnel': 'officiel',
+  "Conseil d'État": 'officiel',
+  CNIL: 'officiel',
+  'Le Club des juristes': 'juridique',
+  'Les Surligneurs': 'juridique',
+  'Actu-Juridique': 'juridique',
+  'Dalloz Actu Étudiant': 'juridique',
+  'Jus Politicum': 'juridique',
+  'Revue des droits et libertés fondamentaux': 'juridique'
+};
+const NEWS_LEAN_ORDER = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite', 'parlement', 'officiel', 'juridique'];
+const NEWS_LEAN_POLITICAL = ['gauche', 'centreGauche', 'public', 'centreDroit', 'droite'];
+
+function newsSourceLean(name) {
+  return NEWS_SOURCE_LEAN[String(name || '').replace(/’/g, "'").trim()] || null;
+}
+
+function newsLeanTag(name) {
+  const lean = newsSourceLean(name);
+  if (!lean) return null;
+  const tag = newsEl('span', `news-lean news-lean--${lean}`, t(`news.lean.${lean}`));
+  tag.title = t(`news.leanInfo.${lean}`);
+  return tag;
+}
+
+// « Ligne éditoriale des sources : 4 service public · 1 gauche · aucune source de droite »
+function newsLeanSummary(names) {
+  const counts = {};
+  names.forEach((name) => {
+    const lean = newsSourceLean(name);
+    if (lean) counts[lean] = (counts[lean] || 0) + 1;
+  });
+  const parts = NEWS_LEAN_ORDER.filter((lean) => counts[lean]).map((lean) => `${counts[lean]} ${t(`news.lean.${lean}`)}`);
+  if (!parts.length) return null;
+  const political = NEWS_LEAN_POLITICAL.some((lean) => counts[lean]);
+  if (political && !counts.droite && !counts.centreDroit) parts.push(t('news.leanNoRight'));
+  return newsEl('p', 'news-lean-summary', t('news.leanSummary', { list: parts.join(' · ') }));
+}
 // Lancer le robot depuis l'app (bouton « Générer le résumé » et rattrapage
 // automatique d'un résumé manquant) : jeton GitHub À PART de celui de la
 // synchro, limité au dépôt avec la seule permission Actions, gardé sur
@@ -66,6 +115,28 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Afficher plus ({count})',
     isNew: 'Nouveau',
     sources: 'Sources : {list}',
+    leanSummary: 'Ligne éditoriale des sources : {list}',
+    leanNoRight: 'aucune source de droite',
+    lean: {
+      gauche: 'gauche',
+      centreGauche: 'centre gauche',
+      public: 'service public',
+      centreDroit: 'centre droit',
+      droite: 'droite',
+      parlement: 'parlementaire',
+      officiel: 'officiel',
+      juridique: 'juridique'
+    },
+    leanInfo: {
+      gauche: 'Ligne éditoriale de gauche.',
+      centreGauche: 'Plutôt centre gauche (groupe Le Monde) ; traduit des journaux étrangers de toutes tendances.',
+      public: 'Média public : obligation de neutralité et de pluralisme. Classé au centre ; ses critiques le jugent parfois un peu à gauche.',
+      centreDroit: 'Ligne éditoriale de centre droit.',
+      droite: 'Ligne éditoriale de droite.',
+      parlement: 'Chaîne du Parlement : temps de parole réparti entre les groupes politiques. Neutre.',
+      officiel: 'Institution publique : communiqués et décisions officielles. Neutre.',
+      juridique: 'Revue, éditeur ou site juridique : analyse du droit, sans ligne partisane affichée.'
+    },
     modeDay: 'Jour',
     modeWeek: 'Semaine',
     modeAria: 'Affichage',
@@ -138,6 +209,28 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Show more ({count})',
     isNew: 'New',
     sources: 'Sources: {list}',
+    leanSummary: 'Editorial line of the sources: {list}',
+    leanNoRight: 'no right-leaning source',
+    lean: {
+      gauche: 'left',
+      centreGauche: 'centre-left',
+      public: 'public service',
+      centreDroit: 'centre-right',
+      droite: 'right',
+      parlement: 'parliamentary',
+      officiel: 'official',
+      juridique: 'legal'
+    },
+    leanInfo: {
+      gauche: 'Left-leaning editorial line.',
+      centreGauche: 'Rather centre-left (Le Monde group); translates foreign papers of all leanings.',
+      public: 'Public broadcaster: required to be neutral and pluralistic. Rated centre; critics sometimes see it as slightly left-leaning.',
+      centreDroit: 'Centre-right editorial line.',
+      droite: 'Right-leaning editorial line.',
+      parlement: 'Parliament channel: speaking time shared between political groups. Neutral.',
+      officiel: 'Public institution: official releases and decisions. Neutral.',
+      juridique: 'Law journal, publisher or site: legal analysis, no stated political line.'
+    },
     modeDay: 'Day',
     modeWeek: 'Week',
     modeAria: 'View',
@@ -210,6 +303,28 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Xem thêm ({count})',
     isNew: 'Mới',
     sources: 'Nguồn: {list}',
+    leanSummary: 'Khuynh hướng của các nguồn: {list}',
+    leanNoRight: 'không có nguồn cánh hữu',
+    lean: {
+      gauche: 'cánh tả',
+      centreGauche: 'trung tả',
+      public: 'truyền thông công',
+      centreDroit: 'trung hữu',
+      droite: 'cánh hữu',
+      parlement: 'kênh quốc hội',
+      officiel: 'chính thức',
+      juridique: 'pháp lý'
+    },
+    leanInfo: {
+      gauche: 'Khuynh hướng biên tập cánh tả.',
+      centreGauche: 'Khá trung tả (tập đoàn Le Monde); dịch báo nước ngoài thuộc mọi khuynh hướng.',
+      public: 'Truyền thông công: bắt buộc trung lập và đa nguyên. Được xếp ở trung tâm; đôi khi bị chê là hơi thiên tả.',
+      centreDroit: 'Khuynh hướng biên tập trung hữu.',
+      droite: 'Khuynh hướng biên tập cánh hữu.',
+      parlement: 'Kênh của Quốc hội: thời lượng chia cho các nhóm chính trị. Trung lập.',
+      officiel: 'Cơ quan nhà nước: thông cáo và quyết định chính thức. Trung lập.',
+      juridique: 'Tạp chí, nhà xuất bản hoặc trang pháp lý: phân tích luật, không có khuynh hướng đảng phái.'
+    },
     modeDay: 'Ngày',
     modeWeek: 'Tuần',
     modeAria: 'Chế độ xem',
@@ -837,12 +952,16 @@ function renderNewsPoints(block, data) {
         const link = newsLink(source.link, source.source, 'news-point__source');
         link.title = source.title || '';
         sources.append(link);
+        const lean = newsLeanTag(source.source);
+        if (lean) sources.append(document.createTextNode(' '), lean);
       });
       item.append(sources);
     }
     list.append(item);
   });
   block.append(list);
+  const summary = newsLeanSummary(points.flatMap((point) => (Array.isArray(point.sources) ? point.sources.map((s) => s.source) : [])));
+  if (summary) block.append(summary);
 }
 
 // Créneau affiché par défaut : celui en cours aujourd'hui, le soir pour un jour passé.
@@ -1004,6 +1123,8 @@ function renderNewsHeadlines(container, day) {
     const date = new Date(item.date);
     meta.append(newsEl('span', 'news-item__time', formatTime(date)));
     meta.append(newsEl('span', 'news-item__source', item.source));
+    const lean = newsLeanTag(item.source);
+    if (lean) meta.append(lean);
     if (newsState.theme === 'all') meta.append(newsEl('span', 'news-item__theme', newsThemeLabel(item.theme)));
     if (newsState.seenBefore && date.getTime() > newsState.seenBefore) {
       meta.append(newsEl('span', 'news-item__new', t('news.isNew')));
