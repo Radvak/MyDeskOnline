@@ -12,6 +12,16 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-08',
+    title: 'Programme de sport v7',
+    items: [
+      { area: 'sport', text: 'Sport : programme v7, revu en détail en s’appuyant sur les études de référence. Départs recalés pour quelqu’un qui fait ~25 pompes (pompes pieds surélevés, pompes serrées, fentes), deux fois plus d’arrière des cuisses, nouveau tirage glissé au sol, planche scie et glissé avant à genoux. Plus aucun exercice sur une table ou une chaise : tout se fait au lit, au canapé, au mur ou au sol.' },
+      { area: 'sport', text: 'Sport : échauffement détaillé propre à chaque séance (général, mobilité dont les poignets, séries d’approche) et retour au calme ; fiches réécrites avec placement précis, tempo, respiration, « ce que tu dois sentir » et corrections du type « si tu sens X, fais Y ».' },
+      { area: 'sport', text: 'Sport : au rowing et au crunch avec sac à dos, l’app propose d’abord d’ajouter du poids (+0,5 à 1,5 kg, maximum 10–12 kg) avant de changer de variante ; en dessous de la fourchette, elle propose de retirer une bouteille. Charges de départ indiquées dans les fiches.' },
+      { area: 'sport', text: 'Sport : tes séances préfaites passent en v7 en gardant ton historique et ta variante si tu étais plus avancé ; les variantes renommées suivent dans tes saisies. Conseils de progression, de sécurité et d’alimentation réécrits (semaine allégée, reprise après une pause, courbature ou blessure). Créneau d’agenda proposé par défaut : 1 h.' }
+    ]
+  },
+  {
     date: '2026-10-07',
     title: 'Cartes en lot, impact écologique, ligne éditoriale',
     items: [

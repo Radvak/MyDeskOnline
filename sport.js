@@ -79,6 +79,10 @@ const SPORT_TRANSLATIONS = {
     suggestUpTop: 'Bravo, tu as atteint {max} partout. Ajoute une série ou ralentis la descente (3 s).',
     suggestDown: 'Moins de {min} sur certaines séries. Essaie plutôt : {name}',
     suggestKeep: 'Objectif : {max} sur toutes les séries, puis variante suivante.',
+    suggestLoadUp: 'Bravo, {max} partout. Ajoute du poids dans le sac (+0,5 à 1,5 kg). Sac déjà au maximum (10–12 kg) ? Passe à : {name}',
+    suggestLoadTop: 'Bravo, {max} partout. Ajoute du poids dans le sac (+0,5 à 1,5 kg), jusqu’à 10–12 kg au maximum.',
+    suggestLoadDown: 'Moins de {min} sur certaines séries : retire une bouteille du sac la prochaine fois.',
+    suggestLoadKeep: 'Objectif : {max} sur toutes les séries, puis ajoute du poids dans le sac.',
     switchVariant: 'Passer à cette variante',
     addExercise: 'Ajouter un exercice',
     moveUp: 'Monter',
@@ -195,6 +199,10 @@ const SPORT_TRANSLATIONS = {
     suggestUpTop: 'Well done, {max} on every set. Add a set or slow down the descent (3 s).',
     suggestDown: 'Below {min} on some sets. Try: {name}',
     suggestKeep: 'Goal: {max} on every set, then the next variation.',
+    suggestLoadUp: 'Well done, {max} on every set. Add weight to the backpack (+0.5 to 1.5 kg). Backpack already at its maximum (10–12 kg)? Move to: {name}',
+    suggestLoadTop: 'Well done, {max} on every set. Add weight to the backpack (+0.5 to 1.5 kg), up to 10–12 kg at most.',
+    suggestLoadDown: 'Below {min} on some sets: take one bottle out of the backpack next time.',
+    suggestLoadKeep: 'Goal: {max} on every set, then add weight to the backpack.',
     switchVariant: 'Switch to this variation',
     addExercise: 'Add exercise',
     moveUp: 'Move up',
@@ -311,6 +319,10 @@ const SPORT_TRANSLATIONS = {
     suggestUpTop: 'Tuyệt, đạt {max} ở mọi hiệp. Thêm một hiệp hoặc hạ chậm hơn (3 giây).',
     suggestDown: 'Dưới {min} ở một số hiệp. Hãy thử: {name}',
     suggestKeep: 'Mục tiêu: {max} ở mọi hiệp, rồi chuyển biến thể tiếp theo.',
+    suggestLoadUp: 'Tuyệt, đạt {max} ở mọi hiệp. Thêm tạ vào ba lô (+0,5 đến 1,5 kg). Ba lô đã ở mức tối đa (10–12 kg)? Chuyển sang: {name}',
+    suggestLoadTop: 'Tuyệt, đạt {max} ở mọi hiệp. Thêm tạ vào ba lô (+0,5 đến 1,5 kg), tối đa 10–12 kg.',
+    suggestLoadDown: 'Dưới {min} ở một số hiệp: lần sau bớt một chai khỏi ba lô.',
+    suggestLoadKeep: 'Mục tiêu: {max} ở mọi hiệp, rồi thêm tạ vào ba lô.',
     switchVariant: 'Chuyển sang biến thể này',
     addExercise: 'Thêm bài tập',
     moveUp: 'Lên trên',
@@ -394,6 +406,7 @@ function ensureSportData() {
   migrerProgrammeV4();
   migrerProgrammeV5();
   migrerProgrammeV6();
+  migrerProgrammeV7();
   renommerSeancesPrefaites();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
@@ -664,6 +677,63 @@ function migrerProgrammeV6() {
   appData.sport.migration = 6;
 }
 
+// v7 (08/10/2026) : programme revu (départs recalés, plus d'ischios, tirage
+// glissé, échauffements détaillés, plus rien sur une table ou une chaise).
+// Variantes renommées : séances, saisies (variant) et exclusions suivent.
+// Séance préfaite à la structure v6 intacte : nouvelle liste d'exercices. Un
+// exercice déjà présent garde son identifiant (donc son historique) et sa
+// variante si elle est plus avancée que le nouveau départ ; les nouveaux
+// sont créés. Consignes remplacées si elles n'ont pas été modifiées.
+function migrerProgrammeV7() {
+  if ((appData.sport.migration || 0) >= 7) return;
+  const renomme = (name) => SPORT_V7_RENAMED[name] || name;
+  appData.sport.excluded = appData.sport.excluded.map(renomme);
+  SPORT_DEFAULT_EXCLUDED.forEach((name) => {
+    if (!appData.sport.excluded.includes(name)) appData.sport.excluded.push(name);
+  });
+  Object.values(appData.sport.logs).forEach((day) => {
+    Object.values(day || {}).forEach((seance) => {
+      Object.values(seance || {}).forEach((entry) => {
+        if (entry && entry.variant) entry.variant = renomme(entry.variant);
+      });
+    });
+  });
+  appData.sport.sessions.forEach((session) => {
+    (session.exercises || []).forEach((exercise) => {
+      if (exercise.name) exercise.name = renomme(exercise.name);
+    });
+    if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 6) return;
+    const index = Number.isInteger(session.templateIndex)
+      ? session.templateIndex
+      : sportProgramIndexByName(session.name);
+    const template = SPORT_PROGRAM[index];
+    if (!template) return;
+    const echelles = (session.exercises || []).map((exercise) => exercise.ladder || null);
+    if (JSON.stringify(echelles) === JSON.stringify(SPORT_PROGRAM_V6_LADDERS[index])) {
+      const restants = session.exercises.slice();
+      session.exercises = template.exercises.map(([ladderId, stepIndex, sets, rest]) => {
+        const position = restants.findIndex((exercise) => exercise.ladder === ladderId);
+        const exercise = position !== -1 ? restants.splice(position, 1)[0] : { id: uid() };
+        const actuelle = SPORT_LADDERS[ladderId].steps.findIndex((step) => step.name === exercise.name);
+        applyLadderStep(exercise, ladderId, Math.max(actuelle, stepIndex));
+        exercise.sets = sets;
+        exercise.rest = rest;
+        return exercise;
+      });
+    } else {
+      // Séance retouchée à la main : on garde ses exercices, fourchettes à jour.
+      session.exercises.forEach((exercise) => {
+        const ladder = exercise.ladder ? SPORT_LADDERS[exercise.ladder] : null;
+        const step = ladder && ladder.steps.find((item) => item.name === exercise.name);
+        if (step) exercise.reps = step.reps;
+      });
+    }
+    if (session.description === SPORT_PROGRAM_V6_DESCRIPTIONS[index]) session.description = template.description;
+    session.templateVersion = 7;
+  });
+  appData.sport.migration = 7;
+}
+
 function isExcludedName(name) {
   return Boolean(appData.sport && Array.isArray(appData.sport.excluded) && appData.sport.excluded.includes(name));
 }
@@ -727,7 +797,8 @@ function getProgressionAdvice(exercise, sets) {
   if (!range || values.length < count || values.some((value) => !(value > 0))) {
     return range ? { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) } : null;
   }
-  const { ladder } = getLadderStep(exercise);
+  const { ladder, step } = getLadderStep(exercise);
+  const load = Boolean(step && step.load); // variante au sac à dos : poids d'abord
   // Étape voisine autorisée (on saute les variantes exclues).
   const neighbour = (direction) => {
     if (!ladder) return null;
@@ -738,15 +809,21 @@ function getProgressionAdvice(exercise, sets) {
   };
   if (values.every((value) => value >= range.max)) {
     const next = neighbour(1);
+    if (load) {
+      return next !== null
+        ? { kind: 'up', text: t('sport.suggestLoadUp', { max: range.max, name: ladder.steps[next].name }), step: next }
+        : { kind: 'top', text: t('sport.suggestLoadTop', { max: range.max }) };
+    }
     return next !== null
       ? { kind: 'up', text: t('sport.suggestUp', { max: range.max, name: ladder.steps[next].name }), step: next }
       : { kind: 'top', text: t('sport.suggestUpTop', { max: range.max }) };
   }
   if (values.some((value) => value < range.min)) {
     const prev = neighbour(-1);
+    if (load) return { kind: 'keep', text: t('sport.suggestLoadDown', { min: range.min }) };
     if (prev !== null) return { kind: 'down', text: t('sport.suggestDown', { min: range.min, name: ladder.steps[prev].name }), step: prev };
   }
-  return { kind: 'keep', text: t('sport.suggestKeep', { max: range.max }) };
+  return { kind: 'keep', text: t(load ? 'sport.suggestLoadKeep' : 'sport.suggestKeep', { max: range.max }) };
 }
 
 // Occurrences de l'agenda liées au sport sur une journée donnée.
@@ -1812,7 +1889,7 @@ function renderSportEdit(main, session) {
   durationInput.type = 'number';
   durationInput.min = '15';
   durationInput.step = '5';
-  durationInput.value = '45';
+  durationInput.value = '60';
   const wrap = (labelKey, input) => {
     const label = sportEl('label');
     label.appendChild(sportEl('span', '', t(labelKey)));
@@ -1974,7 +2051,7 @@ function renderSportPresets(main) {
       durationInput.type = 'number';
       durationInput.min = '15';
       durationInput.step = '5';
-      durationInput.value = '45';
+      durationInput.value = '60';
       const wrap = (label, input) => {
         const element = sportEl('label');
         element.append(sportEl('span', '', label), input);
