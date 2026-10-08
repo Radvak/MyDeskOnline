@@ -951,7 +951,7 @@ const SPORT_LADDERS = {
 // biceps ≈ 14 indirectes ; quadriceps 6 ; ischios 6 ; fessiers ≈ 12 indirectes ;
 // abdos 15 (flexion 6, gainage 6, latéral 3).
 // [échelle, étape de départ, séries, repos en s]
-const SPORT_PROGRAM_VERSION = 7;
+const SPORT_PROGRAM_VERSION = 8;
 // Anciens noms (avec la lettre), pour reconnaître et renommer les séances existantes.
 const SPORT_PROGRAM_OLD_NAMES = ['A — Pecs & abdos', 'B — Dos, jambes & gainage', 'C — Pecs & abdos (volume)'];
 // Programme v4, pour reconnaître les séances jamais modifiées à la main.
@@ -1001,19 +1001,44 @@ const SPORT_PROGRAM_V6_DESCRIPTIONS = [
   'Échauffement (5 min) : 30 s de jumping jacks, 10 rotations d’épaules, 10 pompes faciles, 10 squats.\n' +
     'Pompes piquées : hanches hautes, la tête descend devant les mains. C’est l’exercice des épaules de la semaine.'
 ];
+// Consignes v7 (échauffement écrit dans le texte), pour reconnaître les séances
+// v7 jamais modifiées à la main (migrerProgrammeV8 dans sport.js).
+const SPORT_PROGRAM_V7_DESCRIPTIONS = [
+  'ÉCHAUFFEMENT (≈ 6 min)\n' +
+  '1. Général, 2 min : 30 s de jumping jacks puis 30 s de montées de genoux, deux fois.\n' +
+  '2. Mobilité, 2 min : 10 cercles de bras dans chaque sens. 10 cercles de poignets dans chaque sens. Mains à plat au sol, 10 bascules lentes d’avant en arrière. 8 « chat-vache » à quatre pattes.\n' +
+  '3. Approche, 2 min : 8 pompes inclinées (mains sur le lit), 30 s de pause, puis 5 répétitions de ta variante du jour, sans forcer.\n' +
+  'SÉANCE\n' +
+  'Arrête chaque série avec 1 à 3 répétitions propres en réserve. Pieds nus sur sol lisse pour les pompes et la planche.\n' +
+  'Rowing : vérifie les coutures et le calage du sac. Avant la première série, 8 répétitions à deux mains pour t’échauffer.\n' +
+  'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement. Les étirements ne réduisent pas les courbatures : fais-en seulement si ça te fait du bien.',
+  'ÉCHAUFFEMENT (≈ 7 min)\n' +
+  '1. Général, 2 min : 30 s de montées de genoux puis 30 s de talons-fesses, deux fois.\n' +
+  '2. Mobilité, 3 min : 10 cercles de hanches dans chaque sens. 10 squats lents. 6 fentes arrière par jambe. 10 « bonjour » (mains sur les hanches, buste penché, dos plat). 10 cercles de bras et de poignets dans chaque sens.\n' +
+  '3. Approche, 2 min : 10 rowings penchés à deux mains avec le sac du jour (demi-charge par bras), puis 5 rowings un bras de chaque côté.\n' +
+  'SÉANCE\n' +
+  'Arrête chaque série avec 1 à 3 répétitions propres en réserve.\n' +
+  'Avant les pompes serrées : 6 pompes classiques faciles. Leg curl et tirage glissé : serviette sur sol lisse, mouvements lents.\n' +
+  'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement.',
+  'ÉCHAUFFEMENT (≈ 7 min)\n' +
+  '1. Général, 2 min : 30 s de jumping jacks puis 30 s de montées de genoux, deux fois.\n' +
+  '2. Mobilité, 3 min : 10 cercles de bras dans chaque sens. 10 cercles de poignets dans chaque sens. 8 « chat-vache ». 5 passages lents de la planche bras tendus au V inversé, talons vers le sol.\n' +
+  '3. Approche, 2 min : 8 pompes inclinées (mains sur le lit), 30 s de pause, puis 5 répétitions de ta variante du jour, sans forcer.\n' +
+  'SÉANCE\n' +
+  'Arrête chaque série avec 1 à 3 répétitions propres en réserve. Pieds nus sur sol lisse.\n' +
+  'Avant les pompes piquées : 5 répétitions faciles sur les genoux. Descends la tête lentement, serviette pliée au sol.\n' +
+  'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement.'
+];
+// v8 : l'échauffement est construit d'après les exercices (SPORT_WARMUP).
 const SPORT_PROGRAM = [
   {
     weekday: 1,
     name: 'Pecs & abdos',
     description:
-      'ÉCHAUFFEMENT (≈ 6 min)\n' +
-      '1. Général, 2 min : 30 s de jumping jacks puis 30 s de montées de genoux, deux fois.\n' +
-      '2. Mobilité, 2 min : 10 cercles de bras dans chaque sens. 10 cercles de poignets dans chaque sens. Mains à plat au sol, 10 bascules lentes d’avant en arrière. 8 « chat-vache » à quatre pattes.\n' +
-      '3. Approche, 2 min : 8 pompes inclinées (mains sur le lit), 30 s de pause, puis 5 répétitions de ta variante du jour, sans forcer.\n' +
-      'SÉANCE\n' +
+      'Échauffement : déroule-le dans la carte « 🔥 Échauffement » ou en mode guidé (▶), adapté aux exercices du jour.\n' +
       'Arrête chaque série avec 1 à 3 répétitions propres en réserve. Pieds nus sur sol lisse pour les pompes et la planche.\n' +
-      'Rowing : vérifie les coutures et le calage du sac. Avant la première série, 8 répétitions à deux mains pour t’échauffer.\n' +
-      'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement. Les étirements ne réduisent pas les courbatures : fais-en seulement si ça te fait du bien.',
+      'Rowing : vérifie les coutures et le calage du sac avant de commencer.\n' +
+      'Retour au calme (facultatif, 2 min) : marche et respire lentement. Les étirements ne réduisent pas les courbatures : fais-en seulement si ça te fait du bien.',
     exercises: [
       ['push', 4, 4, 120],
       ['row', 1, 4, 75],
@@ -1027,14 +1052,10 @@ const SPORT_PROGRAM = [
     weekday: 3,
     name: 'Dos, jambes & gainage',
     description:
-      'ÉCHAUFFEMENT (≈ 7 min)\n' +
-      '1. Général, 2 min : 30 s de montées de genoux puis 30 s de talons-fesses, deux fois.\n' +
-      '2. Mobilité, 3 min : 10 cercles de hanches dans chaque sens. 10 squats lents. 6 fentes arrière par jambe. 10 « bonjour » (mains sur les hanches, buste penché, dos plat). 10 cercles de bras et de poignets dans chaque sens.\n' +
-      '3. Approche, 2 min : 10 rowings penchés à deux mains avec le sac du jour (demi-charge par bras), puis 5 rowings un bras de chaque côté.\n' +
-      'SÉANCE\n' +
+      'Échauffement : déroule-le dans la carte « 🔥 Échauffement » ou en mode guidé (▶), adapté aux exercices du jour.\n' +
       'Arrête chaque série avec 1 à 3 répétitions propres en réserve.\n' +
-      'Avant les pompes serrées : 6 pompes classiques faciles. Leg curl et tirage glissé : serviette sur sol lisse, mouvements lents.\n' +
-      'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement.',
+      'Leg curl et tirage glissé : serviette sur sol lisse, mouvements lents.\n' +
+      'Retour au calme (facultatif, 2 min) : marche et respire lentement.',
     exercises: [
       ['row', 1, 4, 75],
       ['close', 2, 4, 90],
@@ -1048,14 +1069,10 @@ const SPORT_PROGRAM = [
     weekday: 5,
     name: 'Pecs, épaules & abdos',
     description:
-      'ÉCHAUFFEMENT (≈ 7 min)\n' +
-      '1. Général, 2 min : 30 s de jumping jacks puis 30 s de montées de genoux, deux fois.\n' +
-      '2. Mobilité, 3 min : 10 cercles de bras dans chaque sens. 10 cercles de poignets dans chaque sens. 8 « chat-vache ». 5 passages lents de la planche bras tendus au V inversé, talons vers le sol.\n' +
-      '3. Approche, 2 min : 8 pompes inclinées (mains sur le lit), 30 s de pause, puis 5 répétitions de ta variante du jour, sans forcer.\n' +
-      'SÉANCE\n' +
+      'Échauffement : déroule-le dans la carte « 🔥 Échauffement » ou en mode guidé (▶), adapté aux exercices du jour.\n' +
       'Arrête chaque série avec 1 à 3 répétitions propres en réserve. Pieds nus sur sol lisse.\n' +
-      'Avant les pompes piquées : 5 répétitions faciles sur les genoux. Descends la tête lentement, serviette pliée au sol.\n' +
-      'RETOUR AU CALME (facultatif, 2 min) : marche et respire lentement.',
+      'Pompes piquées : serviette pliée au sol sous la tête, descends lentement.\n' +
+      'Retour au calme (facultatif, 2 min) : marche et respire lentement.',
     exercises: [
       ['push', 4, 4, 120],
       ['row', 1, 3, 75],
@@ -1077,19 +1094,19 @@ const SPORT_VIDEOS = {
   pull: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
   row: ['aGTrrWvX6vk', 'puaKVJOY8eg', 'puaKVJOY8eg'],
   invrow: [null, '5i7zfFO9RH4', 'kAP0skZtWDg', 'QWbY1Nt1FYU'],
-  slidepull: [null, null, null],
-  pike: [null, null, null],
-  hamcurl: [null, null, null, null],
+  slidepull: ['-Hr1mNz056w', '-Hr1mNz056w', '-Hr1mNz056w'],
+  pike: ['bA4xN8hD1l8', 'eZOg_vmkgbk', '_FfCWr4B6z8'],
+  hamcurl: ['a_FmZ4kz00s', 'Beb0_rycJCU', 'SLRv1VZIpQs', 'DenoSLSQaN0'],
   back: ['KuddSXD0Jk0', 'ZpZEQ2JCXyc', 'LSy6R7j3PDc'],
-  squat: ['tPTVVEaYza0', 'RhusC-zA56k', 'Ey1o1oQ8x6M', 'eCJxHKDXBqk', null],
+  squat: ['tPTVVEaYza0', 'RhusC-zA56k', 'Ey1o1oQ8x6M', 'eCJxHKDXBqk', 'kc4YfSHjbYE'],
   hinge: ['9Wma4mC8wpw', 'QWu5ApIBD9A', null],
-  plank: ['JCLxkG7ULfM', 'mv42eVXvMDc', null, null, null],
+  plank: ['JCLxkG7ULfM', 'mv42eVXvMDc', 'wcKyqAMqueQ', 'Qip3IEgsDzw', '1zpcvOYzdbE'],
   side: ['hAWS7C17uJY', 'fIkpxa-kuIA', 'hAWS7C17uJY'],
   legraise: [null, 'ce-DMxpDIf8', null],
-  revcrunch: [null, null, null],
+  revcrunch: ['0bq05pA3bkA', 'RSOE57OXyDk', 'SW2vRGrl4dA'],
   hollow: ['6n7ZWnV8snU', 'HAfUt2Cco74', 'HAfUt2Cco74'],
   climbers: ['e9Nwd8ckkYA', 'e9Nwd8ckkYA', 'K3Xt4QH4b-U'],
-  crunch: ['PtqG6BmZW4o', null, null]
+  crunch: ['PtqG6BmZW4o', 'eqg47ZuGZXQ', '2k_OJw9uxBM']
 };
 
 // Exercices exclus par défaut (à la demande de l'utilisateur) :
@@ -1144,4 +1161,105 @@ const SPORT_TIPS = {
     'Protéines : ≈ 1,6 g par kg de poids par jour suffisent le plus souvent (≈ 120 g pour toi). Jusqu’à ≈ 2,2 g/kg en période de déficit (≈ 160 g). Répartis-les sur 3 ou 4 repas.',
     'Dors 7 à 9 h par nuit : le manque de sommeil freine la récupération et augmente la faim.'
   ]
+};
+
+/* ── Échauffement ──────────────────────────────────────────────
+   Liste ordonnée, filtrée d'après les exercices de la séance
+   (sportWarmupSteps dans sport.js), selon la méthode RAMP : faire monter
+   le cardio, mobiliser les articulations qui vont travailler, activer les
+   muscles, puis séries d'approche juste avant le premier exercice de
+   chaque famille (SPORT_APPROACH_FAMILIES). ≈ 6–8 min. Tout le debout
+   d'abord, puis tout au sol. Pas d'étirements longs avant l'effort :
+   mouvements dynamiques seulement.
+   ─────────────────────────────────────────────────────────────── */
+const SPORT_WARMUP = [
+  {
+    group: 'all',
+    name: 'Jumping jacks',
+    seconds: 45,
+    detail: 'Rythme tranquille, sur l’avant du pied. Sans sauter (voisins, plancher) : écarte une jambe puis l’autre en levant les bras.'
+  },
+  {
+    group: 'all',
+    name: 'Montées de genoux sur place',
+    seconds: 30,
+    detail: 'Genoux vers la hauteur des hanches, bras qui accompagnent. Tu dois commencer à avoir chaud, pas à être essoufflé.'
+  },
+  {
+    group: 'push',
+    name: 'Cercles de bras',
+    reps: '10 / sens',
+    detail: 'Bras tendus, grands cercles lents vers l’avant puis vers l’arrière. Épaules basses, loin des oreilles.'
+  },
+  {
+    group: 'pull',
+    name: 'Ouvertures en T',
+    reps: '10',
+    detail: 'Debout, bras tendus devant toi à hauteur d’épaules : ouvre-les en croix en serrant les omoplates, pouces vers l’arrière. Lent, 1 s bras ouverts.'
+  },
+  {
+    group: 'hips',
+    name: 'Cercles de hanches',
+    reps: '10 / sens',
+    detail: 'Debout, mains sur les hanches, grands cercles lents du bassin.'
+  },
+  {
+    group: 'legs',
+    name: 'Squats lents',
+    reps: '8',
+    detail: 'Descends en 3 s, marque 2 s en bas talons au sol, remonte. Genoux dans l’axe des pieds.'
+  },
+  {
+    group: 'legs',
+    name: 'Fentes arrière',
+    reps: '5 / jambe',
+    detail: 'Un grand pas en arrière, genou arrière qui frôle le sol, remonte en poussant dans le pied avant. Main sur un mur si besoin.'
+  },
+  {
+    group: 'all',
+    name: 'Chat-vache',
+    reps: '8',
+    detail: 'À quatre pattes, mains sous les épaules, genoux sous les hanches : arrondis lentement le dos en soufflant, puis creuse-le en inspirant.'
+  },
+  {
+    group: 'pull',
+    name: 'Rotations du buste à quatre pattes',
+    reps: '6 / côté',
+    detail: 'Une main derrière la tête : ouvre le coude vers le plafond en le suivant des yeux, puis ramène-le sous la poitrine. Le bassin ne bouge pas.'
+  },
+  {
+    group: 'push',
+    name: 'Poignets à quatre pattes',
+    reps: '10 + 10',
+    detail: 'Mains à plat, doigts vers l’avant : bascule doucement le poids vers l’avant puis l’arrière (10). Puis doigts tournés vers les genoux, petites bascules (10). Jamais jusqu’à la douleur.'
+  },
+  {
+    group: 'push',
+    name: 'Pompes scapulaires',
+    reps: '10',
+    detail: 'En planche bras tendus, pieds nus : laisse la poitrine descendre entre les omoplates sans plier les coudes, puis repousse le sol en écartant les omoplates. Réveille le dentelé et stabilise les épaules.'
+  },
+  {
+    group: 'hamstrings',
+    name: 'Pont fessier',
+    reps: '10',
+    detail: 'Sur le dos, pieds à plat près des fesses : monte le bassin en serrant les fessiers 1 s en haut. Prépare l’arrière des cuisses au leg curl.'
+  }
+];
+
+// Groupes de l'échauffement, déclenchés par les échelles présentes dans la
+// séance (« all » : toujours).
+const SPORT_WARMUP_GROUPS = {
+  push: ['push', 'wide', 'close', 'pike', 'plank', 'side', 'climbers'],
+  pull: ['row', 'slidepull', 'pull', 'invrow', 'back'],
+  hips: ['squat', 'hamcurl', 'hinge'],
+  legs: ['squat', 'hinge'],
+  hamstrings: ['hamcurl', 'hinge']
+};
+
+// Séries d'approche : avant le premier exercice de chaque famille.
+const SPORT_APPROACH_FAMILIES = {
+  push: ['push', 'wide', 'close'],
+  pike: ['pike'],
+  row: ['row']
 };

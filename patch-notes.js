@@ -13,8 +13,12 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-10-08',
-    title: 'Programme de sport v7',
+    title: 'Sport : programme v7, semaine libre, échauffement guidé',
     items: [
+      { area: 'sport', text: 'Sport : les séances ne sont plus liées à un jour. Chacune est à faire une fois dans la semaine (lundi → dimanche), le jour que tu veux : l’onglet ouvre la séance commencée ce jour-là, sinon la prochaine pas encore faite. La liste montre « ✓ faite mar. 6 » ou « À faire cette semaine », et un créneau de l’agenda ouvre sa séance si elle reste à faire, sinon la suivante (rappel compris).' },
+      { area: 'sport', text: 'Sport : régularité à la semaine — la semaine compte quand chaque séance de ta liste est faite une fois ; l’historique montre ce qui reste à faire cette semaine (« Faire aujourd’hui ») et les séances pas faites des 2 dernières semaines.' },
+      { area: 'sport', text: 'Sport : échauffement revu et construit d’après les exercices de la séance (cardio, mobilité des épaules, poignets, hanches et dos, activation, tout le debout puis tout au sol, ≈ 7–8 min). Carte « 🔥 Échauffement » dans la séance et, en mode guidé, étape par étape avec chrono. Séries d’approche juste avant le premier exercice de chaque famille (variante plus facile puis variante du jour, ou sac à moitié chargé), suivies d’1 min de repos.' },
+      { area: 'sport', text: 'Sport : vidéos d’explication ajoutées pour les 17 variantes qui n’en avaient pas (pompes piquées, leg curl, tirage glissé, planches, crunchs inversés, crunch vélo, crunch lesté, squat sur une jambe).' },
       { area: 'sport', text: 'Sport : programme v7, revu en détail en s’appuyant sur les études de référence. Départs recalés pour quelqu’un qui fait ~25 pompes (pompes pieds surélevés, pompes serrées, fentes), deux fois plus d’arrière des cuisses, nouveau tirage glissé au sol, planche scie et glissé avant à genoux. Plus aucun exercice sur une table ou une chaise : tout se fait au lit, au canapé, au mur ou au sol.' },
       { area: 'sport', text: 'Sport : échauffement détaillé propre à chaque séance (général, mobilité dont les poignets, séries d’approche) et retour au calme ; fiches réécrites avec placement précis, tempo, respiration, « ce que tu dois sentir » et corrections du type « si tu sens X, fais Y ».' },
       { area: 'sport', text: 'Sport : au rowing et au crunch avec sac à dos, l’app propose d’abord d’ajouter du poids (+0,5 à 1,5 kg, maximum 10–12 kg) avant de changer de variante ; en dessous de la fourchette, elle propose de retirer une bouteille. Charges de départ indiquées dans les fiches.' },

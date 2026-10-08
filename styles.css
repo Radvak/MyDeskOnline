@@ -3123,6 +3123,20 @@ main {
   color: var(--muted);
 }
 
+/* Échauffement construit d'après les exercices de la séance. */
+.sport-warmup__list,
+.sport-warmup__approach {
+  margin: 0.5rem 0 0;
+  padding-left: 1.3rem;
+  line-height: 1.45;
+}
+.sport-warmup__list li { margin-bottom: 0.4rem; }
+.sport-warmup__list strong { display: block; }
+.sport-warmup__list span,
+.sport-warmup__approach li { color: var(--muted); }
+.sport-warmup__approach-title { font-weight: 600; color: var(--text) !important; }
+.sport-session-item.is-week-done small { color: #10b981; font-weight: 600; }
+
 /* Liste des exercices (mode séance) */
 .sport-workout {
   list-style: none;
@@ -6728,6 +6742,13 @@ body.sport-guided-open { overflow: hidden; }
 .sport-guided__steps span { flex: 1; height: 6px; border-radius: 999px; background: rgba(148, 163, 184, 0.3); }
 .sport-guided__steps span.done { background: #10b981; }
 .sport-guided__steps span.current { background: #f97316; }
+.sport-guided__steps span.warm { flex: 0.6; }
+.sport-guided__count--text { font-size: clamp(2.4rem, 11vw, 4rem); }
+.sport-guided__detail { margin: 0; max-width: 34rem; color: var(--muted); line-height: 1.5; }
+.sport-guided__approach { margin: 0; padding-left: 1.3rem; text-align: left; max-width: 34rem; line-height: 1.5; }
+.sport-guided__approach li { margin-bottom: 0.5rem; }
+.sport-guided__approach strong { display: block; font-size: 1.1rem; }
+.sport-guided__approach span { color: var(--muted); }
 .sport-guided__body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; padding: 1.5rem 0; text-align: center; }
 .sport-guided__body.is-summary { justify-content: flex-start; align-items: stretch; text-align: left; }
 .sport-guided__eyebrow { margin: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }

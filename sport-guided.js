@@ -1,6 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
    SPORT : MODE SÉANCE GUIDÉE
-   Plein écran, un exercice et une série à la fois : on note la
+   Plein écran : l'échauffement pas à pas (chrono pour les mouvements
+   tenus), puis un exercice et une série à la fois, avec des séries
+   d'approche avant le premier exercice de chaque famille. On note la
    série, le repos défile, puis la série suivante s'affiche. Les
    séries vont dans le même journal que la liste (appData.sport.logs).
    L'écran reste allumé (Wake Lock) tant que le mode est ouvert.
@@ -30,7 +32,16 @@ const SPORT_GUIDED_TRANSLATIONS = {
     guidedSeconds: 'secondes',
     guidedReps: 'répétitions',
     guidedHolding: 'Tiens !',
-    guidedCancel: 'Annuler'
+    guidedCancel: 'Annuler',
+    guidedWarmup: 'Échauffement {n}/{total}',
+    guidedWarmupStart: '▶ Lancer',
+    guidedWarmupDone: '✓ Fait ›',
+    guidedWarmupSkip: 'Passer l’échauffement ›',
+    guidedApproach: 'Séries d’approche',
+    guidedApproachHint: 'Ensuite 1 min de repos, puis ta 1re série.',
+    guidedApproachDone: '✓ Fait, repos 1 min',
+    guidedApproachSkip: 'Passer ›',
+    guidedCooldown: 'Retour au calme (facultatif) : 2 min de marche, respiration lente.'
   },
   en: {
     guidedStart: '▶ Guided mode',
@@ -55,7 +66,16 @@ const SPORT_GUIDED_TRANSLATIONS = {
     guidedSeconds: 'seconds',
     guidedReps: 'reps',
     guidedHolding: 'Hold!',
-    guidedCancel: 'Cancel'
+    guidedCancel: 'Cancel',
+    guidedWarmup: 'Warm-up {n}/{total}',
+    guidedWarmupStart: '▶ Start',
+    guidedWarmupDone: '✓ Done ›',
+    guidedWarmupSkip: 'Skip warm-up ›',
+    guidedApproach: 'Ramp-up sets',
+    guidedApproachHint: 'Then 1 min rest, then your first set.',
+    guidedApproachDone: '✓ Done, 1 min rest',
+    guidedApproachSkip: 'Skip ›',
+    guidedCooldown: 'Cool-down (optional): 2 min of walking, slow breathing.'
   },
   vi: {
     guidedStart: '▶ Chế độ hướng dẫn',
@@ -80,7 +100,16 @@ const SPORT_GUIDED_TRANSLATIONS = {
     guidedSeconds: 'giây',
     guidedReps: 'lần',
     guidedHolding: 'Giữ!',
-    guidedCancel: 'Hủy'
+    guidedCancel: 'Hủy',
+    guidedWarmup: 'Khởi động {n}/{total}',
+    guidedWarmupStart: '▶ Bắt đầu',
+    guidedWarmupDone: '✓ Xong ›',
+    guidedWarmupSkip: 'Bỏ qua khởi động ›',
+    guidedApproach: 'Hiệp làm quen',
+    guidedApproachHint: 'Sau đó nghỉ 1 phút, rồi hiệp đầu tiên.',
+    guidedApproachDone: '✓ Xong, nghỉ 1 phút',
+    guidedApproachSkip: 'Bỏ qua ›',
+    guidedCooldown: 'Thả lỏng (tùy chọn): đi bộ 2 phút, thở chậm.'
   }
 };
 
@@ -88,8 +117,10 @@ Object.keys(SPORT_GUIDED_TRANSLATIONS).forEach((language) => {
   if (SPORT_TRANSLATIONS[language]) Object.assign(SPORT_TRANSLATIONS[language], SPORT_GUIDED_TRANSLATIONS[language]);
 });
 
-// { sessionId, dateKey, phase: 'set' | 'hold' | 'rest' | 'done', index, set,
-//   value, pending, restEnd, restTotal, holdStart, interval, wakeLock }
+// { sessionId, dateKey, phase: 'warmup' | 'approach' | 'set' | 'hold' | 'rest' | 'done',
+//   index, set, value, pending, restEnd, restTotal, holdStart, interval, wakeLock,
+//   warmup (étapes), warmIndex, warmEnd, start (1re position après l'échauffement),
+//   approach (séries d'approche affichées), approached (exercices déjà préparés) }
 let sportGuided = null;
 
 function guidedSession() {
@@ -144,6 +175,18 @@ function guidedGoTo(position) {
   sportGuided.index = position.index;
   sportGuided.set = position.set;
   sportGuided.phase = 'set';
+  // Première arrivée sur un exercice pas encore commencé : séries d'approche.
+  const session = guidedSession();
+  if (session && position.set === 0 && !sportGuided.approached.has(position.index)) {
+    sportGuided.approached.add(position.index);
+    const entry = guidedEntry(session, session.exercises[position.index]);
+    const started = Array.isArray(entry.sets) && entry.sets.some((value) => Number(value) > 0);
+    const sets = started ? null : sportApproach(session, position.index);
+    if (sets) {
+      sportGuided.phase = 'approach';
+      sportGuided.approach = sets;
+    }
+  }
   guidedPrepareValue();
 }
 
@@ -164,10 +207,19 @@ function guidedKeydown(event) {
 function openSportGuided(session, date) {
   closeSportGuided(false);
   stopRestTimer();
-  sportGuided = { sessionId: session.id, dateKey: sportDateKey(date), phase: 'set', index: 0, set: 0, interval: null, wakeLock: null };
+  sportGuided = { sessionId: session.id, dateKey: sportDateKey(date), phase: 'set', index: 0, set: 0, interval: null, wakeLock: null, warmup: [], warmIndex: 0, warmEnd: null, approached: new Set() };
   const firstOpen = session.exercises.findIndex((exercise) => !guidedEntry(session, exercise).done);
+  // Échauffement seulement si rien n'est encore noté pour cette séance ce jour-là.
+  const started = session.exercises.some((exercise) => {
+    const entry = guidedEntry(session, exercise);
+    return entry.done || (Array.isArray(entry.sets) && entry.sets.some((value) => Number(value) > 0));
+  });
   if (firstOpen === -1) {
     sportGuided.phase = 'done';
+  } else if (!started) {
+    sportGuided.warmup = sportWarmupSteps(session);
+    sportGuided.start = { index: firstOpen, set: guidedFirstEmptySet(session, session.exercises[firstOpen]) };
+    sportGuided.phase = 'warmup';
   } else {
     guidedGoTo({ index: firstOpen, set: guidedFirstEmptySet(session, session.exercises[firstOpen]) });
   }
@@ -259,18 +311,109 @@ function renderSportGuided() {
     sportButton('sport-guided__close', '✕', () => closeSportGuided(), t('sport.guidedClose'))
   );
   const steps = sportEl('div', 'sport-guided__steps');
+  if (sportGuided.warmup.length) {
+    steps.appendChild(sportEl('span', `warm ${sportGuided.phase === 'warmup' ? 'current' : 'done'}`));
+  }
   session.exercises.forEach((exercise, index) => {
     const step = sportEl('span');
     if (guidedEntry(session, exercise).done) step.classList.add('done');
-    if (index === sportGuided.index && sportGuided.phase !== 'done') step.classList.add('current');
+    if (index === sportGuided.index && !['done', 'warmup'].includes(sportGuided.phase)) step.classList.add('current');
     steps.appendChild(step);
   });
   const body = sportEl('div', 'sport-guided__body');
   overlay.append(top, steps, body);
 
   if (sportGuided.phase === 'done') renderGuidedDone(body, session);
+  else if (sportGuided.phase === 'warmup') renderGuidedWarmup(body);
+  else if (sportGuided.phase === 'approach') renderGuidedApproach(body, session);
   else if (sportGuided.phase === 'rest') renderGuidedRest(body, session);
   else renderGuidedSet(body, session);
+}
+
+/* ── Échauffement pas à pas ─────────────────────────────────── */
+
+function guidedWarmupGo(index) {
+  clearInterval(sportGuided.interval);
+  sportGuided.warmEnd = null;
+  if (index >= sportGuided.warmup.length) guidedGoTo(sportGuided.start);
+  else sportGuided.warmIndex = Math.max(0, index);
+  renderSportGuided();
+}
+
+// Mouvement tenu : chrono à lancer, bip et étape suivante à la fin.
+// Mouvement en répétitions : « Fait » quand c'est fini.
+function renderGuidedWarmup(body) {
+  const steps = sportGuided.warmup;
+  const step = steps[sportGuided.warmIndex];
+  body.appendChild(sportEl('p', 'sport-guided__eyebrow', t('sport.guidedWarmup', { n: sportGuided.warmIndex + 1, total: steps.length })));
+  body.appendChild(sportEl('h2', 'sport-guided__name', step.name));
+  const actions = sportEl('div', 'sport-guided__actions');
+  if (step.seconds) {
+    const count = sportEl('div', 'sport-guided__count');
+    const track = sportEl('div', 'sport-guided__track');
+    const bar = sportEl('div', 'sport-guided__bar');
+    track.appendChild(bar);
+    body.append(count, track);
+    const tick = () => {
+      const left = sportGuided.warmEnd ? Math.max(0, Math.ceil((sportGuided.warmEnd - Date.now()) / 1000)) : step.seconds;
+      count.textContent = formatClock(left);
+      bar.style.width = `${(left / step.seconds) * 100}%`;
+      if (sportGuided.warmEnd && left <= 0) {
+        sportAlert();
+        guidedWarmupGo(sportGuided.warmIndex + 1);
+      }
+    };
+    tick();
+    if (sportGuided.warmEnd) {
+      sportGuided.interval = setInterval(tick, 250);
+    } else {
+      actions.appendChild(sportButton('sport-guided__hold', t('sport.guidedWarmupStart'), () => {
+        sportGuided.warmEnd = Date.now() + step.seconds * 1000;
+        renderSportGuided();
+      }));
+    }
+  } else {
+    body.appendChild(sportEl('div', 'sport-guided__count sport-guided__count--text', step.reps));
+  }
+  body.appendChild(sportEl('p', 'sport-guided__detail', step.detail));
+  actions.appendChild(sportButton('sport-guided__done', t('sport.guidedWarmupDone'), () => guidedWarmupGo(sportGuided.warmIndex + 1)));
+  body.appendChild(actions);
+
+  const nav = sportEl('div', 'sport-guided__nav');
+  const prev = sportButton('', t('sport.guidedPrev'), () => guidedWarmupGo(sportGuided.warmIndex - 1));
+  prev.disabled = sportGuided.warmIndex === 0;
+  nav.append(prev, sportButton('', t('sport.guidedWarmupSkip'), () => guidedWarmupGo(steps.length)));
+  body.appendChild(nav);
+}
+
+// Séries d'approche, puis 1 min de repos avant la première vraie série.
+function renderGuidedApproach(body, session) {
+  const exercise = session.exercises[sportGuided.index];
+  body.appendChild(sportEl('p', 'sport-guided__eyebrow', `${t('sport.guidedExercise', { n: sportGuided.index + 1, total: session.exercises.length })} · ${t('sport.guidedApproach')}`));
+  body.appendChild(sportEl('h2', 'sport-guided__name', exercise.name || t('sport.exercise')));
+  const list = sportEl('ol', 'sport-guided__approach');
+  sportGuided.approach.forEach((set) => {
+    const item = sportEl('li');
+    item.append(sportEl('strong', '', `${set.reps} × ${set.name}`), sportEl('span', '', set.detail));
+    list.appendChild(item);
+  });
+  body.appendChild(list);
+  body.appendChild(sportEl('p', 'sport-guided__meta', t('sport.guidedApproachHint')));
+  const actions = sportEl('div', 'sport-guided__actions');
+  actions.appendChild(sportButton('sport-guided__done', t('sport.guidedApproachDone'), () => {
+    sportGuided.phase = 'rest';
+    sportGuided.pending = { index: sportGuided.index, set: 0 };
+    sportGuided.restTotal = 60;
+    sportGuided.restEnd = Date.now() + 60000;
+    renderSportGuided();
+  }));
+  body.appendChild(actions);
+  const nav = sportEl('div', 'sport-guided__nav');
+  nav.appendChild(sportButton('', t('sport.guidedApproachSkip'), () => {
+    sportGuided.phase = 'set';
+    renderSportGuided();
+  }));
+  body.appendChild(nav);
 }
 
 function renderGuidedHeading(body, session, exercise, index, set) {
@@ -439,5 +582,6 @@ function renderGuidedRest(body, session) {
 function renderGuidedDone(body, session) {
   body.classList.add('is-summary');
   renderSportSummary(body, session, sportGuided.dateKey);
+  body.appendChild(sportEl('p', 'sport-guided__meta', t('sport.guidedCooldown')));
   body.appendChild(sportButton('sport-guided__done', t('sport.guidedFinish'), () => closeSportGuided()));
 }

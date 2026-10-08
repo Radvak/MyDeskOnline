@@ -1,15 +1,15 @@
 /* ═══════════════════════════════════════════════════════════
    SPORT : HISTORIQUE, PROGRESSION ET RÉGULARITÉ
-   Tout est recalculé depuis le journal (appData.sport.logs) et
-   les créneaux Sport de l'agenda : rien de plus n'est stocké.
-   Une séance « faite » = au moins une série notée ou un exercice
-   coché ce jour-là. Une semaine « tenue » = autant de séances
-   faites que de créneaux prévus (n'importe quel jour de la
-   semaine) ; sans créneau prévu, une seule séance suffit.
+   Tout est recalculé depuis le journal (appData.sport.logs) : rien
+   de plus n'est stocké. Une séance « faite » = au moins une série
+   notée ou un exercice coché ce jour-là. Une semaine « tenue » =
+   chaque séance de la liste faite une fois, n'importe quel jour du
+   lundi au dimanche (on peut décaler) ; liste vide : une seule
+   séance suffit. Les créneaux de l'agenda ne servent qu'à la grille
+   (jours prévus, à venir ou manqués d'une semaine non tenue).
    ═══════════════════════════════════════════════════════════ */
 
 const SPORT_HISTORY_WEEKS = 26;
-const SPORT_MISSED_DAYS = 14;
 
 const SPORT_HISTORY_TRANSLATIONS = {
   fr: {
@@ -20,12 +20,15 @@ const SPORT_HISTORY_TRANSLATIONS = {
     weekProgress: '{done}/{planned} séances cette semaine',
     weekDoneOnly: '{done} séance(s) cette semaine',
     streak: '🔥 {count} semaine(s) d’affilée',
-    streakNone: 'Fais toutes les séances prévues cette semaine pour lancer ta série de semaines.',
+    streakNone: 'Fais toutes tes séances cette semaine pour lancer ta série de semaines.',
     weekBadge: 'Semaine : {done}/{planned}',
     weekBadgeFree: 'Semaine : {done} séance(s)',
-    weekRule: 'Une semaine compte quand toutes les séances prévues dans l’agenda sont faites, n’importe quel jour de la semaine. Sans séance prévue, une seule suffit.',
-    missedTitle: 'Manquées ces 2 dernières semaines',
-    missedNone: 'Aucune séance manquée ces deux dernières semaines. 👏',
+    weekRule: 'Une semaine compte quand chaque séance de ta liste est faite une fois, n’importe quel jour du lundi au dimanche : tu peux décaler tes séances. Sans séance dans la liste, une seule suffit.',
+    missedTitle: 'Pas faites ces 2 dernières semaines',
+    missedNone: 'Toutes tes séances faites ces deux dernières semaines. 👏',
+    weekOf: 'semaine du {date}',
+    todoTitle: 'Encore à faire cette semaine',
+    todoNone: 'Toutes les séances de la semaine sont faites. 👏',
     catchUp: 'Faire aujourd’hui',
     lastSession: 'Dernière séance : {date}',
     heatmapTitle: 'Les {weeks} dernières semaines',
@@ -51,12 +54,15 @@ const SPORT_HISTORY_TRANSLATIONS = {
     weekProgress: '{done}/{planned} workouts this week',
     weekDoneOnly: '{done} workout(s) this week',
     streak: '🔥 {count} week(s) in a row',
-    streakNone: 'Do every workout planned this week to start your streak.',
+    streakNone: 'Do all your workouts this week to start your streak.',
     weekBadge: 'Week: {done}/{planned}',
     weekBadgeFree: 'Week: {done} workout(s)',
-    weekRule: 'A week counts when every workout planned in the calendar is done, on any day of that week. With nothing planned, one workout is enough.',
-    missedTitle: 'Missed in the last 2 weeks',
-    missedNone: 'No missed workout in the last two weeks. 👏',
+    weekRule: 'A week counts when every workout in your list is done once, on any day from Monday to Sunday: you can move your workouts around. With no workout in the list, one is enough.',
+    missedTitle: 'Not done in the last 2 weeks',
+    missedNone: 'Every workout done in the last two weeks. 👏',
+    weekOf: 'week of {date}',
+    todoTitle: 'Still to do this week',
+    todoNone: 'Every workout of the week is done. 👏',
     catchUp: 'Do it today',
     lastSession: 'Last workout: {date}',
     heatmapTitle: 'Last {weeks} weeks',
@@ -82,12 +88,15 @@ const SPORT_HISTORY_TRANSLATIONS = {
     weekProgress: '{done}/{planned} buổi tuần này',
     weekDoneOnly: '{done} buổi tuần này',
     streak: '🔥 {count} tuần liên tiếp',
-    streakNone: 'Tập đủ các buổi đã lên lịch tuần này để bắt đầu chuỗi tuần.',
+    streakNone: 'Tập đủ các buổi tuần này để bắt đầu chuỗi tuần.',
     weekBadge: 'Tuần: {done}/{planned}',
     weekBadgeFree: 'Tuần: {done} buổi',
-    weekRule: 'Một tuần được tính khi tập đủ các buổi đã lên lịch, vào bất kỳ ngày nào trong tuần. Nếu không lên lịch, chỉ cần một buổi.',
-    missedTitle: 'Bỏ lỡ trong 2 tuần qua',
-    missedNone: 'Không bỏ lỡ buổi nào trong hai tuần qua. 👏',
+    weekRule: 'Một tuần được tính khi mỗi buổi trong danh sách được tập một lần, vào bất kỳ ngày nào từ thứ Hai đến Chủ nhật: có thể đổi ngày tập. Nếu danh sách trống, chỉ cần một buổi.',
+    missedTitle: 'Chưa tập trong 2 tuần qua',
+    missedNone: 'Đã tập đủ các buổi trong hai tuần qua. 👏',
+    weekOf: 'tuần {date}',
+    todoTitle: 'Còn cần tập tuần này',
+    todoNone: 'Đã tập đủ các buổi trong tuần. 👏',
     catchUp: 'Tập hôm nay',
     lastSession: 'Buổi gần nhất: {date}',
     heatmapTitle: '{weeks} tuần gần đây',
@@ -151,15 +160,38 @@ function sportPlannedBetween(from, to) {
   return result;
 }
 
-function sportWeekStats(weekStart, planned = sportPlannedBetween(weekStart, sportShiftDays(weekStart, 6))) {
-  let plannedCount = 0;
-  let done = 0;
+// Semaine tenue quand chaque séance de la liste a été faite une fois, n'importe
+// quel jour du lundi au dimanche (on peut décaler). Liste vide : une seule suffit.
+function sportWeekStats(weekStart) {
+  const active = new Set();
   for (let i = 0; i < 7; i += 1) {
-    const key = sportDateKey(sportShiftDays(weekStart, i));
-    plannedCount += (planned[key] || []).length;
-    done += sportActiveSessionsOn(key).length;
+    sportActiveSessionsOn(sportDateKey(sportShiftDays(weekStart, i))).forEach((id) => active.add(id));
   }
-  return { planned: plannedCount, done, met: plannedCount ? done >= plannedCount : done > 0 };
+  const sessions = appData.sport.sessions;
+  if (!sessions.length) return { planned: 0, done: active.size, met: active.size > 0 };
+  const done = sessions.filter((session) => active.has(session.id)).length;
+  return { planned: sessions.length, done, met: done >= sessions.length };
+}
+
+// Séances de la liste pas faites dans les semaines terminées récentes (à partir
+// de la première séance notée, pour ne pas compter avant le début).
+function sportMissedSessions(weeks = 2) {
+  const first = Object.keys(appData.sport.logs).sort().find((key) => sportActiveSessionsOn(key).length);
+  if (!first) return [];
+  const current = startOfWeek(new Date());
+  const missed = [];
+  for (let w = 1; w <= weeks; w += 1) {
+    const weekStart = sportShiftDays(current, -7 * w);
+    if (sportDateKey(sportShiftDays(weekStart, 6)) < first) continue;
+    const active = new Set();
+    for (let i = 0; i < 7; i += 1) {
+      sportActiveSessionsOn(sportDateKey(sportShiftDays(weekStart, i))).forEach((id) => active.add(id));
+    }
+    appData.sport.sessions.forEach((session) => {
+      if (!active.has(session.id)) missed.push({ weekStart, session });
+    });
+  }
+  return missed;
 }
 
 // Semaines tenues d'affilée. La semaine en cours compte si elle est déjà
@@ -178,29 +210,6 @@ function sportStreak() {
 function sportOccurrenceName(occurrence) {
   const session = getSportSession(occurrence.sourceEvent.sportSessionId);
   return session ? session.name : occurrence.sourceEvent.title || t('sport.newSessionName');
-}
-
-// Créneaux passés sans séance, dans une semaine qui n'a pas été rattrapée.
-function sportMissedOccurrences(days = SPORT_MISSED_DAYS) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const from = sportShiftDays(today, -days);
-  const planned = sportPlannedBetween(startOfWeek(from), sportShiftDays(startOfWeek(today), 6));
-  const weekCache = {};
-  const missed = [];
-  Object.keys(planned).sort().reverse().forEach((key) => {
-    if (key >= sportDateKey(today) || key < sportDateKey(from)) return;
-    const weekStart = startOfWeek(new Date(`${key}T00:00`));
-    const weekKey = sportDateKey(weekStart);
-    if (!weekCache[weekKey]) weekCache[weekKey] = sportWeekStats(weekStart, planned);
-    if (weekCache[weekKey].met) return;
-    const active = sportActiveSessionsOn(key);
-    planned[key].forEach((occurrence) => {
-      if (active.length && (!occurrence.sourceEvent.sportSessionId || active.includes(occurrence.sourceEvent.sportSessionId))) return;
-      missed.push({ dateKey: key, occurrence });
-    });
-  });
-  return missed;
 }
 
 function sportLastActiveDate() {
@@ -284,20 +293,36 @@ function renderSportRegularity(main) {
   const last = sportLastActiveDate();
   if (last) card.appendChild(sportEl('p', 'sport-help__muted', t('sport.lastSession', { date: formatShortDate(last) })));
 
+  // Séances encore à faire cette semaine, à lancer d'un clic.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todo = appData.sport.sessions.filter((session) => !sportSessionDoneDay(session.id, today));
+  if (appData.sport.sessions.length) {
+    card.appendChild(sportEl('h4', '', t('sport.todoTitle')));
+    if (!todo.length) {
+      card.appendChild(sportEl('p', 'sport-help__muted', t('sport.todoNone')));
+    } else {
+      const list = sportEl('ul', 'sport-missed');
+      todo.forEach((session) => {
+        const item = sportEl('li');
+        item.append(
+          sportEl('span', '', session.name || t('sport.newSessionName')),
+          sportButton('sport-link-btn', t('sport.catchUp'), () => openSportDay(sportDateKey(today), session.id))
+        );
+        list.appendChild(item);
+      });
+      card.appendChild(list);
+    }
+  }
   card.appendChild(sportEl('h4', '', t('sport.missedTitle')));
-  const missed = sportMissedOccurrences();
+  const missed = sportMissedSessions();
   if (!missed.length) {
     card.appendChild(sportEl('p', 'sport-help__muted', t('sport.missedNone')));
   } else {
     const list = sportEl('ul', 'sport-missed');
-    missed.forEach(({ dateKey, occurrence }) => {
-      const item = sportEl('li');
-      item.appendChild(sportEl('span', '', `${formatShortDate(dateKey)} — ${sportOccurrenceName(occurrence)}`));
-      const sessionId = occurrence.sourceEvent.sportSessionId;
-      if (getSportSession(sessionId)) {
-        item.appendChild(sportButton('sport-link-btn', t('sport.catchUp'), () => openSportDay(sportDateKey(new Date()), sessionId)));
-      }
-      list.appendChild(item);
+    missed.forEach(({ weekStart, session }) => {
+      const week = t('sport.weekOf', { date: formatShortDate(sportDateKey(weekStart)) });
+      list.appendChild(sportEl('li', '', `${week} — ${session.name || t('sport.newSessionName')}`));
     });
     card.appendChild(list);
   }

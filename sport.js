@@ -41,10 +41,23 @@ const SPORT_TRANSLATIONS = {
     plannedOn: 'Prévue : {days}',
     plannedAt: 'Aujourd’hui à {time} · {duration} min',
     notScheduled: "Pas encore dans l'agenda",
+    weekToDo: 'À faire cette semaine',
+    weekDoneOn: '✓ faite {day}',
+    weekStatus: 'À faire cette semaine · {done}/{total} faites',
+    weekAlreadyDone: '✓ Déjà faite cette semaine ({day})',
+    weekDoneToday: '✓ Faite aujourd’hui',
+    reminderWeekDone: 'Toutes les séances de la semaine sont faites 👏',
+    warmupTitle: '🔥 Échauffement (≈ {min} min)',
+    warmupApproach: 'Séries d’approche, juste avant l’exercice :',
+    warmupApproachLine: 'avant « {exercise} » : {list}',
+    approachThen: ', puis ',
+    approachLoad: 'Avec le sac à moitié chargé, sans forcer.',
+    approachEasy: 'Variante plus facile, technique parfaite.',
+    approachToday: 'Ta variante du jour, loin de l’échec : juste pour caler le geste.',
     progress: '{done}/{total} exercices faits',
     allDone: 'Séance terminée, bravo !',
     noExercises: 'Aucun exercice. Cliquez sur « Modifier » pour en ajouter.',
-    instructions: 'Échauffement et consignes',
+    instructions: 'Consignes',
     edit: '✎ Modifier',
     editTitle: 'Modifier la séance',
     doneEditing: 'Terminé',
@@ -161,10 +174,23 @@ const SPORT_TRANSLATIONS = {
     plannedOn: 'Scheduled: {days}',
     plannedAt: 'Today at {time} · {duration} min',
     notScheduled: 'Not in the calendar yet',
+    weekToDo: 'To do this week',
+    weekDoneOn: '✓ done {day}',
+    weekStatus: 'To do this week · {done}/{total} done',
+    weekAlreadyDone: '✓ Already done this week ({day})',
+    weekDoneToday: '✓ Done today',
+    reminderWeekDone: 'Every workout of the week is done 👏',
+    warmupTitle: '🔥 Warm-up (≈ {min} min)',
+    warmupApproach: 'Ramp-up sets, right before the exercise:',
+    warmupApproachLine: 'before "{exercise}": {list}',
+    approachThen: ', then ',
+    approachLoad: 'Backpack half loaded, no strain.',
+    approachEasy: 'Easier variation, perfect form.',
+    approachToday: 'Today’s variation, far from failure: just to groove the movement.',
     progress: '{done}/{total} exercises done',
     allDone: 'Workout complete, well done!',
     noExercises: 'No exercises yet. Click "Edit" to add some.',
-    instructions: 'Warm-up and instructions',
+    instructions: 'Instructions',
     edit: '✎ Edit',
     editTitle: 'Edit workout',
     doneEditing: 'Done',
@@ -281,10 +307,23 @@ const SPORT_TRANSLATIONS = {
     plannedOn: 'Lịch: {days}',
     plannedAt: 'Hôm nay lúc {time} · {duration} phút',
     notScheduled: 'Chưa có trong lịch',
+    weekToDo: 'Cần tập tuần này',
+    weekDoneOn: '✓ đã tập {day}',
+    weekStatus: 'Cần tập tuần này · đã tập {done}/{total}',
+    weekAlreadyDone: '✓ Đã tập tuần này ({day})',
+    weekDoneToday: '✓ Đã tập hôm nay',
+    reminderWeekDone: 'Đã tập đủ các buổi trong tuần 👏',
+    warmupTitle: '🔥 Khởi động (≈ {min} phút)',
+    warmupApproach: 'Hiệp làm quen, ngay trước bài tập:',
+    warmupApproachLine: 'trước « {exercise} »: {list}',
+    approachThen: ', rồi ',
+    approachLoad: 'Ba lô nạp một nửa, không gắng sức.',
+    approachEasy: 'Biến thể dễ hơn, kỹ thuật chuẩn.',
+    approachToday: 'Biến thể hôm nay, còn xa giới hạn: chỉ để quen động tác.',
     progress: 'Đã tập {done}/{total} bài',
     allDone: 'Hoàn thành buổi tập, tuyệt vời!',
     noExercises: 'Chưa có bài tập. Nhấn "Sửa" để thêm.',
-    instructions: 'Khởi động và hướng dẫn',
+    instructions: 'Hướng dẫn',
     edit: '✎ Sửa',
     editTitle: 'Sửa buổi tập',
     doneEditing: 'Xong',
@@ -407,6 +446,7 @@ function ensureSportData() {
   migrerProgrammeV5();
   migrerProgrammeV6();
   migrerProgrammeV7();
+  migrerProgrammeV8();
   renommerSeancesPrefaites();
   appData.sport.sessions.forEach((session) => {
     if (!Array.isArray(session.exercises)) session.exercises = [];
@@ -734,6 +774,23 @@ function migrerProgrammeV7() {
   appData.sport.migration = 7;
 }
 
+// v8 (08/10/2026) : l'échauffement n'est plus écrit dans les consignes, il est
+// construit d'après les exercices (carte « Échauffement » et mode guidé).
+function migrerProgrammeV8() {
+  if ((appData.sport.migration || 0) >= 8) return;
+  appData.sport.sessions.forEach((session) => {
+    if (session.template !== SPORT_TEMPLATE_KEY || session.templateVersion !== 7) return;
+    const index = Number.isInteger(session.templateIndex)
+      ? session.templateIndex
+      : sportProgramIndexByName(session.name);
+    const template = SPORT_PROGRAM[index];
+    if (!template) return;
+    if (session.description === SPORT_PROGRAM_V7_DESCRIPTIONS[index]) session.description = template.description;
+    session.templateVersion = 8;
+  });
+  appData.sport.migration = 8;
+}
+
 function isExcludedName(name) {
   return Boolean(appData.sport && Array.isArray(appData.sport.excluded) && appData.sport.excluded.includes(name));
 }
@@ -885,8 +942,11 @@ function openSportFromCalendar(occurrence) {
   sportSelectedDate.setHours(0, 0, 0, 0);
   sportPickerEvent = null;
   sportView = 'workout';
-  if (event.sportSessionId && getSportSession(event.sportSessionId)) {
-    appData.sport.activeSessionId = event.sportSessionId;
+  // Semaine libre : la séance du créneau si elle reste à faire cette semaine,
+  // sinon la prochaine à faire (on peut décaler ses séances).
+  const session = sportSessionForDate(sportSelectedDate, event.sportSessionId) || getSportSession(event.sportSessionId);
+  if (session) {
+    appData.sport.activeSessionId = session.id;
   } else if (appData.sport.sessions.length) {
     sportPickerEvent = event; // créneau sans séance : on propose d'en choisir une
   }
@@ -909,7 +969,8 @@ function openSportSessionOn(sessionId, dateKey) {
 // séance, exercices et où on en est de la semaine.
 function sportReminderContent(event, occurrence) {
   ensureSportData();
-  const session = getSportSession(event.sportSessionId);
+  const day = new Date(occurrence.start);
+  const session = sportSessionForDate(day, event.sportSessionId) || getSportSession(event.sportSessionId);
   if (!session) return null;
   const lines = [];
   const names = session.exercises.map((exercise) => exercise.name).filter(Boolean);
@@ -917,8 +978,9 @@ function sportReminderContent(event, occurrence) {
     lines.push(t('sport.reminderExercises', { count: names.length, names: `${names.slice(0, 3).join(', ')}${names.length > 3 ? '…' : ''}` }));
   }
   if (typeof sportWeekStats === 'function') {
-    const week = sportWeekStats(startOfWeek(new Date(occurrence.start)));
-    if (week.planned) lines.push(t('sport.weekBadge', week));
+    const week = sportWeekStats(startOfWeek(day));
+    if (week.met) lines.push(t('sport.reminderWeekDone'));
+    else if (week.planned) lines.push(t('sport.weekBadge', week));
   }
   return {
     title: `🏋️ ${session.name || t('sport.newSessionName')}`,
@@ -1126,10 +1188,9 @@ function renderSportList() {
     button.type = 'button';
     if (session.id === appData.sport.activeSessionId) button.classList.add('active');
     button.appendChild(sportEl('strong', '', session.name || t('sport.newSessionName')));
-    const days = getSessionWeekdays(session.id);
-    button.appendChild(
-      sportEl('small', '', days.length ? days.map((day) => weekdayName(day, 'short')).join(' · ') : t('sport.notScheduled'))
-    );
+    const doneDay = sportSessionDoneDay(session.id, sportSelectedDate || new Date());
+    button.classList.toggle('is-week-done', Boolean(doneDay));
+    button.appendChild(sportEl('small', '', doneDay ? t('sport.weekDoneOn', { day: sportDayLabel(doneDay) }) : t('sport.weekToDo')));
     button.addEventListener('click', () => {
       appData.sport.activeSessionId = session.id;
       sportPickerEvent = null;
@@ -1495,17 +1556,21 @@ function renderSportWorkout(main, session, date) {
   const titleRow = sportEl('div', 'sport-hero__top');
   const titleBlock = sportEl('div');
   titleBlock.appendChild(sportEl('h2', 'sport-hero__title', session.name || t('sport.newSessionName')));
-  const plannedToday = getSportOccurrencesOn(date).find((occ) => occ.sourceEvent.sportSessionId === session.id);
-  const days = getSessionWeekdays(session.id);
+  const plannedToday = getSportOccurrencesOn(date).find((occ) => occ.sourceEvent.sportSessionId);
+  const doneDay = sportSessionDoneDay(session.id, date);
   let subtitle;
+  if (doneDay === dateKey) {
+    subtitle = t('sport.weekDoneToday');
+  } else if (doneDay) {
+    subtitle = t('sport.weekAlreadyDone', { day: sportDayLabel(doneDay, 'long') });
+  } else {
+    const sessions = appData.sport.sessions;
+    subtitle = t('sport.weekStatus', { done: sessions.filter((item) => sportSessionDoneDay(item.id, date)).length, total: sessions.length });
+  }
   if (plannedToday) {
-    subtitle = t('sport.plannedAt', { time: formatTime(new Date(plannedToday.start)), duration: plannedToday.duration });
+    subtitle += ` · ${t('sport.plannedAt', { time: formatTime(new Date(plannedToday.start)), duration: plannedToday.duration })}`;
     const lead = typeof reminderEnabled === 'function' && reminderEnabled() ? reminderLeadFor(plannedToday.sourceEvent) : null;
     if (lead !== null) subtitle += ` · 🔔 ${reminderFormatLead(lead)}`;
-  } else if (days.length) {
-    subtitle = `${t('sport.notPlanned')} · ${t('sport.plannedOn', { days: days.map((d) => weekdayName(d)).join(', ') })}`;
-  } else {
-    subtitle = t('sport.notScheduled');
   }
   titleBlock.appendChild(sportEl('p', 'sport-hero__subtitle', subtitle));
   const heroActions = sportEl('div', 'sport-hero__actions');
@@ -1540,6 +1605,7 @@ function renderSportWorkout(main, session, date) {
   autoRest.append(autoRestBox, sportEl('span', '', t('sport.autoRest')));
   card.appendChild(autoRest);
 
+  if (session.exercises.length) renderSportWarmup(card, session);
   if (session.description) {
     const details = sportEl('details', 'sport-instructions');
     details.appendChild(sportEl('summary', '', t('sport.instructions')));
@@ -1975,11 +2041,117 @@ function addSportSessionEvent(session, start, duration, recurrence) {
   });
 }
 
+/* ── Semaine : chaque séance une fois, le jour qu'on veut ─── */
+
+// Une séance compte comme faite ce jour-là dès qu'une série est notée ou un exercice coché.
+function sportSessionActiveOn(dateKey, sessionId) {
+  return Object.values(getSportLog(dateKey, sessionId)).some(
+    (entry) => entry && (entry.done || (Array.isArray(entry.sets) && entry.sets.some((value) => Number(value) > 0)))
+  );
+}
+
+// Les 7 jours (lundi → dimanche) de la semaine de `date`.
+function sportWeekDayKeys(date) {
+  const start = startOfWeek(date);
+  return Array.from({ length: 7 }, (_, offset) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + offset);
+    return sportDateKey(day);
+  });
+}
+
+// Jour où la séance a été faite dans la semaine de `date`, sinon null.
+function sportSessionDoneDay(sessionId, date) {
+  return sportWeekDayKeys(date).find((key) => sportSessionActiveOn(key, sessionId)) || null;
+}
+
+// Séance à ouvrir ce jour-là : celle déjà commencée ce jour, sinon celle
+// demandée (créneau de l'agenda) si elle reste à faire, sinon la première de
+// la liste pas encore faite cette semaine. null si tout est fait.
+function sportSessionForDate(date, preferredId = null) {
+  const key = sportDateKey(date);
+  const sessions = appData.sport.sessions;
+  const started = sessions.find((session) => sportSessionActiveOn(key, session.id));
+  if (started) return started;
+  const preferred = preferredId ? getSportSession(preferredId) : null;
+  if (preferred && !sportSessionDoneDay(preferred.id, date)) return preferred;
+  return sessions.find((session) => !sportSessionDoneDay(session.id, date)) || null;
+}
+
 function selectSessionForDate(date) {
-  const occurrences = getSportOccurrencesOn(date).filter((occ) => getSportSession(occ.sourceEvent.sportSessionId));
-  if (occurrences.length) {
-    appData.sport.activeSessionId = occurrences[0].sourceEvent.sportSessionId;
+  const session = sportSessionForDate(date);
+  if (session) appData.sport.activeSessionId = session.id;
+}
+
+function sportDayLabel(dateKey, format = 'short') {
+  return new Date(`${dateKey}T00:00`).toLocaleDateString(getCurrentLocale(), { weekday: format, day: 'numeric' });
+}
+
+/* ── Échauffement ──────────────────────────────────────────── */
+
+// Étapes de SPORT_WARMUP utiles aux exercices de la séance (toutes, pour une
+// séance sans exercice de la bibliothèque).
+function sportWarmupSteps(session) {
+  const ladders = new Set(session.exercises.map((exercise) => exercise.ladder).filter(Boolean));
+  const has = (group) => group === 'all' || !ladders.size || SPORT_WARMUP_GROUPS[group].some((id) => ladders.has(id));
+  return SPORT_WARMUP.filter((step) => has(step.group));
+}
+
+// Séries d'approche avant l'exercice `index`, s'il est le premier de sa
+// famille dans la séance : variante plus facile puis variante du jour, ou
+// sac à moitié chargé pour un exercice au sac à dos.
+function sportApproach(session, index) {
+  const exercise = session.exercises[index];
+  if (!exercise || !exercise.ladder || isTimedExercise(exercise)) return null;
+  const family = Object.values(SPORT_APPROACH_FAMILIES).find((ids) => ids.includes(exercise.ladder));
+  if (!family || session.exercises.slice(0, index).some((other) => family.includes(other.ladder))) return null;
+  const { ladder, step } = getLadderStep(exercise);
+  if (!step) return null;
+  if (step.load) return [{ name: exercise.name, reps: '10', detail: t('sport.approachLoad') }];
+  const sets = [];
+  for (let i = exercise.step - 1; i >= 0; i -= 1) {
+    if (!isExcludedName(ladder.steps[i].name)) {
+      sets.push({ name: ladder.steps[i].name, reps: '8', detail: t('sport.approachEasy') });
+      break;
+    }
   }
+  sets.push({ name: exercise.name, reps: '4–5', detail: t('sport.approachToday') });
+  return sets;
+}
+
+function sportWarmupAmount(step) {
+  return step.seconds ? formatRest(step.seconds) : step.reps;
+}
+
+// ≈ 30 s par mouvement en répétitions, plus 10 s pour passer au suivant.
+function sportWarmupMinutes(session) {
+  const seconds = sportWarmupSteps(session).reduce((sum, step) => sum + (step.seconds || 30) + 10, 0);
+  return Math.max(1, Math.round(seconds / 60));
+}
+
+function renderSportWarmup(card, session) {
+  const details = sportEl('details', 'sport-instructions sport-warmup');
+  details.appendChild(sportEl('summary', '', t('sport.warmupTitle', { min: sportWarmupMinutes(session) })));
+  const list = sportEl('ol', 'sport-warmup__list');
+  sportWarmupSteps(session).forEach((step) => {
+    const item = sportEl('li');
+    item.append(sportEl('strong', '', `${step.name} · ${sportWarmupAmount(step)}`), sportEl('span', '', step.detail));
+    list.appendChild(item);
+  });
+  details.appendChild(list);
+  const approaches = session.exercises
+    .map((exercise, index) => [exercise, sportApproach(session, index)])
+    .filter(([, sets]) => sets);
+  if (approaches.length) {
+    details.appendChild(sportEl('p', 'sport-warmup__approach-title', t('sport.warmupApproach')));
+    const approachList = sportEl('ul', 'sport-warmup__approach');
+    approaches.forEach(([exercise, sets]) => {
+      const text = sets.map((set) => `${set.reps} × ${set.name}`).join(t('sport.approachThen'));
+      approachList.appendChild(sportEl('li', '', t('sport.warmupApproachLine', { exercise: exercise.name, list: text })));
+    });
+    details.appendChild(approachList);
+  }
+  card.appendChild(details);
 }
 
 function buildProgramExercises(template) {
