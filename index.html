@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link id="theme-font-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=90">
+  <link rel="stylesheet" href="styles.css?v=91">
 </head>
 <body>
   <header class="app-header">
@@ -339,55 +339,71 @@
     </section>
 
     <section id="notes" class="tab-panel">
-      <div class="notes-layout">
-        <aside class="notes-sidebar">
-          <div class="notes-sidebar__header">
-            <h3 data-i18n="notes.title">Notes</h3>
-            <button id="notes-add-page" data-i18n="notes.addPage">Nouvelle page</button>
+      <div class="nt-app" id="notes-app">
+        <aside class="nt-side">
+          <div class="nt-side__head">
+            <div>
+              <h2 class="nt-side__title" data-i18n="notes.title">Notes</h2>
+              <p class="nt-side__count" id="notes-count"></p>
+            </div>
+            <button type="button" class="nt-new" id="notes-add-page" data-i18n-title="notes.addPageTitle" title="Créer une note"><span aria-hidden="true">＋</span> <span data-i18n="notes.addPage">Nouvelle note</span></button>
           </div>
-          <div class="notes-page-list" id="notes-page-list"></div>
-          <div class="notes-sidebar__actions">
-            <button id="notes-rename-page" data-i18n="notes.renamePage">Renommer</button>
-            <button id="notes-delete-page" data-i18n="notes.deletePage">Supprimer</button>
-          </div>
+          <label class="nt-search">
+            <span class="nt-search__icon" aria-hidden="true">⌕</span>
+            <input type="search" id="notes-search" autocomplete="off" data-i18n-placeholder="notes.search" placeholder="Rechercher dans les notes" data-i18n-aria-label="notes.search" aria-label="Rechercher dans les notes">
+          </label>
+          <div class="nt-list" id="notes-page-list" role="listbox" data-i18n-aria-label="notes.title" aria-label="Notes"></div>
         </aside>
-        <div class="notes-editor">
-          <div class="notes-toolbar" aria-label="Barre d'outils de mise en forme">
-            <button type="button" class="notes-tool" data-command="bold" data-i18n="notes.toolbar.bold" title="Gras">Gras</button>
-            <button type="button" class="notes-tool" data-command="italic" data-i18n="notes.toolbar.italic" title="Italique">Italique</button>
-            <button type="button" class="notes-tool" data-command="underline" data-i18n="notes.toolbar.underline" title="Souligner">Souligner</button>
-            <button type="button" class="notes-tool" data-command="strikeThrough" data-i18n="notes.toolbar.strike" title="Barré">Barré</button>
-            <button type="button" class="notes-tool" data-command="insertUnorderedList" data-i18n="notes.toolbar.bullet" title="Puces">Puces</button>
-            <button type="button" class="notes-tool" data-command="insertOrderedList" data-i18n="notes.toolbar.numbered" title="Liste numérotée">Liste numérotée</button>
-            <label class="notes-tool notes-tool--picker">
-              <span data-i18n="notes.toolbar.fontSize">Taille</span>
-              <select id="notes-font-size">
-                <option value="2">12px</option>
-                <option value="3" selected>16px</option>
-                <option value="4">18px</option>
-                <option value="5">24px</option>
-                <option value="6">32px</option>
-                <option value="7">48px</option>
-              </select>
-            </label>
-            <label class="notes-tool notes-tool--picker">
-              <span data-i18n="notes.toolbar.textColor">Couleur</span>
-              <input type="color" id="notes-text-color" value="#111827" aria-label="Couleur du texte" />
-            </label>
-            <label class="notes-tool notes-tool--picker">
-              <span data-i18n="notes.toolbar.highlight">Surligner</span>
-              <input type="color" id="notes-highlight" value="#fef08a" aria-label="Couleur de surlignage" />
-            </label>
+        <article class="nt-doc">
+          <header class="nt-doc__head">
+            <button type="button" class="nt-back" id="notes-back" data-i18n="notes.back">‹ Notes</button>
+            <button type="button" class="nt-emoji" id="notes-emoji" data-i18n-title="notes.emojiTitle" title="Choisir une icône">📝</button>
+            <input type="text" class="nt-title" id="notes-title" autocomplete="off" data-i18n-placeholder="notes.untitled" placeholder="Sans titre" data-i18n-aria-label="notes.titleLabel" aria-label="Titre de la note">
+            <div class="nt-doc__actions">
+              <button type="button" class="nt-icon-btn" id="notes-pin" aria-pressed="false" data-i18n-aria-label="notes.pin" aria-label="Épingler">📌</button>
+              <div class="nt-menu">
+                <button type="button" class="nt-icon-btn" id="notes-more" aria-haspopup="true" aria-expanded="false" data-i18n-title="notes.more" title="Plus d'actions">⋯</button>
+                <div class="nt-menu__panel" id="notes-menu" role="menu" hidden>
+                  <button type="button" role="menuitem" id="notes-duplicate" data-i18n="notes.duplicate">Dupliquer</button>
+                  <button type="button" role="menuitem" id="notes-copy" data-i18n="notes.copyText">Copier le texte</button>
+                  <button type="button" role="menuitem" id="notes-delete-page" class="nt-menu__danger" data-i18n="notes.deletePage">Supprimer la note</button>
+                </div>
+              </div>
+            </div>
+            <div class="nt-emoji-picker" id="notes-emoji-picker" hidden></div>
+          </header>
+          <div class="nt-toolbar" role="toolbar" data-i18n-aria-label="notes.toolbar.label" aria-label="Mise en forme">
+            <select id="notes-block" class="nt-block" data-i18n-title="notes.toolbar.block" title="Style du paragraphe">
+              <option value="p" data-i18n="notes.toolbar.paragraph">Texte</option>
+              <option value="h1" data-i18n="notes.toolbar.heading1">Titre</option>
+              <option value="h2" data-i18n="notes.toolbar.heading2">Sous-titre</option>
+              <option value="h3" data-i18n="notes.toolbar.heading3">Petit titre</option>
+              <option value="blockquote" data-i18n="notes.toolbar.quote">Citation</option>
+            </select>
+            <span class="nt-sep" aria-hidden="true"></span>
+            <button type="button" class="nt-tool" data-command="bold" data-i18n-title="notes.toolbar.bold" title="Gras (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="nt-tool" data-command="italic" data-i18n-title="notes.toolbar.italic" title="Italique (Ctrl+I)"><i>I</i></button>
+            <button type="button" class="nt-tool" data-command="underline" data-i18n-title="notes.toolbar.underline" title="Souligné (Ctrl+U)"><u>U</u></button>
+            <button type="button" class="nt-tool" data-command="strikeThrough" data-i18n-title="notes.toolbar.strike" title="Barré"><s>S</s></button>
+            <span class="nt-sep" aria-hidden="true"></span>
+            <button type="button" class="nt-tool" data-command="insertUnorderedList" data-i18n-title="notes.toolbar.bullet" title="Liste à puces">•≡</button>
+            <button type="button" class="nt-tool" data-command="insertOrderedList" data-i18n-title="notes.toolbar.numbered" title="Liste numérotée">1≡</button>
+            <button type="button" class="nt-tool nt-tool--action" id="notes-checklist" data-i18n-title="notes.toolbar.checklist" title="Cases à cocher">☑</button>
+            <button type="button" class="nt-tool nt-tool--action" id="notes-link" data-i18n-title="notes.toolbar.link" title="Lien">🔗</button>
+            <span class="nt-sep" aria-hidden="true"></span>
+            <span class="nt-swatches" id="notes-highlights" data-i18n-title="notes.toolbar.highlight" title="Surligner"></span>
+            <span class="nt-swatches nt-swatches--text" id="notes-colors" data-i18n-title="notes.toolbar.textColor" title="Couleur du texte"></span>
+            <button type="button" class="nt-tool nt-tool--action" id="notes-clear" data-i18n-title="notes.toolbar.clear" title="Effacer la mise en forme">T̸</button>
+            <button type="button" class="nt-tool nt-tool--card" id="notes-card" data-i18n-title="notes.toolbar.cardTitle" title="Créer une fiche de Révisions avec la sélection"><span data-i18n="notes.toolbar.card">🧠 Fiche</span></button>
           </div>
-          <div
-            class="notes-editor__content"
-            id="notes-editor"
-            contenteditable="true"
-            data-i18n-placeholder="notes.placeholder"
-            data-placeholder="Commencez à écrire..."
-          ></div>
-          <p class="hint" data-i18n="notes.hint">Ajoutez plusieurs pages et mettez vos notes en forme.</p>
-        </div>
+          <div class="nt-paper">
+            <div class="nt-content" id="notes-editor" contenteditable="true" spellcheck="true" data-i18n-placeholder="notes.placeholder" data-placeholder="Écris ici…"></div>
+          </div>
+          <footer class="nt-doc__foot">
+            <span id="notes-stats"></span>
+            <span id="notes-saved"></span>
+          </footer>
+        </article>
       </div>
     </section>
 
@@ -692,39 +708,39 @@
   </div>
 
   <object id="local-version-source" type="application/json" data="version.json" aria-hidden="true" hidden></object>
-  <script src="sync.js?v=90" defer></script>
-  <script src="calendar-feed.js?v=90" defer></script>
-  <script src="restore.js?v=90" defer></script>
-  <script src="calendar-conflicts.js?v=90" defer></script>
-  <script src="calendar-goals.js?v=90" defer></script>
-  <script src="calendar-reminders.js?v=90" defer></script>
-  <script src="ical.js?v=90" defer></script>
-  <script src="print.js?v=90" defer></script>
-  <script src="undo.js?v=90" defer></script>
-  <script src="sport-library.js?v=90" defer></script>
-  <script src="sport.js?v=90" defer></script>
-  <script src="sport-guided.js?v=90" defer></script>
-  <script src="sport-history.js?v=90" defer></script>
-  <script src="snake.js?v=90" defer></script>
-  <script src="menu-engine.js?v=90" defer></script>
-  <script src="menu.js?v=90" defer></script>
-  <script src="install.js?v=90" defer></script>
-  <script src="vendor/ts-fsrs.umd.js?v=90" defer></script>
-  <script src="anki.js?v=90" defer></script>
-  <script src="news.js?v=90" defer></script>
-  <script src="tab-order.js?v=90" defer></script>
-  <script src="patch-notes.js?v=90" defer></script>
-  <script src="todo.js?v=90" defer></script>
-  <script src="onboarding.js?v=90" defer></script>
-  <script src="eco.js?v=90" defer></script>
-  <script src="translations.js?v=90" defer></script>
-  <script src="calendar.js?v=90" defer></script>
-  <script src="mindmap.js?v=90" defer></script>
-  <script src="gantt.js?v=90" defer></script>
-  <script src="notes.js?v=90" defer></script>
-  <script src="daily-challenges.js?v=90" defer></script>
-  <script src="appearance.js?v=90" defer></script>
-  <script src="script.js?v=90" defer></script>
+  <script src="sync.js?v=91" defer></script>
+  <script src="calendar-feed.js?v=91" defer></script>
+  <script src="restore.js?v=91" defer></script>
+  <script src="calendar-conflicts.js?v=91" defer></script>
+  <script src="calendar-goals.js?v=91" defer></script>
+  <script src="calendar-reminders.js?v=91" defer></script>
+  <script src="ical.js?v=91" defer></script>
+  <script src="print.js?v=91" defer></script>
+  <script src="undo.js?v=91" defer></script>
+  <script src="sport-library.js?v=91" defer></script>
+  <script src="sport.js?v=91" defer></script>
+  <script src="sport-guided.js?v=91" defer></script>
+  <script src="sport-history.js?v=91" defer></script>
+  <script src="snake.js?v=91" defer></script>
+  <script src="menu-engine.js?v=91" defer></script>
+  <script src="menu.js?v=91" defer></script>
+  <script src="install.js?v=91" defer></script>
+  <script src="vendor/ts-fsrs.umd.js?v=91" defer></script>
+  <script src="anki.js?v=91" defer></script>
+  <script src="news.js?v=91" defer></script>
+  <script src="tab-order.js?v=91" defer></script>
+  <script src="patch-notes.js?v=91" defer></script>
+  <script src="todo.js?v=91" defer></script>
+  <script src="onboarding.js?v=91" defer></script>
+  <script src="eco.js?v=91" defer></script>
+  <script src="translations.js?v=91" defer></script>
+  <script src="calendar.js?v=91" defer></script>
+  <script src="mindmap.js?v=91" defer></script>
+  <script src="gantt.js?v=91" defer></script>
+  <script src="notes.js?v=91" defer></script>
+  <script src="daily-challenges.js?v=91" defer></script>
+  <script src="appearance.js?v=91" defer></script>
+  <script src="script.js?v=91" defer></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {

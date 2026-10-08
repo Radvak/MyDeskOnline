@@ -485,6 +485,8 @@ let ankiExportDeck = '';
 let ankiStatsDeckId = '';
 let ankiStatusTimer = null;
 let ankiAddDefaults = { type: 'basic', deckId: null, tagName: '' };
+// Champs proposés à la prochaine ouverture de « Ajouter » (Notes → « 🧠 Fiche »).
+let ankiAddPrefill = null;
 
 function registerAnkiTranslations() {
   Object.keys(translations).forEach((language) => {
@@ -1430,6 +1432,18 @@ function ankiRestoreUi() {
   ankiView = known.includes(view) ? view : 'decks';
 }
 
+// Ouvre l'onglet Révisions sur « Ajouter », champs pré-remplis ({ front, back }).
+function ankiOpenAddWith(prefill) {
+  const link = document.querySelector('.tab-link[data-target="anki"]');
+  if (!link || typeof activateTabHandler !== 'function' || !activateTabHandler) return false;
+  ankiAddPrefill = prefill;
+  ankiEditNoteId = null;
+  ankiEditReturn = 'decks';
+  activateTabHandler(link);
+  ankiGo('add');
+  return true;
+}
+
 function ankiGo(view) {
   ankiView = view;
   if (view !== 'review') ankiCurrent = null;
@@ -1967,6 +1981,11 @@ function renderAnkiEditor(main) {
   }
   let type = editing ? editing.type : ankiAddDefaults.type;
   let fields = editing ? { ...editing.fields } : {};
+  if (!editing && ankiAddPrefill) {
+    // Texte à trous : la sélection devient le texte, le titre le complément.
+    fields = type === 'cloze' ? { text: ankiAddPrefill.back, extra: ankiAddPrefill.front } : { front: ankiAddPrefill.front, back: ankiAddPrefill.back };
+    ankiAddPrefill = null;
+  }
   // Aucun paquet imposé : seulement celui de la note qu'on vient d'ajouter
   // (ou du paquet depuis lequel on a cliqué « Ajouter »).
   const deckFallback = ankiGetDeck(ankiAddDefaults.deckId);

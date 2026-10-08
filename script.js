@@ -311,6 +311,7 @@ function setLanguage(language) {
   renderGantt();
   renderDailyChallenges();
   renderTodo();
+  renderNotes();
   renderTabVisibilitySettings();
   if (typeof renderNews === 'function') {
     renderNews();
@@ -887,14 +888,16 @@ function migrateData() {
     appData.notes.pages = [];
   }
 
-  appData.notes.pages = appData.notes.pages.map((page, index) => ({
+  // Les champs en plus (icône, épinglée, dates) sont gardés ; titre vide permis.
+  appData.notes.pages = appData.notes.pages.map((page) => ({
+    ...(page && typeof page === 'object' ? page : {}),
     id: page && page.id ? page.id : uid(),
-    name: page && page.name ? page.name : t('notes.defaultPageName', { index: index + 1 }),
+    name: page && typeof page.name === 'string' ? page.name : '',
     content: page && typeof page.content === 'string' ? page.content : ''
   }));
 
   if (appData.notes.pages.length === 0) {
-    const defaultPage = { id: uid(), name: t('notes.defaultPageName', { index: 1 }), content: '' };
+    const defaultPage = { id: uid(), name: '', content: '', createdAt: Date.now(), updatedAt: Date.now() };
     appData.notes.pages.push(defaultPage);
     appData.notes.activePageId = defaultPage.id;
   }

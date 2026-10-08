@@ -13,8 +13,11 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-10-08',
-    title: 'Sport : programme v7, semaine libre, échauffement guidé',
+    title: 'Sport repensé, Notes refaites',
     items: [
+      { area: 'app', text: 'Notes refaites : liste avec recherche instantanée (sans tenir compte des accents), notes épinglées en haut, icône, aperçu et date de modification ; titre modifiable directement dans la note (plus de fenêtres « Renommer ») ; barre de mise en forme compacte (titres, citation, gras…, listes, cases à cocher, lien, surligneurs, couleurs) ; mots et temps de lecture.' },
+      { area: 'app', text: 'Notes : raccourcis en début de ligne (« # » titre, « ## » sous-titre, « - » liste, « 1. » liste numérotée, « [] » case à cocher, « > » citation), collage nettoyé depuis le web ou Word (structure gardée, styles et images retirés), dupliquer, copier le texte, supprimer avec « Annuler ». Sur téléphone : la liste, puis la note en plein écran.' },
+      { area: 'anki', text: 'Notes → Révisions : bouton « 🧠 Fiche » qui crée une fiche avec le passage sélectionné (question : le titre juste au-dessus ; en texte à trous si c’est ton type par défaut).' },
       { area: 'sport', text: 'Sport : les séances ne sont plus liées à un jour. Chacune est à faire une fois dans la semaine (lundi → dimanche), le jour que tu veux : l’onglet ouvre la séance commencée ce jour-là, sinon la prochaine pas encore faite. La liste montre « ✓ faite mar. 6 » ou « À faire cette semaine », et un créneau de l’agenda ouvre sa séance si elle reste à faire, sinon la suivante (rappel compris).' },
       { area: 'sport', text: 'Sport : régularité à la semaine — la semaine compte quand chaque séance de ta liste est faite une fois ; l’historique montre ce qui reste à faire cette semaine (« Faire aujourd’hui ») et les séances pas faites des 2 dernières semaines.' },
       { area: 'sport', text: 'Sport : échauffement revu et construit d’après les exercices de la séance (cardio, mobilité des épaules, poignets, hanches et dos, activation, tout le debout puis tout au sol, ≈ 7–8 min). Carte « 🔥 Échauffement » dans la séance et, en mode guidé, étape par étape avec chrono. Séries d’approche juste avant le premier exercice de chaque famille (variante plus facile puis variante du jour, ou sac à moitié chargé), suivies d’1 min de repos.' },
