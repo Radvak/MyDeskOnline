@@ -5911,6 +5911,7 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 }
 
 .news-point__source { text-decoration: underline; text-underline-offset: 2px; }
+.news-point__time { font-variant-numeric: tabular-nums; opacity: 0.85; }
 
 /* Ligne éditoriale des sources : gauche en rouge, droite en bleu, neutres en gris. */
 .news-lean {

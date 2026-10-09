@@ -128,6 +128,7 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Afficher plus ({count})',
     isNew: 'Nouveau',
     sources: 'Sources : {list}',
+    publishedAt: 'Article publié le {date}',
     leanSummary: 'Ligne éditoriale des sources : {list}',
     leanNoRight: 'aucune source de droite',
     leanNoLeft: 'aucune source de gauche',
@@ -227,6 +228,7 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Show more ({count})',
     isNew: 'New',
     sources: 'Sources: {list}',
+    publishedAt: 'Article published on {date}',
     leanSummary: 'Editorial line of the sources: {list}',
     leanNoRight: 'no right-leaning source',
     leanNoLeft: 'no left-leaning source',
@@ -326,6 +328,7 @@ const NEWS_TRANSLATIONS = {
     showMore: 'Xem thêm ({count})',
     isNew: 'Mới',
     sources: 'Nguồn: {list}',
+    publishedAt: 'Bài đăng lúc {date}',
     leanSummary: 'Khuynh hướng của các nguồn: {list}',
     leanNoRight: 'không có nguồn cánh hữu',
     leanNoLeft: 'không có nguồn cánh tả',
@@ -954,7 +957,27 @@ function renderNewsToolbar(container) {
   container.append(filters);
 }
 
-function renderNewsPoints(block, data) {
+// Heure de publication d'une source : notée par le robot (résumés récents),
+// sinon retrouvée dans les titres déjà chargés (anciens résumés).
+function newsSourceDate(source) {
+  if (source.date) return source.date;
+  for (const day of Object.values(newsState.days)) {
+    const item = day && Array.isArray(day.items) ? day.items.find((entry) => entry.link === source.link) : null;
+    if (item && item.date) return item.date;
+  }
+  return null;
+}
+
+// « 07:42 » le jour affiché, sinon « mer. 21:15 ».
+function newsSourceTime(iso, refDay) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const time = formatTime(date);
+  return key === refDay ? time : `${date.toLocaleDateString(getCurrentLocale(), { weekday: 'short' })} ${time}`;
+}
+
+function renderNewsPoints(block, data, refDay = null) {
   if (data.auto) block.append(newsEl('p', 'news-auto', t('news.briefingAuto')));
   const points = Array.isArray(data.points) ? data.points : [];
   if (!points.length) {
@@ -980,6 +1003,13 @@ function renderNewsPoints(block, data) {
         const link = newsLink(source.link, source.source, 'news-point__source');
         link.title = source.title || '';
         sources.append(link);
+        const published = newsSourceDate(source);
+        if (published) {
+          const time = newsEl('time', 'news-point__time', newsSourceTime(published, refDay));
+          time.dateTime = published;
+          time.title = t('news.publishedAt', { date: new Date(published).toLocaleString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) });
+          sources.append(document.createTextNode(' '), time);
+        }
         const lean = newsLeanTag(source.source);
         if (lean) sources.append(document.createTextNode(' '), lean);
       });
@@ -1089,7 +1119,7 @@ function renderNewsBriefing(container, day) {
     const data = current.themes && current.themes[theme];
     const block = newsEl('div', `news-theme news-theme--${theme}`);
     block.append(newsEl('h4', 'news-theme__title', newsThemeLabel(theme)));
-    if (data) renderNewsPoints(block, data);
+    if (data) renderNewsPoints(block, data, newsState.date);
     else block.append(newsEl('p', 'news-empty', t('news.briefingMissing')));
     section.append(block);
   });

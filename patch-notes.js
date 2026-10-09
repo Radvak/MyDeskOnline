@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-09',
+    title: 'Heure des sources',
+    items: [
+      { area: 'news', text: 'Actualités : l’heure de publication de chaque article source s’affiche à côté du média dans les résumés (« franceinfo 07:42 », ou « mer. 21:15 » pour un article d’un autre jour) ; date complète au survol.' }
+    ]
+  },
+  {
     date: '2026-10-08',
     title: 'Sport repensé, Notes refaites',
     items: [

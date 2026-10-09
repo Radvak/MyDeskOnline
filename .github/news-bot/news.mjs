@@ -612,7 +612,7 @@ const autoPoints = (items) => {
         title: cluster.items[0].title,
         summary: best.summary || '',
         context: '',
-        sources: cluster.items.slice(0, 4).map((item) => ({ title: item.title, source: item.source, link: item.link }))
+        sources: cluster.items.slice(0, 4).map((item) => ({ title: item.title, source: item.source, link: item.link, date: item.date }))
       };
     });
 };
@@ -626,7 +626,7 @@ const cleanPoints = (data, items) => {
       refs.forEach((ref) => {
         const item = items[Number(ref) - 1];
         if (!item) return;
-        const candidates = Array.isArray(item.sources) ? item.sources : [{ title: item.title, source: item.source, link: item.link }];
+        const candidates = Array.isArray(item.sources) ? item.sources : [{ title: item.title, source: item.source, link: item.link, date: item.date }];
         candidates.forEach((candidate) => {
           if (candidate.link && !sources.some((source) => source.link === candidate.link)) sources.push(candidate);
         });
