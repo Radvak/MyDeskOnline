@@ -1,0 +1,204 @@
+{
+ "sources": {
+  "rfi-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "f24-europe": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "f24-moyen-orient": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "f24-afrique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "f24-ameriques": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "f24-asie": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "fi-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "courrier-international": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "fi-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 19
+  },
+  "fi-economie": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "f24-france": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "rfi-france": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 30
+  },
+  "public-senat": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 60
+  },
+  "lcp": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 100
+  },
+  "conseil-constitutionnel": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 50
+  },
+  "conseil-etat": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "club-juristes": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "surligneurs": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "actu-juridique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "fi-justice": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 19
+  },
+  "liberation-justice": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 50
+  },
+  "rfi-justice": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 24
+  },
+  "dalloz-etudiant": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "conseil-etat-jurisprudence": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "cnil": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "jus-politicum": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "revue-dlf": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "figaro-international": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "lepoint-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 100
+  },
+  "cnews-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 99
+  },
+  "liberation-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 50
+  },
+  "humanite-monde": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "figaro-france": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "figaro-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "lepoint-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 97
+  },
+  "europe1-politique": {
+   "lastOk": "2026-10-07T13:56:21.601Z",
+   "entries": 50
+  },
+  "valeurs-actuelles": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "contrepoints": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "liberation-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 50
+  },
+  "mediapart": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  },
+  "humanite-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 20
+  },
+  "politis": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 200
+  },
+  "obs-politique": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 40
+  },
+  "lepoint-justice": {
+   "lastOk": "2026-10-11T01:13:39.617Z",
+   "entries": 10
+  }
+ },
+ "briefingAttempts": {
+  "key": "2026-10-10-soir",
+  "count": 1,
+  "at": "2026-10-10T19:00:08.508Z"
+ },
+ "lastBriefing": {
+  "at": "2026-10-10T19:00:08.508Z",
+  "slot": "soir",
+  "errors": [
+   "gemini-3.8-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.8-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.8-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.7-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.7-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.7-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.8-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.8-flash : HTTP 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+   "gemini-3.8-flash : HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota ex"
+  ]
+ },
+ "weekAttempts": {
+  "key": "2026-10-10",
+  "count": 1
+ }
+}
