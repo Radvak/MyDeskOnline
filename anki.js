@@ -80,6 +80,9 @@ const ANKI_TRANSLATIONS = {
     suspendedStatus: '{count} carte(s) suspendue(s) : elles n’apparaîtront plus en révision (▶ Réactiver pour les remettre).',
     deleteNote: '🗑 Supprimer',
     deleteNoteConfirm: 'Supprimer cette note et ses {count} carte(s) ? (Annulable avec Ctrl+Z)',
+    bulkDelete: '🗑 Supprimer la sélection',
+    bulkDeleteConfirm: 'Supprimer {notes} note(s) et leurs {count} carte(s) ? (Annulable avec Ctrl+Z)',
+    bulkDeletedStatus: '{notes} note(s) supprimée(s). Ctrl+Z pour annuler.',
     endSession: 'Terminer',
     keyboardHelp: 'Clavier : Espace = réponse, puis 1 À revoir · 2 Difficile · 3 Correct · 4 Facile · E modifier · C à confirmer · Ctrl+Z annuler',
     typeBasic: 'Basique',
@@ -305,6 +308,9 @@ const ANKI_TRANSLATIONS = {
     suspendedStatus: '{count} card(s) suspended: they will no longer show up in reviews (▶ Unsuspend to bring them back).',
     deleteNote: '🗑 Delete',
     deleteNoteConfirm: 'Delete this note and its {count} card(s)? (Ctrl+Z to undo)',
+    bulkDelete: '🗑 Delete selection',
+    bulkDeleteConfirm: 'Delete {notes} note(s) and their {count} card(s)? (Ctrl+Z to undo)',
+    bulkDeletedStatus: '{notes} note(s) deleted. Ctrl+Z to undo.',
     endSession: 'End',
     keyboardHelp: 'Keyboard: Space = answer, then 1 Again · 2 Hard · 3 Good · 4 Easy · E edit · C to check · Ctrl+Z undo',
     typeBasic: 'Basic',
@@ -1983,6 +1989,24 @@ function ankiDeleteNote(noteId) {
   else renderAnki();
 }
 
+// Suppression groupée depuis « Parcourir » : une seule entrée d'annulation.
+function ankiDeleteNotes(noteIds) {
+  const data = ankiData();
+  const ids = new Set(noteIds);
+  const cards = data.cards.filter((card) => ids.has(card.noteId));
+  if (!ids.size) return false;
+  if (!window.confirm(t('anki.bulkDeleteConfirm', { notes: ids.size, count: cards.length }))) return false;
+  const cardIds = new Set(cards.map((card) => card.id));
+  const logs = data.revlog.filter((log) => cardIds.has(log.c));
+  ankiPushUndo('delete', ankiCapture({ notes: Array.from(ids), cards: Array.from(cardIds), revlog: logs.map((log) => log.id) }));
+  data.notes = data.notes.filter((note) => !ids.has(note.id));
+  ankiMarkDelete();
+  data.cards = data.cards.filter((card) => !cardIds.has(card.id));
+  data.revlog = data.revlog.filter((log) => !cardIds.has(log.c));
+  saveData();
+  return true;
+}
+
 /* ── Ajout / modification ──────────────────────────────────── */
 
 function ankiEditNote(noteId, returnView) {
@@ -2745,6 +2769,13 @@ function renderAnkiBrowse(main) {
       ankiButton('anki-btn', t('anki.bulkApply'), apply),
       suspendBtn,
       unsuspendBtn,
+      ankiButton('anki-btn anki-btn--danger', t('anki.bulkDelete'), () => {
+        const count = ankiBrowseSelected.size;
+        if (!ankiDeleteNotes(Array.from(ankiBrowseSelected))) return;
+        ankiBrowseSelected.clear();
+        renderAnki(true);
+        ankiStatus(t('anki.bulkDeletedStatus', { notes: count }), 'success');
+      }),
       ankiButton('anki-link', t('anki.bulkClear'), () => {
         ankiBrowseSelected.clear();
         updateSelection();

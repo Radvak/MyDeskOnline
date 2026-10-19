@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-19',
+    title: 'Ménage dans les cartes',
+    items: [
+      { area: 'anki', text: 'Révisions : dans « Parcourir », la barre de la sélection a un bouton « 🗑 Supprimer la sélection » — coche des notes (case de l’en-tête, Maj + clic pour une plage), confirme, et elles partent d’un coup avec leurs cartes. Annulable avec Ctrl+Z en une seule fois.' }
+    ]
+  },
+  {
     date: '2026-10-17',
     title: 'Plus de cartes quand il le faut',
     items: [
