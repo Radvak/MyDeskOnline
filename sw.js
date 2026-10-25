@@ -34,6 +34,7 @@ const APP_SHELL = [
   'install.js',
   'vendor/ts-fsrs.umd.js',
   'anki.js',
+  'fiches.js',
   'news.js',
   'tab-order.js',
   'patch-notes.js',

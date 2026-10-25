@@ -1391,12 +1391,14 @@ function ankiStatus(text, type = 'info') {
 
 function ankiIsActive() {
   const panel = document.getElementById('anki');
+  if (typeof fichesModeIsSheets === 'function' && fichesModeIsSheets()) return false;
   return Boolean(panel && panel.classList.contains('active'));
 }
 
 /* ── Rendu général ─────────────────────────────────────────── */
 
 function renderAnki(force = false) {
+  if (typeof fichesRefresh === 'function') fichesRefresh();
   const main = document.getElementById('anki-main');
   if (!main || !appData.anki || typeof FSRS === 'undefined') return;
   // Ne pas effacer un formulaire en cours de saisie (synchro en arrière-plan).

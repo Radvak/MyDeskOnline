@@ -12,6 +12,14 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-10-25',
+    title: 'Fiches de révisions',
+    items: [
+      { area: 'anki', text: 'Révisions : nouveau choix en haut de l’onglet entre « 🧠 Flashcards » et « 📋 Fiches de révisions ». Une fiche par thème, rangée par matière puis par chapitre, avec des sections colorées : les mots à retrouver sont cachés dans des cases grises, un clic affiche la correction (re-clic pour recacher). Boutons « Tout révéler / Tout cacher », compteur de cases révélées, fiche « maîtrisée », fiche précédente / suivante.' },
+      { area: 'anki', text: 'Révisions : import de fiches depuis un fichier .txt (Markdown avec {{mot caché}}, plusieurs fiches par fichier séparées par « === »). Réimporter met à jour les fiches existantes sans perdre « maîtrisée ». Les fiches se synchronisent comme le reste.' }
+    ]
+  },
+  {
     date: '2026-10-19',
     title: 'Ménage dans les cartes',
     items: [

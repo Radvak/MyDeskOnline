@@ -1616,6 +1616,9 @@ async function bootstrap() {
   if (typeof initAnki === 'function') {
     initAnki();
   }
+  if (typeof initFiches === 'function') {
+    initFiches();
+  }
   if (typeof initNews === 'function') {
     initNews();
   }
