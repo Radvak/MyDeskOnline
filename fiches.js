@@ -398,20 +398,29 @@ function fichesRenderSubject(main) {
   main.appendChild(wrap);
   fichesHead(wrap, subject, [
     ankiButton('anki-btn anki-btn--ghost', '← Matières', () => fichesGo('home', { subject: '' })),
+    ankiButton('anki-btn anki-btn--ghost', '🗑 Supprimer la matière', () => fichesDelete(sheets, `la matière « ${subject} » et ses ${sheets.length} fiche(s)`)),
     ankiButton('anki-btn', '📥 Importer', () => fichesGo('import', { draft: null }))
   ]);
   fichesChapters(sheets).forEach(([chapter, list]) => {
     const block = ankiEl('section', 'fiches-chapter');
-    block.appendChild(ankiEl('h3', 'fiches-chapter__title', chapter));
+    const titleRow = ankiEl('div', 'fiches-chapter__row');
+    titleRow.appendChild(ankiEl('h3', 'fiches-chapter__title', chapter));
+    titleRow.appendChild(
+      ankiButton('fiches-del fiches-del--chapter', '🗑 Chapitre', () => fichesDelete(list, `le chapitre « ${chapter} » et ses ${list.length} fiche(s)`), 'Supprimer ce chapitre')
+    );
+    block.appendChild(titleRow);
     const grid = ankiEl('div', 'fiches-grid fiches-grid--tiles');
     list.forEach((sheet) => {
+      const cell = ankiEl('div', 'fiches-cell');
       const tile = ankiEl('button', `fiches-tile${sheet.mastered ? ' is-done' : ''}`);
       tile.type = 'button';
       tile.appendChild(ankiEl('strong', 'fiches-tile__title', sheet.title));
       const gaps = fichesGapCount(sheet.body);
       tile.appendChild(ankiEl('span', 'fiches-tile__meta', `${gaps} case${gaps > 1 ? 's' : ''}${sheet.mastered ? ' · ✓ maîtrisée' : ''}`));
       tile.addEventListener('click', () => fichesGo('sheet', { sheetId: sheet.id }));
-      grid.appendChild(tile);
+      cell.appendChild(tile);
+      cell.appendChild(ankiButton('fiches-del fiches-del--tile', '🗑', () => fichesDelete([sheet], `la fiche « ${sheet.title} »`), 'Supprimer cette fiche'));
+      grid.appendChild(cell);
     });
     block.appendChild(grid);
     wrap.appendChild(block);
@@ -462,15 +471,7 @@ function fichesRenderSheet(main) {
 
   const footer = ankiEl('div', 'fiches-actions fiches-footer');
   footer.appendChild(ankiButton('anki-btn anki-btn--ghost', '✏️ Modifier', () => fichesGo('edit', { sheetId: sheet.id })));
-  footer.appendChild(
-    ankiButton('anki-btn anki-btn--ghost', '🗑 Supprimer', () => {
-      if (!window.confirm(`Supprimer la fiche « ${sheet.title} » ?`)) return;
-      appData.anki.sheets = fichesSheets().filter((item) => item.id !== sheet.id);
-      ankiMarkDelete();
-      saveData();
-      fichesGo('subject', { sheetId: '' });
-    })
-  );
+  footer.appendChild(ankiButton('anki-btn anki-btn--ghost', '🗑 Supprimer', () => fichesDelete([sheet], `la fiche « ${sheet.title} »`)));
   wrap.appendChild(footer);
 
   const gaps = () => Array.from(content.querySelectorAll('.fiche-gap'));
@@ -501,6 +502,18 @@ function fichesRenderSheet(main) {
   });
   drawMastered();
   update();
+}
+
+// Supprime des fiches après confirmation (pas d'annulation : la synchro
+// propage la suppression aux autres appareils).
+function fichesDelete(sheets, label) {
+  if (!sheets.length || !window.confirm(`Supprimer ${label} ? Cette action est définitive.`)) return;
+  const ids = new Set(sheets.map((sheet) => sheet.id));
+  appData.anki.sheets = fichesSheets().filter((sheet) => !ids.has(sheet.id));
+  ankiMarkDelete();
+  saveData();
+  fichesUi.flash = `${ids.size} fiche(s) supprimée(s).`;
+  fichesGo('subject', { sheetId: '' });
 }
 
 /* ── Créer / modifier une fiche ────────────────────────────── */

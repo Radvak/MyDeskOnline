@@ -16,7 +16,8 @@ const PATCH_NOTES = [
     title: 'Fiches de révisions',
     items: [
       { area: 'anki', text: 'Révisions : nouveau choix en haut de l’onglet entre « 🧠 Flashcards » et « 📋 Fiches de révisions ». Une fiche par thème, rangée par matière puis par chapitre, avec des sections colorées : les mots à retrouver sont cachés dans des cases grises, un clic affiche la correction (re-clic pour recacher). Boutons « Tout révéler / Tout cacher », compteur de cases révélées, fiche « maîtrisée », fiche précédente / suivante.' },
-      { area: 'anki', text: 'Révisions : import de fiches depuis un fichier .txt (Markdown avec {{mot caché}}, plusieurs fiches par fichier séparées par « === »). Réimporter met à jour les fiches existantes sans perdre « maîtrisée ». Les fiches se synchronisent comme le reste.' }
+      { area: 'anki', text: 'Révisions : import de fiches depuis un fichier .txt (Markdown avec {{mot caché}}, plusieurs fiches par fichier séparées par « === »). Réimporter met à jour les fiches existantes sans perdre « maîtrisée ». Les fiches se synchronisent comme le reste.' },
+      { area: 'anki', text: 'Fiches de révisions : suppression depuis la liste — 🗑 sur chaque fiche, « 🗑 Chapitre » pour un chapitre entier et « 🗑 Supprimer la matière », avec confirmation.' }
     ]
   },
   {

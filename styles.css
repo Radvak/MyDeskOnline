@@ -7247,3 +7247,12 @@ body.sport-guided-open { overflow: hidden; }
   .fiches-paper__title { font-size: 1.35rem; }
   .fiches-toolbar { top: 0; }
 }
+
+.fiches-chapter__row { display: flex; align-items: center; gap: 0.5rem; }
+.fiches-chapter__row .fiches-chapter__title { flex: 1; }
+.fiches-cell { position: relative; display: flex; }
+.fiches-cell .fiches-tile { flex: 1; padding-right: 2.2rem; }
+.fiches-del { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
+.fiches-del:hover { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+.fiches-del--tile { position: absolute; top: 0.4rem; right: 0.4rem; padding: 0.15rem 0.4rem; }
+.fiches-del--chapter { padding: 0.3rem 0.6rem; white-space: nowrap; }
