@@ -212,6 +212,24 @@ const ANKI_TRANSLATIONS = {
     moreNewLabel: 'Étudier plus aujourd’hui',
     moreNewButton: 'Ajouter',
     moreNewDone: '+{count} nouvelle(s) carte(s) ajoutée(s) pour aujourd’hui dans ce paquet.',
+    examTitle: '🎯 Objectif examen',
+    examIntro: 'Indique la date de tes examens : chaque matière reçoit un quota de nouvelles cartes par jour, calculé pour les avoir toutes vues avant le jour J. Le quota se recalcule chaque jour, donc les cartes ajoutées en route sont prises en compte.',
+    examSummary: 'Examen le {date} (J-{days}) · toutes les nouvelles cartes vues d’ici le {finish} · {margin} jour(s) de marge pour réviser seulement.',
+    examColDeck: 'Matière',
+    examColLeft: 'Restantes',
+    examColQuota: 'Par jour',
+    examColToday: 'Aujourd’hui',
+    examTotal: 'Total : {quota} nouvelle(s) carte(s) par jour, plus {reviews} révision(s) prévue(s) aujourd’hui.',
+    examNone: 'Plus aucune nouvelle carte : il ne reste que les révisions.',
+    examDate: 'Date de l’examen',
+    examMargin: 'Jours de marge avant l’examen (révisions seules)',
+    examSave: 'Enregistrer',
+    examClear: 'Retirer l’objectif',
+    examSaved: 'Objectif examen enregistré : quotas recalculés.',
+    examCleared: 'Objectif examen retiré : retour à la limite habituelle.',
+    examInvalid: 'Choisis une date d’examen à venir.',
+    examOverview: '🎯 Objectif examen : {quota} nouvelle(s) carte(s) par jour dans ce paquet ({left} restante(s)).',
+    newPerDayExam: 'Remplacé par le quota de l’🎯 objectif examen tant qu’une date est réglée (sous la liste des paquets).',
     reviewsPerDay: 'Révisions maximum par jour',
     learningSteps: 'Étapes d’apprentissage',
     relearningSteps: 'Étapes de réapprentissage',
@@ -438,6 +456,24 @@ const ANKI_TRANSLATIONS = {
     shuffleOffDone: 'Original order restored.',
     moreNewInfo: 'Daily limit reached: {left} new card(s) waiting in this deck.',
     moreNewLabel: 'Study more today',
+    examTitle: '🎯 Exam goal',
+    examIntro: 'Set your exam date: each subject gets a daily quota of new cards, computed so you see them all before the big day. The quota is recomputed every day, so cards you add along the way are included.',
+    examSummary: 'Exam on {date} (D-{days}) · all new cards seen by {finish} · {margin} margin day(s) for reviews only.',
+    examColDeck: 'Subject',
+    examColLeft: 'Left',
+    examColQuota: 'Per day',
+    examColToday: 'Today',
+    examTotal: 'Total: {quota} new card(s) per day, plus {reviews} review(s) due today.',
+    examNone: 'No new cards left: only reviews remain.',
+    examDate: 'Exam date',
+    examMargin: 'Margin days before the exam (reviews only)',
+    examSave: 'Save',
+    examClear: 'Remove goal',
+    examSaved: 'Exam goal saved: quotas recomputed.',
+    examCleared: 'Exam goal removed: back to the usual limit.',
+    examInvalid: 'Pick an upcoming exam date.',
+    examOverview: '🎯 Exam goal: {quota} new card(s) per day in this deck ({left} left).',
+    newPerDayExam: 'Replaced by the 🎯 exam goal quota while a date is set (below the deck list).',
     moreNewButton: 'Add',
     moreNewDone: '+{count} new card(s) added for today in this deck.',
     reviewsPerDay: 'Maximum reviews per day',
@@ -479,7 +515,9 @@ const ANKI_DEFAULT_SETTINGS = {
   relearningSteps: '10m',
   maxInterval: 36500,
   dayStartHour: 4,
-  burySiblings: true
+  burySiblings: true,
+  examDate: '', // « AAAA-MM-JJ » : quota de nouvelles cartes calculé pour finir avant
+  examMarginDays: 3 // derniers jours avant l'examen gardés pour les révisions
 };
 
 const ANKI_STATE = { NEW: 0, LEARNING: 1, REVIEW: 2, RELEARNING: 3 };
@@ -746,6 +784,24 @@ function ankiAddDays(ms, days) {
   const date = new Date(ms);
   date.setDate(date.getDate() + days);
   return date.getTime();
+}
+
+/* ── Objectif examen ───────────────────────────────────────── */
+
+// Date d'examen à venir : jours restants (aujourd'hui compris, jour J exclu)
+// et jours pour voir les nouvelles cartes (avant la marge). null sinon.
+function ankiExamPlan() {
+  const settings = ankiData().settings;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(settings.examDate || ''));
+  if (!match) return null;
+  const hour = Number(settings.dayStartHour) || 0;
+  const today = ankiDayStart();
+  const start = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour).getTime();
+  const days = Math.round((start - today) / 86400000);
+  if (days < 1) return null;
+  const margin = Math.max(0, Math.round(Number(settings.examMarginDays) || 0));
+  const newDays = Math.max(1, days - margin);
+  return { start, days, margin, newDays, finish: ankiAddDays(today, newDays - 1) };
 }
 
 /* ── Paquets ───────────────────────────────────────────────── */
@@ -1090,7 +1146,14 @@ function ankiQueue(deckId) {
   // « Étudier plus aujourd'hui » : rallonge valable pour ce paquet, ce jour seulement.
   const queueDeck = deckId ? ankiGetDeck(deckId) : null;
   const extraNew = queueDeck && queueDeck.extraNew && queueDeck.extraNew.day === dayStart ? Number(queueDeck.extraNew.count) || 0 : 0;
-  const newLeft = Math.max(0, Math.round(Number(settings.newPerDay) || 0) + extraNew - newDone);
+  // Objectif examen : les nouvelles cartes restantes (celles vues aujourd'hui
+  // comprises, pour un quota stable dans la journée) réparties sur les jours
+  // avant la marge. Remplace la limite « Nouvelles cartes par jour ».
+  const exam = ankiExamPlan();
+  const newTotal = news.length + newDone;
+  const examQuota = exam ? Math.ceil(newTotal / exam.newDays) : null;
+  const newLimit = exam ? examQuota : Math.round(Number(settings.newPerDay) || 0);
+  const newLeft = Math.max(0, newLimit + extraNew - newDone);
   const reviewLeft = Math.max(0, Math.round(Number(settings.reviewsPerDay) || 0) - reviewDone);
   return {
     learningNow,
@@ -1099,6 +1162,9 @@ function ankiQueue(deckId) {
     news: newQueue.slice(0, newLeft),
     newDone,
     reviewDone,
+    newTotal,
+    examQuota,
+    reviewsDue: reviewQueue.length,
     newWaiting: Math.max(0, newQueue.length - newLeft),
     counts: {
       new: Math.min(newQueue.length, newLeft),
@@ -1591,6 +1657,109 @@ function renderAnkiDecks(main) {
   });
   card.appendChild(table);
   main.appendChild(card);
+  renderAnkiExam(main, decks);
+}
+
+// Objectif examen : date + marge, puis le quota du jour par matière
+// (paquets de premier niveau).
+function renderAnkiExam(main, decks) {
+  const settings = ankiData().settings;
+  const plan = ankiExamPlan();
+  const card = ankiEl('div', 'anki-card anki-exam');
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.examTitle')));
+
+  if (plan) {
+    card.appendChild(
+      ankiEl('p', 'anki-exam__summary', t('anki.examSummary', { date: ankiFormatDate(plan.start), days: plan.days, finish: ankiFormatDate(plan.finish), margin: plan.margin }))
+    );
+    const rows = decks
+      .filter((deck) => ankiDeckDepth(deck) === 0)
+      .map((deck) => ({ deck, queue: ankiQueue(deck.id) }))
+      .filter(({ queue }) => queue.newTotal > 0);
+    if (rows.length) {
+      const table = ankiEl('div', 'anki-exam__table');
+      const header = ankiEl('div', 'anki-exam-row anki-exam-row--head');
+      ['examColDeck', 'examColLeft', 'examColQuota', 'examColToday'].forEach((key) => header.appendChild(ankiEl('span', '', t(`anki.${key}`))));
+      table.appendChild(header);
+      let totalQuota = 0;
+      let totalReviews = 0;
+      rows.forEach(({ deck, queue }) => {
+        totalQuota += queue.examQuota;
+        totalReviews += queue.counts.review;
+        const row = ankiEl('div', 'anki-exam-row');
+        const name = ankiButton('anki-exam-row__name', deck.name, () => {
+          ankiDeckId = deck.id;
+          ankiGo('overview');
+        });
+        const done = queue.newDone >= queue.examQuota;
+        row.append(
+          name,
+          ankiEl('span', 'anki-exam-row__num', String(queue.newTotal - queue.newDone)),
+          ankiEl('strong', 'anki-exam-row__num anki-count--new', String(queue.examQuota)),
+          ankiEl('span', `anki-exam-row__num${done ? ' is-done' : ''}`, `${Math.min(queue.newDone, queue.examQuota)}/${queue.examQuota}${done ? ' ✓' : ''}`)
+        );
+        table.appendChild(row);
+      });
+      card.appendChild(table);
+      card.appendChild(ankiEl('p', 'anki-muted', t('anki.examTotal', { quota: totalQuota, reviews: totalReviews })));
+    } else {
+      card.appendChild(ankiEl('p', 'anki-muted', t('anki.examNone')));
+    }
+  } else {
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.examIntro')));
+  }
+
+  const form = ankiEl('form', 'anki-exam__form');
+  form.noValidate = true;
+  const field = (labelKey, input) => {
+    const label = ankiEl('label', 'anki-field');
+    label.append(ankiEl('span', 'anki-field__label', t(labelKey)), input);
+    form.appendChild(label);
+  };
+  const date = ankiEl('input', 'anki-input');
+  date.type = 'date';
+  date.value = settings.examDate || '';
+  date.min = new Date(ankiAddDays(ankiDayStart(), 1) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  field('anki.examDate', date);
+  const margin = ankiEl('input', 'anki-input');
+  margin.type = 'number';
+  margin.min = '0';
+  margin.max = '14';
+  margin.inputMode = 'numeric';
+  margin.value = String(settings.examMarginDays);
+  field('anki.examMargin', margin);
+  const actions = ankiEl('div', 'anki-actions');
+  const save = ankiEl('button', 'anki-btn', t('anki.examSave'));
+  save.type = 'submit';
+  actions.appendChild(save);
+  if (settings.examDate) {
+    actions.appendChild(
+      ankiButton('anki-btn anki-btn--ghost', t('anki.examClear'), () => {
+        settings.examDate = '';
+        saveData();
+        renderAnki();
+        ankiStatus(t('anki.examCleared'), 'success');
+      })
+    );
+  }
+  form.appendChild(actions);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const previous = { examDate: settings.examDate, examMarginDays: settings.examMarginDays };
+    settings.examDate = date.value;
+    const days = Math.round(Number(margin.value));
+    settings.examMarginDays = Number.isFinite(days) ? Math.min(14, Math.max(0, days)) : 3;
+    if (!ankiExamPlan()) {
+      Object.assign(settings, previous);
+      ankiStatus(t('anki.examInvalid'), 'error');
+      return;
+    }
+    saveData();
+    renderAnki();
+    ankiStatus(t('anki.examSaved'), 'success');
+  });
+  card.appendChild(form);
+  main.appendChild(card);
 }
 
 function ankiCleanDeckName(name) {
@@ -1711,6 +1880,9 @@ function renderAnkiOverview(main) {
   } else {
     card.appendChild(ankiEl('p', 'anki-muted', t('anki.overviewEmpty')));
     ankiAppendLearningInfo(card, queue);
+  }
+  if (queue.examQuota !== null && queue.newTotal > 0) {
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.examOverview', { quota: queue.examQuota, left: queue.newTotal - queue.newDone })));
   }
   ankiAppendMoreNew(card, deck.id, queue);
   if (deck.shuffle) card.appendChild(ankiEl('p', 'anki-muted', t('anki.shuffleOn')));
@@ -3205,7 +3377,7 @@ function renderAnkiSettings(main) {
   retention.addEventListener('input', () => {
     retentionValue.textContent = Number(retention.value).toFixed(2);
   });
-  addField('newPerDay', 'anki.newPerDay', { type: 'number', min: '0', max: '9999', inputmode: 'numeric' });
+  addField('newPerDay', 'anki.newPerDay', { type: 'number', min: '0', max: '9999', inputmode: 'numeric' }, ankiExamPlan() ? 'anki.newPerDayExam' : undefined);
   addField('reviewsPerDay', 'anki.reviewsPerDay', { type: 'number', min: '0', max: '99999', inputmode: 'numeric' });
   addField('learningSteps', 'anki.learningSteps', { type: 'text' }, 'anki.stepsHelp');
   addField('relearningSteps', 'anki.relearningSteps', { type: 'text' });

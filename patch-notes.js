@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-11-20',
+    title: 'Objectif examen',
+    items: [
+      { area: 'anki', text: 'Révisions : « 🎯 Objectif examen » sous la liste des paquets. Indique la date de l’examen (et quelques jours de marge, 3 par défaut) : chaque matière reçoit un quota de nouvelles cartes par jour pour les avoir toutes vues avant la marge, qui reste pour réviser. Tableau par matière : cartes restantes, quota du jour et avancement (✓ quand c’est fait). Le quota se recalcule chaque jour, donc les cartes ajoutées en route sont prises en compte ; il remplace « Nouvelles cartes par jour » jusqu’à l’examen.' }
+    ]
+  },
+  {
     date: '2026-10-25',
     title: 'Fiches de révisions',
     items: [
