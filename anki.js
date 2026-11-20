@@ -15,6 +15,7 @@ const ANKI_TAB_TRANSLATIONS = { fr: 'Révisions', en: 'Flashcards', vi: 'Ôn t�
 const ANKI_TRANSLATIONS = {
   fr: {
     navDecks: 'Paquets',
+    navSession: '▶ Session',
     navAdd: '＋ Ajouter',
     navBrowse: 'Parcourir',
     navStats: 'Statistiques',
@@ -230,6 +231,22 @@ const ANKI_TRANSLATIONS = {
     examInvalid: 'Choisis une date d’examen à venir.',
     examOverview: '🎯 Objectif examen : {quota} nouvelle(s) carte(s) par jour dans ce paquet ({left} restante(s)).',
     newPerDayExam: 'Remplacé par le quota de l’🎯 objectif examen tant qu’une date est réglée (sous la liste des paquets).',
+    sessionTitle: 'Session de révision',
+    sessionHelp: 'Coche un ou plusieurs paquets, puis, si tu veux, seulement certains tags (chapitres). La session reprend toutes les nouvelles cartes et les révisions dues de la sélection, sans limite du jour : idéal pour boucler un chapitre.',
+    sessionTags: 'Tags — aucun coché = tout le paquet',
+    sessionNoTag: 'Sans tag',
+    sessionStats: '{fresh} nouvelle(s) · {due} à revoir · {seen}/{total} vues',
+    sessionAhead: 'Inclure les cartes pas encore dues (réviser en avance)',
+    sessionAheadHelp: 'Pratique pour vérifier qu’un chapitre est maîtrisé : toutes ses cartes déjà vues repassent, et leurs prochaines dates sont recalculées à partir d’aujourd’hui.',
+    sessionSummary: 'Cette session : {new} nouvelle(s), {learn} en apprentissage, {review} à revoir.',
+    sessionEmpty: 'Rien à étudier dans cette sélection pour l’instant (coche « réviser en avance » pour tout repasser).',
+    sessionEmptyAhead: 'Tout a déjà été vu aujourd’hui dans cette sélection : ces cartes pourront repasser dès demain.',
+    sessionPick: 'Coche au moins un paquet.',
+    sessionStart: 'Lancer la session',
+    sessionClear: 'Tout décocher',
+    sessionBack: '← Session',
+    sessionDoneTitle: 'Session terminée 🎉',
+    sessionDoneInfo: 'Plus rien à voir dans cette sélection pour l’instant. Pour repasser tout le chapitre, coche « réviser en avance » dans Session.',
     reviewsPerDay: 'Révisions maximum par jour',
     learningSteps: 'Étapes d’apprentissage',
     relearningSteps: 'Étapes de réapprentissage',
@@ -261,6 +278,7 @@ const ANKI_TRANSLATIONS = {
   },
   en: {
     navDecks: 'Decks',
+    navSession: '▶ Session',
     navAdd: '＋ Add',
     navBrowse: 'Browse',
     navStats: 'Stats',
@@ -474,6 +492,22 @@ const ANKI_TRANSLATIONS = {
     examInvalid: 'Pick an upcoming exam date.',
     examOverview: '🎯 Exam goal: {quota} new card(s) per day in this deck ({left} left).',
     newPerDayExam: 'Replaced by the 🎯 exam goal quota while a date is set (below the deck list).',
+    sessionTitle: 'Study session',
+    sessionHelp: 'Tick one or more decks, then, if you like, only some tags (chapters). The session includes every new card and every due review in the selection, with no daily limit: ideal to wrap up a chapter.',
+    sessionTags: 'Tags — none ticked = whole deck',
+    sessionNoTag: 'No tag',
+    sessionStats: '{fresh} new · {due} due · {seen}/{total} seen',
+    sessionAhead: 'Include cards not due yet (review ahead)',
+    sessionAheadHelp: 'Handy to check a chapter is mastered: all its seen cards come back, and their next dates are recomputed from today.',
+    sessionSummary: 'This session: {new} new, {learn} learning, {review} due.',
+    sessionEmpty: 'Nothing to study in this selection right now (tick “review ahead” to go through everything).',
+    sessionEmptyAhead: 'Everything in this selection was already seen today: these cards can come back from tomorrow.',
+    sessionPick: 'Tick at least one deck.',
+    sessionStart: 'Start session',
+    sessionClear: 'Untick all',
+    sessionBack: '← Session',
+    sessionDoneTitle: 'Session complete 🎉',
+    sessionDoneInfo: 'Nothing left in this selection for now. To go through the whole chapter again, tick “review ahead” in Session.',
     moreNewButton: 'Add',
     moreNewDone: '+{count} new card(s) added for today in this deck.',
     reviewsPerDay: 'Maximum reviews per day',
@@ -549,6 +583,10 @@ let ankiStatusTimer = null;
 let ankiAddDefaults = { type: 'basic', deckId: null, tagName: '' };
 // Champs proposés à la prochaine ouverture de « Ajouter » (Notes → « 🧠 Fiche »).
 let ankiAddPrefill = null;
+// Session de révision en cours (paquets + tags choisis) et sélection en
+// préparation dans l'écran « Session ».
+let ankiSession = null;
+let ankiSessionDraft = { sel: {}, ahead: false };
 
 function registerAnkiTranslations() {
   Object.keys(translations).forEach((language) => {
@@ -1065,7 +1103,22 @@ function ankiShuffleKey(id, seed) {
   return h >>> 0;
 }
 
-function ankiQueue(deckId) {
+// Session de révision : { sel: { [deckId]: [tagIds] }, ahead }. Un paquet
+// coché couvre ses sous-paquets ; une liste de tags vide = tous ses tags.
+function ankiSessionMatcher(session) {
+  const rules = Object.entries((session && session.sel) || {})
+    .filter(([deckId]) => ankiGetDeck(deckId))
+    .map(([deckId, tags]) => ({ family: ankiDeckFamily(deckId), tags: new Set(Array.isArray(tags) ? tags : []) }));
+  return (note) =>
+    rules.some(({ family, tags }) => family.has(note.deckId) && (!tags.size || tags.has(note.tagId || ANKI_NO_TAG)));
+}
+
+// File de la révision en cours : la session si elle existe, sinon le paquet.
+function ankiActiveQueue() {
+  return ankiSession ? ankiQueue(null, ankiSession) : ankiQueue(ankiDeckId);
+}
+
+function ankiQueue(deckId, session = null) {
   const data = ankiData();
   const settings = data.settings;
   const now = Date.now();
@@ -1073,22 +1126,30 @@ function ankiQueue(deckId) {
   const dayEnd = ankiDayEnd(now);
   const family = deckId ? ankiDeckFamily(deckId) : null;
   const notes = ankiNoteMap();
+  const inSession = session ? ankiSessionMatcher(session) : null;
   const inDeck = (card) => {
     const note = notes.get(card.noteId);
-    return note && (!family || family.has(note.deckId));
+    if (!note) return false;
+    if (inSession) return inSession(note);
+    return !family || family.has(note.deckId);
   };
+  // Session avec « réviser en avance » : toutes les cartes en révision, une
+  // fois par jour au plus (sinon une carte revue reviendrait sans fin).
+  const ahead = Boolean(session && session.ahead);
 
   // Ce qui a déjà été fait aujourd'hui dans ce paquet.
   const cardsById = new Map(data.cards.map((card) => [card.id, card]));
   let newDone = 0;
   let reviewDone = 0;
   const seenNotes = new Set();
+  const seenCards = new Set();
   const newSeen = new Set();
   data.revlog.forEach((log) => {
     if (log.t < dayStart) return;
     const card = cardsById.get(log.c);
     if (!card || !inDeck(card)) return;
     seenNotes.add(card.noteId);
+    seenCards.add(log.c);
     if (log.s === ANKI_STATE.NEW && !newSeen.has(log.c)) {
       newSeen.add(log.c);
       newDone += 1;
@@ -1107,7 +1168,7 @@ function ankiQueue(deckId) {
       if (card.due <= now) learningNow.push(card);
       else if (card.due < dayEnd) learningLater.push(card);
     } else if (card.state === ANKI_STATE.REVIEW) {
-      if (card.due < dayEnd) reviews.push(card);
+      if (card.due < dayEnd || (ahead && !seenCards.has(card.id))) reviews.push(card);
     } else {
       news.push(card);
     }
@@ -1149,12 +1210,13 @@ function ankiQueue(deckId) {
   // Objectif examen : les nouvelles cartes restantes (celles vues aujourd'hui
   // comprises, pour un quota stable dans la journée) réparties sur les jours
   // avant la marge. Remplace la limite « Nouvelles cartes par jour ».
-  const exam = ankiExamPlan();
+  // Une session choisie à la main n'a pas de limite du jour.
+  const exam = session ? null : ankiExamPlan();
   const newTotal = news.length + newDone;
   const examQuota = exam ? Math.ceil(newTotal / exam.newDays) : null;
   const newLimit = exam ? examQuota : Math.round(Number(settings.newPerDay) || 0);
-  const newLeft = Math.max(0, newLimit + extraNew - newDone);
-  const reviewLeft = Math.max(0, Math.round(Number(settings.reviewsPerDay) || 0) - reviewDone);
+  const newLeft = session ? Infinity : Math.max(0, newLimit + extraNew - newDone);
+  const reviewLeft = session ? Infinity : Math.max(0, Math.round(Number(settings.reviewsPerDay) || 0) - reviewDone);
   return {
     learningNow,
     learningLater,
@@ -1477,6 +1539,7 @@ function renderAnki(force = false) {
   main.innerHTML = '';
   const views = {
     decks: renderAnkiDecks,
+    session: renderAnkiSession,
     overview: renderAnkiOverview,
     review: renderAnkiReview,
     done: renderAnkiDone,
@@ -1512,7 +1575,9 @@ function ankiSaveUi() {
         browseTag: ankiBrowseTag,
         browseQuery: ankiBrowseQuery,
         tagsDeck: ankiTagsDeck,
-        statsDeck: ankiStatsDeckId
+        statsDeck: ankiStatsDeckId,
+        session: ankiSession,
+        sessionDraft: ankiSessionDraft
       })
     );
   } catch (error) {
@@ -1535,6 +1600,17 @@ function ankiRestoreUi() {
   ankiBrowseQuery = typeof ui.browseQuery === 'string' ? ui.browseQuery : '';
   ankiTagsDeck = deckOk(ui.tagsDeck);
   ankiStatsDeckId = deckOk(ui.statsDeck);
+  const sessionOk = (value) => {
+    if (!ankiIsObject(value) || !ankiIsObject(value.sel)) return null;
+    const sel = {};
+    Object.entries(value.sel).forEach(([deckId, tags]) => {
+      if (ankiGetDeck(deckId)) sel[deckId] = Array.isArray(tags) ? tags.filter((tag) => typeof tag === 'string') : [];
+    });
+    return { sel, ahead: Boolean(value.ahead) };
+  };
+  ankiSessionDraft = sessionOk(ui.sessionDraft) || { sel: {}, ahead: false };
+  ankiSession = sessionOk(ui.session);
+  if (ankiSession && !Object.keys(ankiSession.sel).length) ankiSession = null;
   let view = ui.view;
   if (view === 'edit' && !ankiData().notes.some((note) => note.id === ui.editNoteId)) view = 'browse';
   if (view === 'edit') {
@@ -1542,9 +1618,10 @@ function ankiRestoreUi() {
     ankiEditReturn = 'browse';
   }
   // En pleine révision : on reprend la révision du paquet (carte suivante due).
-  if ((view === 'review' || view === 'done' || view === 'overview') && !ankiDeckId) view = 'decks';
+  if ((view === 'review' || view === 'done') && !ankiDeckId && !ankiSession) view = 'decks';
+  if (view === 'overview' && !ankiDeckId) view = 'decks';
   if (view === 'add') ankiEditReturn = 'decks';
-  const known = ['decks', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'restore', 'stats', 'settings', 'import', 'export'];
+  const known = ['decks', 'session', 'overview', 'review', 'done', 'add', 'edit', 'browse', 'tags', 'restore', 'stats', 'settings', 'import', 'export'];
   ankiView = known.includes(view) ? view : 'decks';
 }
 
@@ -1562,6 +1639,7 @@ function ankiOpenAddWith(prefill) {
 
 function ankiGo(view) {
   ankiView = view;
+  if (view === 'decks' || view === 'overview') ankiSession = null; // retour à un paquet
   if (view !== 'review') ankiCurrent = null;
   renderAnki(true);
   const panel = document.getElementById('anki');
@@ -1574,6 +1652,7 @@ function renderAnkiNav() {
   nav.innerHTML = '';
   const items = [
     ['decks', 'anki.navDecks'],
+    ['session', 'anki.navSession'],
     ['add', 'anki.navAdd'],
     ['browse', 'anki.navBrowse'],
     ['tags', 'anki.navTags'],
@@ -1582,7 +1661,8 @@ function renderAnkiNav() {
     ['import', 'anki.navImport'],
     ['export', 'anki.navExport']
   ];
-  const activeNav = { overview: 'decks', review: 'decks', done: 'decks', edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
+  const reviewing = ankiSession ? 'session' : 'decks';
+  const activeNav = { overview: 'decks', review: reviewing, done: reviewing, edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
   items.forEach(([view, key]) => {
     const button = ankiButton(`anki-nav__btn${activeNav === view ? ' active' : ''}`, t(key), () => {
       if (view === 'add') {
@@ -1762,6 +1842,164 @@ function renderAnkiExam(main, decks) {
   main.appendChild(card);
 }
 
+/* ── Session de révision (paquets + tags choisis) ──────────── */
+
+// Compteurs par paquet (exact) et par tag : cartes, nouvelles, à revoir aujourd'hui.
+function ankiSessionStats() {
+  const dayEnd = ankiDayEnd();
+  const notes = ankiNoteMap();
+  const byDeck = new Map();
+  const empty = () => ({ total: 0, fresh: 0, due: 0 });
+  ankiData().cards.forEach((card) => {
+    const note = notes.get(card.noteId);
+    if (card.suspended || !note) return;
+    if (!byDeck.has(note.deckId)) byDeck.set(note.deckId, { all: empty(), tags: new Map() });
+    const entry = byDeck.get(note.deckId);
+    const key = note.tagId || ANKI_NO_TAG;
+    if (!entry.tags.has(key)) entry.tags.set(key, empty());
+    [entry.all, entry.tags.get(key)].forEach((stats) => {
+      stats.total += 1;
+      if (card.state === ANKI_STATE.NEW) stats.fresh += 1;
+      else if (card.due < dayEnd) stats.due += 1;
+    });
+  });
+  return byDeck;
+}
+
+function ankiSessionStatsLine(stats) {
+  const line = ankiEl('span', 'anki-session__stats');
+  const bar = ankiEl('span', 'anki-session__bar');
+  const fill = ankiEl('span', 'anki-session__fill');
+  fill.style.width = `${stats.total ? Math.round(((stats.total - stats.fresh) / stats.total) * 100) : 0}%`;
+  bar.appendChild(fill);
+  line.append(ankiEl('span', '', t('anki.sessionStats', { fresh: stats.fresh, due: stats.due, seen: stats.total - stats.fresh, total: stats.total })), bar);
+  return line;
+}
+
+function renderAnkiSession(main) {
+  const draft = ankiSessionDraft;
+  Object.keys(draft.sel).forEach((id) => {
+    if (!ankiGetDeck(id)) delete draft.sel[id];
+  });
+  const stats = ankiSessionStats();
+  const sumOver = (deckIds, pick) => {
+    const total = { total: 0, fresh: 0, due: 0 };
+    deckIds.forEach((id) => {
+      const entry = stats.get(id);
+      const part = entry && pick(entry);
+      if (!part) return;
+      total.total += part.total;
+      total.fresh += part.fresh;
+      total.due += part.due;
+    });
+    return total;
+  };
+  const rerender = () => {
+    ankiSaveUi();
+    renderAnki(true);
+  };
+
+  const card = ankiEl('div', 'anki-card anki-session');
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.sessionTitle')));
+  card.appendChild(ankiEl('p', 'anki-muted', t('anki.sessionHelp')));
+
+  const list = ankiEl('div', 'anki-session__decks');
+  ankiSortedDecks().forEach((deck) => {
+    const family = Array.from(ankiDeckFamily(deck.id));
+    const deckStats = sumOver(family, (entry) => entry.all);
+    if (!deckStats.total) return;
+    const selected = Object.prototype.hasOwnProperty.call(draft.sel, deck.id);
+    const block = ankiEl('div', `anki-session__deck${selected ? ' is-on' : ''}`);
+    block.style.marginLeft = `${ankiDeckDepth(deck) * 1.1}rem`;
+    const row = ankiEl('label', 'anki-session__row anki-session__row--deck');
+    const box = ankiEl('input');
+    box.type = 'checkbox';
+    box.checked = selected;
+    box.addEventListener('change', () => {
+      if (box.checked) draft.sel[deck.id] = [];
+      else delete draft.sel[deck.id];
+      rerender();
+    });
+    row.append(box, ankiEl('strong', 'anki-session__name', ankiDeckShortName(deck)), ankiSessionStatsLine(deckStats));
+    block.appendChild(row);
+
+    if (selected) {
+      const chosen = new Set(draft.sel[deck.id]);
+      const tags = ankiTagsIn(deck.id).map((tag) => {
+        const owner = tag.deckId !== deck.id ? ankiGetDeck(tag.deckId) : null;
+        return { id: tag.id, name: owner ? `${tag.name} (${ankiDeckShortName(owner)})` : tag.name, stats: sumOver([tag.deckId], (entry) => entry.tags.get(tag.id)) };
+      });
+      const untagged = sumOver(family, (entry) => entry.tags.get(ANKI_NO_TAG));
+      if (untagged.total) tags.push({ id: ANKI_NO_TAG, name: t('anki.sessionNoTag'), stats: untagged });
+      const shown = tags.filter((tag) => tag.stats.total);
+      if (shown.length > 1 || (shown.length === 1 && shown[0].id !== ANKI_NO_TAG)) {
+        const tagBox = ankiEl('div', 'anki-session__tags');
+        tagBox.appendChild(ankiEl('span', 'anki-hint', t('anki.sessionTags')));
+        shown.forEach((tag) => {
+          const tagRow = ankiEl('label', 'anki-session__row');
+          const check = ankiEl('input');
+          check.type = 'checkbox';
+          check.checked = chosen.has(tag.id);
+          check.addEventListener('change', () => {
+            const next = new Set(draft.sel[deck.id]);
+            if (check.checked) next.add(tag.id);
+            else next.delete(tag.id);
+            draft.sel[deck.id] = Array.from(next);
+            rerender();
+          });
+          tagRow.append(check, ankiEl('span', 'anki-session__name', tag.name), ankiSessionStatsLine(tag.stats));
+          tagBox.appendChild(tagRow);
+        });
+        block.appendChild(tagBox);
+      }
+    }
+    list.appendChild(block);
+  });
+  if (!list.children.length) {
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.noDecks')));
+    main.appendChild(card);
+    return;
+  }
+  card.appendChild(list);
+
+  const ahead = ankiEl('label', 'anki-field anki-field--check');
+  const aheadBox = ankiEl('input');
+  aheadBox.type = 'checkbox';
+  aheadBox.checked = Boolean(draft.ahead);
+  aheadBox.addEventListener('change', () => {
+    draft.ahead = aheadBox.checked;
+    rerender();
+  });
+  ahead.append(aheadBox, ankiEl('span', 'anki-field__label', t('anki.sessionAhead')));
+  card.appendChild(ahead);
+  card.appendChild(ankiEl('p', 'anki-hint', t('anki.sessionAheadHelp')));
+
+  const picked = Object.keys(draft.sel).length > 0;
+  const queue = picked ? ankiQueue(null, draft) : null;
+  const next = queue ? ankiPickNext(queue, true) : null;
+  let summary = t('anki.sessionPick');
+  if (queue) summary = next ? t('anki.sessionSummary', queue.counts) : t(draft.ahead ? 'anki.sessionEmptyAhead' : 'anki.sessionEmpty');
+  card.appendChild(ankiEl('p', 'anki-session__summary', summary));
+  const actions = ankiEl('div', 'anki-actions');
+  const start = ankiButton('anki-btn anki-btn--big', t('anki.sessionStart'), () => {
+    ankiSession = JSON.parse(JSON.stringify(draft));
+    const first = ankiPickNext(ankiActiveQueue(), true);
+    if (first) ankiShowCard(first);
+  });
+  start.disabled = !next;
+  actions.appendChild(start);
+  if (picked) {
+    actions.appendChild(
+      ankiButton('anki-btn anki-btn--ghost', t('anki.sessionClear'), () => {
+        draft.sel = {};
+        rerender();
+      })
+    );
+  }
+  card.appendChild(actions);
+  main.appendChild(card);
+}
+
 function ankiCleanDeckName(name) {
   return String(name || '')
     .split('::')
@@ -1931,7 +2169,7 @@ function ankiAppendLearningInfo(container, queue) {
     container.appendChild(ankiEl('p', 'anki-muted', t('anki.doneLearning', { count: queue.learningLater.length, time: ankiFormatInterval(wait) })));
     container.appendChild(
       ankiButton('anki-btn anki-btn--ghost', t('anki.studyAhead'), () => {
-        const card = ankiPickNext(ankiQueue(ankiDeckId), true);
+        const card = ankiPickNext(ankiActiveQueue(), true);
         if (card) ankiShowCard(card);
       })
     );
@@ -1971,6 +2209,7 @@ function ankiAppendMoreNew(container, deckId, queue) {
 
 function ankiStartReview(deckId) {
   ankiDeckId = deckId;
+  ankiSession = null;
   ankiNextCard();
 }
 
@@ -1981,7 +2220,7 @@ function ankiShowCard(card) {
 }
 
 function ankiNextCard() {
-  const card = ankiPickNext(ankiQueue(ankiDeckId));
+  const card = ankiPickNext(ankiActiveQueue());
   if (card) {
     ankiShowCard(card);
   } else {
@@ -2003,10 +2242,12 @@ function renderAnkiReview(main) {
     ankiNextCard();
     return;
   }
-  const queue = ankiQueue(ankiDeckId);
+  const queue = ankiActiveQueue();
   const wrap = ankiEl('div', 'anki-review');
   const top = ankiEl('div', 'anki-review__top');
-  top.appendChild(ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo('overview')));
+  top.appendChild(
+    ankiSession ? ankiButton('anki-link', t('anki.sessionBack'), () => ankiGo('session')) : ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo('overview'))
+  );
   const counts = ankiEl('div', 'anki-review__counts');
   const kind = card.state === ANKI_STATE.NEW ? 'new' : card.state === ANKI_STATE.REVIEW ? 'review' : 'learn';
   [
@@ -2095,13 +2336,26 @@ function ankiAnswer(rating) {
 }
 
 function renderAnkiDone(main) {
-  const queue = ankiQueue(ankiDeckId);
+  const queue = ankiActiveQueue();
   const next = ankiPickNext(queue);
   if (next) {
     ankiShowCard(next);
     return;
   }
   const card = ankiEl('div', 'anki-card anki-done');
+  if (ankiSession) {
+    card.appendChild(ankiEl('h2', 'anki-title', t('anki.sessionDoneTitle')));
+    ankiAppendLearningInfo(card, queue);
+    card.appendChild(ankiEl('p', 'anki-muted', t('anki.sessionDoneInfo')));
+    const actions = ankiEl('div', 'anki-actions');
+    actions.append(
+      ankiButton('anki-btn', t('anki.sessionBack'), () => ankiGo('session')),
+      ankiButton('anki-btn anki-btn--ghost', t('anki.backToDecks'), () => ankiGo('decks'))
+    );
+    card.appendChild(actions);
+    main.appendChild(card);
+    return;
+  }
   card.appendChild(ankiEl('h2', 'anki-title', t('anki.doneTitle')));
   ankiAppendLearningInfo(card, queue);
   ankiAppendMoreNew(card, ankiDeckId, queue);
