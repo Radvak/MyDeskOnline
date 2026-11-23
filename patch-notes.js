@@ -12,6 +12,14 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-11-23',
+    title: 'Programme de révision',
+    items: [
+      { area: 'anki', text: 'Révisions : import d’un programme de révision (fichier .json, en haut de la liste des paquets). Ses créneaux arrivent dans l’Agenda (type « Révisions », partiels compris) ; réimporter le programme mis à jour remplace ses créneaux sans doublon, « Retirer le programme » les enlève.' },
+      { area: 'anki', text: 'Révisions : bouton « 🔥 Séance du jour » en tête de l’onglet. Un clic lance la séance prévue : les révisions dues de tous les paquets, les nouvelles cartes des chapitres du jour (et celles des jours précédents pas encore vues, le retard se rattrape tout seul), et la révision en avance prévue avant chaque partiel. L’encadré du programme montre la séance du jour, le cours à avancer et ce qui est prévu demain.' }
+    ]
+  },
+  {
     date: '2026-11-20',
     title: 'Sessions sur mesure',
     items: [

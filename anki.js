@@ -213,6 +213,23 @@ const ANKI_TRANSLATIONS = {
     moreNewLabel: 'Étudier plus aujourd’hui',
     moreNewButton: 'Ajouter',
     moreNewDone: '+{count} nouvelle(s) carte(s) ajoutée(s) pour aujourd’hui dans ce paquet.',
+    planNav: '🔥 Séance du jour',
+    planTitle: '📅 Programme : {title}',
+    planEmpty: '📅 Programme de révision : importe le fichier de ton programme pour avoir ta séance du jour et les créneaux dans l’agenda.',
+    planImport: '📥 Importer un programme',
+    planReplace: '📥 Mettre à jour le programme',
+    planRemove: 'Retirer le programme',
+    planRemoveConfirm: 'Retirer le programme de révision et ses créneaux dans l’agenda ? Tes cartes ne bougent pas.',
+    planCourse: 'Cours restant du jour : {course}',
+    planStart: '▶ Lancer la séance du jour',
+    planNothing: 'Rien à faire dans cette séance pour l’instant : tout est à jour 🎉',
+    planNext: 'Pas de séance prévue aujourd’hui. Prochaine : {date}.',
+    planOver: 'Programme terminé.',
+    planTomorrow: 'Demain : {label}',
+    planMissing: 'Paquet(s) pas encore importé(s) : {decks}. Leurs nouvelles cartes arriveront dès l’import.',
+    planDoneTitle: 'Séance du jour terminée 🎉',
+    planInvalid: 'Ce fichier n’est pas un programme de révision MyDesk.',
+    planImported: 'Programme importé : {days} jour(s), {events} créneau(x) ajouté(s) à l’agenda.',
     sessionTitle: 'Session de révision',
     sessionHelp: 'Coche un ou plusieurs paquets, puis, si tu veux, seulement certains tags (chapitres). La session reprend toutes les nouvelles cartes et les révisions dues de la sélection, sans limite du jour : idéal pour boucler un chapitre.',
     sessionTags: 'Tags — aucun coché = tout le paquet',
@@ -456,6 +473,23 @@ const ANKI_TRANSLATIONS = {
     shuffleOffDone: 'Original order restored.',
     moreNewInfo: 'Daily limit reached: {left} new card(s) waiting in this deck.',
     moreNewLabel: 'Study more today',
+    planNav: '🔥 Today’s session',
+    planTitle: '📅 Plan: {title}',
+    planEmpty: '📅 Study plan: import your plan file to get today’s session and the slots in your calendar.',
+    planImport: '📥 Import a plan',
+    planReplace: '📥 Update the plan',
+    planRemove: 'Remove plan',
+    planRemoveConfirm: 'Remove the study plan and its calendar slots? Your cards stay as they are.',
+    planCourse: 'Remaining lesson today: {course}',
+    planStart: '▶ Start today’s session',
+    planNothing: 'Nothing to do in this session right now: all caught up 🎉',
+    planNext: 'No session planned today. Next one: {date}.',
+    planOver: 'Plan finished.',
+    planTomorrow: 'Tomorrow: {label}',
+    planMissing: 'Deck(s) not imported yet: {decks}. Their new cards will come once imported.',
+    planDoneTitle: 'Today’s session complete 🎉',
+    planInvalid: 'This file is not a MyDesk study plan.',
+    planImported: 'Plan imported: {days} day(s), {events} slot(s) added to the calendar.',
     sessionTitle: 'Study session',
     sessionHelp: 'Tick one or more decks, then, if you like, only some tags (chapters). The session includes every new card and every due review in the selection, with no daily limit: ideal to wrap up a chapter.',
     sessionTags: 'Tags — none ticked = whole deck',
@@ -523,6 +557,8 @@ const ANKI_UNDO_MAX = 30;
 const ANKI_BROWSE_PAGE = 200;
 const ANKI_MATURE_DAYS = 21;
 const ANKI_COLLECTIONS = ['decks', 'notes', 'cards', 'revlog', 'tags'];
+const ANKI_PLAN_TYPE_NAME = 'Révisions';
+const ANKI_PLAN_TYPE_COLOR = '#8b5cf6';
 
 let ankiView = 'decks'; // decks | overview | review | done | add | edit | browse | stats | settings | import
 let ankiDeckId = null;
@@ -1050,7 +1086,12 @@ function ankiShuffleKey(id, seed) {
 // Session de révision : { sel: { [deckId]: [tagIds] }, ahead }. Un paquet
 // coché couvre ses sous-paquets ; une liste de tags vide = tous ses tags.
 function ankiSessionMatcher(session) {
-  const rules = Object.entries((session && session.sel) || {})
+  return ankiSelMatcher(session && session.sel);
+}
+
+// { [deckId]: [tagIds] } → note → bool (liste vide = tout le paquet).
+function ankiSelMatcher(sel) {
+  const rules = Object.entries(sel || {})
     .filter(([deckId]) => ankiGetDeck(deckId))
     .map(([deckId, tags]) => ({ family: ankiDeckFamily(deckId), tags: new Set(Array.isArray(tags) ? tags : []) }));
   return (note) =>
@@ -1080,6 +1121,10 @@ function ankiQueue(deckId, session = null) {
   // Session avec « réviser en avance » : toutes les cartes en révision, une
   // fois par jour au plus (sinon une carte revue reviendrait sans fin).
   const ahead = Boolean(session && session.ahead);
+  // Séance du jour : nouvelles cartes limitées aux tags prévus, révision en
+  // avance limitée à certains tags ; les révisions dues viennent de partout.
+  const newOk = session && session.newSel ? ankiSelMatcher(session.newSel) : null;
+  const aheadOk = session && session.aheadSel ? ankiSelMatcher(session.aheadSel) : null;
 
   // Ce qui a déjà été fait aujourd'hui dans ce paquet.
   const cardsById = new Map(data.cards.map((card) => [card.id, card]));
@@ -1112,8 +1157,9 @@ function ankiQueue(deckId, session = null) {
       if (card.due <= now) learningNow.push(card);
       else if (card.due < dayEnd) learningLater.push(card);
     } else if (card.state === ANKI_STATE.REVIEW) {
-      if (card.due < dayEnd || (ahead && !seenCards.has(card.id))) reviews.push(card);
-    } else {
+      const early = ahead || (aheadOk && aheadOk(notes.get(card.noteId)));
+      if (card.due < dayEnd || (early && !seenCards.has(card.id))) reviews.push(card);
+    } else if (!newOk || newOk(notes.get(card.noteId))) {
       news.push(card);
     }
   });
@@ -1534,13 +1580,20 @@ function ankiRestoreUi() {
   ankiBrowseQuery = typeof ui.browseQuery === 'string' ? ui.browseQuery : '';
   ankiTagsDeck = deckOk(ui.tagsDeck);
   ankiStatsDeckId = deckOk(ui.statsDeck);
-  const sessionOk = (value) => {
-    if (!ankiIsObject(value) || !ankiIsObject(value.sel)) return null;
+  const selOk = (value) => {
     const sel = {};
-    Object.entries(value.sel).forEach(([deckId, tags]) => {
+    Object.entries(ankiIsObject(value) ? value : {}).forEach(([deckId, tags]) => {
       if (ankiGetDeck(deckId)) sel[deckId] = Array.isArray(tags) ? tags.filter((tag) => typeof tag === 'string') : [];
     });
-    return { sel, ahead: Boolean(value.ahead) };
+    return sel;
+  };
+  const sessionOk = (value) => {
+    if (!ankiIsObject(value) || !ankiIsObject(value.sel)) return null;
+    const session = { sel: selOk(value.sel), ahead: Boolean(value.ahead) };
+    if (ankiIsObject(value.newSel)) session.newSel = selOk(value.newSel);
+    if (ankiIsObject(value.aheadSel)) session.aheadSel = selOk(value.aheadSel);
+    if (value.daily) session.daily = true;
+    return session;
   };
   ankiSessionDraft = sessionOk(ui.sessionDraft) || { sel: {}, ahead: false };
   ankiSession = sessionOk(ui.session);
@@ -1584,6 +1637,11 @@ function renderAnkiNav() {
   const nav = document.getElementById('anki-nav');
   if (!nav) return;
   nav.innerHTML = '';
+  // Programme de révision : la séance du jour en un clic.
+  if (ankiPlanDay()) {
+    const daily = ankiButton(`anki-nav__btn anki-nav__btn--today${ankiSession && ankiSession.daily && ['review', 'done'].includes(ankiView) ? ' active' : ''}`, t('anki.planNav'), ankiStartDaily);
+    nav.appendChild(daily);
+  }
   const items = [
     ['decks', 'anki.navDecks'],
     ['session', 'anki.navSession'],
@@ -1595,7 +1653,7 @@ function renderAnkiNav() {
     ['import', 'anki.navImport'],
     ['export', 'anki.navExport']
   ];
-  const reviewing = ankiSession ? 'session' : 'decks';
+  const reviewing = ankiSession && !ankiSession.daily ? 'session' : ankiSession ? '' : 'decks';
   const activeNav = { overview: 'decks', review: reviewing, done: reviewing, edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
   items.forEach(([view, key]) => {
     const button = ankiButton(`anki-nav__btn${activeNav === view ? ' active' : ''}`, t(key), () => {
@@ -1670,7 +1728,216 @@ function renderAnkiDecks(main) {
     table.appendChild(row);
   });
   card.appendChild(table);
+  main.prepend(ankiRenderPlan());
   main.appendChild(card);
+}
+
+/* ── Programme de révision (fichier importé) ───────────────── */
+// appData.anki.plan = { id, title, days: [{ date, label, course, news, ahead }] }
+// news / ahead : [{ deck, tags }] avec des noms (« RGO », « Chap 1 ») ; un
+// tag vaut aussi pour ses sous-tags (« T1 » → « T1 - Chap 2 »), aucun tag =
+// tout le paquet. Les événements du fichier vont dans l'agenda.
+
+function ankiPlan() {
+  const plan = ankiData() && ankiData().plan;
+  return ankiIsObject(plan) && Array.isArray(plan.days) ? plan : null;
+}
+
+function ankiPlanToday() {
+  return toISODateString(new Date(ankiDayStart()));
+}
+
+function ankiPlanDay(date = ankiPlanToday()) {
+  const plan = ankiPlan();
+  return plan ? plan.days.find((day) => day.date === date) || null : null;
+}
+
+// Noms du fichier → { [deckId]: [tagIds] } ; `missing` reçoit les paquets introuvables.
+function ankiPlanSel(specs, missing) {
+  const sel = {};
+  (Array.isArray(specs) ? specs : []).forEach((spec) => {
+    const name = ankiNormalize(String(spec && spec.deck));
+    const deck = ankiData().decks.find((d) => ankiNormalize(d.name) === name);
+    if (!deck) {
+      if (missing && spec && spec.deck) missing.add(spec.deck);
+      return;
+    }
+    const wanted = (Array.isArray(spec.tags) ? spec.tags : []).map((tag) => ankiNormalize(String(tag)));
+    const current = sel[deck.id];
+    if (!wanted.length || (current && !current.length)) {
+      sel[deck.id] = [];
+      return;
+    }
+    const ids = ankiTagsIn(deck.id)
+      .filter((tag) => {
+        const tagName = ankiNormalize(tag.name);
+        return wanted.some((w) => tagName === w || tagName.startsWith(`${w} - `));
+      })
+      .map((tag) => tag.id);
+    if (!ids.length) return;
+    sel[deck.id] = Array.from(new Set([...(current || []), ...ids]));
+  });
+  return sel;
+}
+
+// Séance du jour : révisions dues de tous les paquets, nouvelles cartes de
+// tous les jours prévus jusqu'à aujourd'hui (le retard se rattrape tout
+// seul), révision en avance des tags prévus aujourd'hui.
+function ankiPlanSession(missing) {
+  const plan = ankiPlan();
+  const today = ankiPlanToday();
+  const day = ankiPlanDay(today);
+  if (!plan || !day) return null;
+  const sel = {};
+  ankiData().decks.forEach((deck) => {
+    if (ankiDeckDepth(deck) === 0) sel[deck.id] = [];
+  });
+  const newSpecs = plan.days.filter((d) => d.date <= today).flatMap((d) => (Array.isArray(d.news) ? d.news : []));
+  const session = { sel, ahead: false, daily: true, newSel: ankiPlanSel(newSpecs, missing) };
+  if (Array.isArray(day.ahead) && day.ahead.length) session.aheadSel = ankiPlanSel(day.ahead, missing);
+  return session;
+}
+
+function ankiStartDaily() {
+  const session = ankiPlanSession();
+  if (!session) return;
+  ankiSession = session;
+  const first = ankiPickNext(ankiActiveQueue(), true);
+  if (first) ankiShowCard(first);
+  else ankiGo('done');
+}
+
+function ankiPlanDateLabel(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(typeof getCurrentLocale === 'function' ? getCurrentLocale() : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function ankiRenderPlan() {
+  const card = ankiEl('div', 'anki-card anki-plan');
+  const plan = ankiPlan();
+  const fileInput = ankiEl('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.json,application/json';
+  fileInput.hidden = true;
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (file) file.text().then(ankiImportPlan);
+    fileInput.value = '';
+  });
+  card.appendChild(fileInput);
+  const importButton = ankiButton('anki-btn anki-btn--ghost', t(plan ? 'anki.planReplace' : 'anki.planImport'), () => fileInput.click());
+
+  if (!plan) {
+    const head = ankiEl('div', 'anki-card__head');
+    head.append(ankiEl('p', 'anki-muted', t('anki.planEmpty')), importButton);
+    card.appendChild(head);
+    return card;
+  }
+
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.planTitle', { title: plan.title || '' })));
+  const today = ankiPlanToday();
+  const day = ankiPlanDay(today);
+  if (day) {
+    card.appendChild(ankiEl('p', 'anki-plan__day', `${ankiPlanDateLabel(today)} · ${day.label || ''}`));
+    if (day.course) card.appendChild(ankiEl('p', 'anki-muted', t('anki.planCourse', { course: day.course })));
+    const missing = new Set();
+    const queue = ankiQueue(null, ankiPlanSession(missing));
+    renderAnkiCounts(card, queue.counts);
+    if (missing.size) card.appendChild(ankiEl('p', 'anki-status anki-status--error', t('anki.planMissing', { decks: Array.from(missing).join(', ') })));
+    const start = ankiButton('anki-btn anki-btn--big', t('anki.planStart'), ankiStartDaily);
+    start.disabled = !ankiPickNext(queue, true);
+    const actions = ankiEl('div', 'anki-actions');
+    actions.appendChild(start);
+    card.appendChild(actions);
+    if (start.disabled) card.appendChild(ankiEl('p', 'anki-muted', t('anki.planNothing')));
+  } else {
+    const next = plan.days.map((d) => d.date).sort().find((date) => date > today);
+    card.appendChild(ankiEl('p', 'anki-muted', next ? t('anki.planNext', { date: ankiPlanDateLabel(next) }) : t('anki.planOver')));
+  }
+  const tomorrow = ankiPlanDay(toISODateString(new Date(ankiAddDays(ankiDayStart(), 1))));
+  if (day && tomorrow && tomorrow.label) card.appendChild(ankiEl('p', 'anki-hint', t('anki.planTomorrow', { label: tomorrow.label })));
+  const tools = ankiEl('div', 'anki-actions');
+  tools.append(
+    importButton,
+    ankiButton('anki-btn anki-btn--ghost', t('anki.planRemove'), () => {
+      if (!window.confirm(t('anki.planRemoveConfirm'))) return;
+      ankiRemovePlanEvents(plan.id);
+      delete ankiData().plan;
+      saveData();
+      if (typeof renderCalendar === 'function') renderCalendar();
+      renderAnki(true);
+    })
+  );
+  card.appendChild(tools);
+  return card;
+}
+
+function ankiRemovePlanEvents(planId) {
+  appData.calendar.events = appData.calendar.events.filter((event) => !event.revisionPlanId || event.revisionPlanId !== planId);
+}
+
+// Fichier JSON : { type: 'mydesk-revision-plan', id, title, days, events }.
+// Réimporter le même programme (même id) remplace ses événements d'agenda.
+function ankiImportPlan(text) {
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    data = null;
+  }
+  if (!ankiIsObject(data) || data.type !== 'mydesk-revision-plan' || !Array.isArray(data.days)) {
+    ankiStatus(t('anki.planInvalid'), 'error');
+    return;
+  }
+  const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value));
+  const cleanSpecs = (list) =>
+    (Array.isArray(list) ? list : [])
+      .filter((spec) => ankiIsObject(spec) && spec.deck)
+      .map((spec) => ({ deck: String(spec.deck), tags: (Array.isArray(spec.tags) ? spec.tags : []).map(String) }));
+  const plan = {
+    id: String(data.id || uid()),
+    title: String(data.title || ''),
+    days: data.days
+      .filter((day) => ankiIsObject(day) && isDate(day.date))
+      .map((day) => ({
+        date: day.date,
+        label: String(day.label || ''),
+        course: String(day.course || ''),
+        news: cleanSpecs(day.news),
+        ahead: cleanSpecs(day.ahead)
+      }))
+  };
+  const previous = ankiPlan();
+  if (previous) ankiRemovePlanEvents(previous.id);
+  ankiRemovePlanEvents(plan.id);
+  let added = 0;
+  if (Array.isArray(data.events) && typeof appData === 'object' && appData.calendar) {
+    let type = appData.calendar.types.find((item) => item.name === ANKI_PLAN_TYPE_NAME);
+    if (!type) {
+      type = { id: uid(), name: ANKI_PLAN_TYPE_NAME, color: ANKI_PLAN_TYPE_COLOR };
+      appData.calendar.types.push(type);
+    }
+    data.events.forEach((event) => {
+      if (!ankiIsObject(event) || !isDate(event.date) || !/^\d{2}:\d{2}$/.test(String(event.time)) || !event.title) return;
+      appData.calendar.events.push({
+        id: uid(),
+        title: String(event.title),
+        start: `${event.date}T${event.time}`,
+        duration: Math.max(15, Math.round(Number(event.duration) || 60)),
+        recurrence: 'none',
+        typeId: type.id,
+        color: event.color || type.color,
+        location: String(event.location || ''),
+        revisionPlanId: plan.id
+      });
+      added += 1;
+    });
+  }
+  ankiData().plan = plan;
+  saveData();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  renderAnki(true);
+  ankiStatus(t('anki.planImported', { days: plan.days.length, events: added }), 'success');
 }
 
 /* ── Session de révision (paquets + tags choisis) ──────────── */
@@ -2074,7 +2341,9 @@ function renderAnkiReview(main) {
   const wrap = ankiEl('div', 'anki-review');
   const top = ankiEl('div', 'anki-review__top');
   top.appendChild(
-    ankiSession ? ankiButton('anki-link', t('anki.sessionBack'), () => ankiGo('session')) : ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo('overview'))
+    ankiSession && !ankiSession.daily
+      ? ankiButton('anki-link', t('anki.sessionBack'), () => ankiGo('session'))
+      : ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo(ankiSession ? 'decks' : 'overview'))
   );
   const counts = ankiEl('div', 'anki-review__counts');
   const kind = card.state === ANKI_STATE.NEW ? 'new' : card.state === ANKI_STATE.REVIEW ? 'review' : 'learn';
@@ -2171,6 +2440,15 @@ function renderAnkiDone(main) {
     return;
   }
   const card = ankiEl('div', 'anki-card anki-done');
+  if (ankiSession && ankiSession.daily) {
+    const day = ankiPlanDay();
+    card.appendChild(ankiEl('h2', 'anki-title', t('anki.planDoneTitle')));
+    ankiAppendLearningInfo(card, queue);
+    if (day && day.course) card.appendChild(ankiEl('p', 'anki-big', t('anki.planCourse', { course: day.course })));
+    card.appendChild(ankiButton('anki-btn', t('anki.backToDecks'), () => ankiGo('decks')));
+    main.appendChild(card);
+    return;
+  }
   if (ankiSession) {
     card.appendChild(ankiEl('h2', 'anki-title', t('anki.sessionDoneTitle')));
     ankiAppendLearningInfo(card, queue);
