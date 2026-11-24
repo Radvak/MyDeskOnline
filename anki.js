@@ -85,7 +85,7 @@ const ANKI_TRANSLATIONS = {
     bulkDeleteConfirm: 'Supprimer {notes} note(s) et leurs {count} carte(s) ? (Annulable avec Ctrl+Z)',
     bulkDeletedStatus: '{notes} note(s) supprimée(s). Ctrl+Z pour annuler.',
     endSession: 'Terminer',
-    keyboardHelp: 'Clavier : Espace = réponse, puis 1 À revoir · 2 Difficile · 3 Correct · 4 Facile · E modifier · C à confirmer · Ctrl+Z annuler',
+    keyboardHelp: 'Clavier : Espace = réponse, puis 1 (&) À revoir · 2 (é) Difficile · 3 (") Correct · 4 (\') Facile · E modifier · C à confirmer · Ctrl+Z annuler',
     typeBasic: 'Basique',
     typeReversed: 'Basique + carte inversée',
     typeCloze: 'Texte à trous',
@@ -4546,6 +4546,15 @@ function ankiIsTextField(element) {
   return !['checkbox', 'radio', 'button', 'submit', 'range', 'file'].includes(element.type);
 }
 
+// Note 1 à 4 : touches de la rangée des chiffres quelle que soit la disposition
+// (en AZERTY, & é " ' sans Maj), pavé numérique, ou caractères 1-4.
+const ANKI_RATING_KEYS = { '&': 1, 'é': 2, '"': 3, "'": 4, 1: 1, 2: 2, 3: 3, 4: 4 };
+function ankiRatingKey(event) {
+  const code = /^(?:Digit|Numpad)([1-4])$/.exec(event.code || '');
+  if (code) return Number(code[1]);
+  return ANKI_RATING_KEYS[event.key] || 0;
+}
+
 function ankiHandleKeydown(event) {
   if (!ankiIsActive()) return;
   const inField = ankiIsTextField(event.target);
@@ -4562,9 +4571,9 @@ function ankiHandleKeydown(event) {
     event.preventDefault();
     if (!ankiCurrent.answerShown) ankiRevealAnswer();
     else ankiAnswer(3);
-  } else if (['1', '2', '3', '4'].includes(event.key) && ankiCurrent.answerShown) {
+  } else if (ankiRatingKey(event) && ankiCurrent.answerShown) {
     event.preventDefault();
-    ankiAnswer(Number(event.key));
+    ankiAnswer(ankiRatingKey(event));
   } else if (key === 'c') {
     const card = ankiCurrentCard();
     if (card) {

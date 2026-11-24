@@ -18,6 +18,7 @@ const PATCH_NOTES = [
       { area: 'anki', text: 'Révisions : série de jours 🔥 — chaque journée où la séance du jour est terminée allonge ta série, affichée sur le bouton « Séance du jour » et dans l’encadré du programme.' },
       { area: 'anki', text: 'Révisions : anneau de progression de la séance du jour (cartes faites / total), barre de progression pendant la séance, confettis tous les 50 cartes et à la fin de la séance.' },
       { area: 'anki', text: 'Révisions : combo pendant la séance (bonnes réponses d’affilée, « À revoir » le remet à zéro), fêté à ×10, ×25, ×50 et ×100, et meilleur combo du jour à la fin.' },
+      { area: 'anki', text: 'Révisions : sur un clavier AZERTY, les touches & é " \' notent directement la carte (comme 1 2 3 4), sans Maj ; le pavé numérique marche aussi.' },
       { area: 'anki', text: 'Révisions : « 📈 Prêt pour les partiels ? » — par matière, la part des cartes solides jusqu’au jour du partiel (selon l’algorithme), la part déjà vue et le compte à rebours J-x (dates des partiels dans le fichier programme).' }
     ]
   },
