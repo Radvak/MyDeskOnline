@@ -4739,6 +4739,154 @@ button.anki-deck-row__name:hover { color: var(--primary); text-decoration: under
 .anki-nav__btn--today:hover,
 .anki-nav__btn--today.active { filter: brightness(1.08); color: #fff; }
 
+/* Motivation : anneau, série, progression, combo, maîtrise, fêtes */
+.anki-plan__goal {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.anki-plan__side { flex: 1 1 14rem; }
+.anki-plan__side .anki-counts { justify-content: flex-start; margin-top: 0.5rem; }
+
+.anki-ring {
+  --p: 0deg;
+  width: 7.5rem;
+  height: 7.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: conic-gradient(#8b5cf6, #ec4899 var(--p), rgba(148, 163, 184, 0.25) var(--p));
+  display: grid;
+  place-items: center;
+  transition: background 0.4s;
+}
+
+.anki-ring.is-done { background: conic-gradient(#10b981 360deg, #10b981 0); }
+
+.anki-ring__inner {
+  width: 78%;
+  height: 78%;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.anki-ring__value { font-size: 1.5rem; line-height: 1.1; }
+.anki-ring__label { font-size: 0.72rem; color: var(--muted); }
+
+.anki-streak { font-weight: 600; margin: 0; }
+.anki-streak--big { font-size: 1.15rem; margin: 0.5rem 0; }
+
+.anki-review__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.anki-review__track {
+  flex: 1;
+  height: 0.45rem;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.anki-review__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  transition: width 0.3s;
+}
+
+.anki-review__ratio { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.anki-combo {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #f59e0b;
+  animation: anki-pop 0.3s ease-out;
+}
+
+.anki-mastery__row { margin: 0.7rem 0; }
+.anki-mastery__head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+
+.anki-mastery__exam {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8b5cf6;
+  font-variant-numeric: tabular-nums;
+}
+
+.anki-mastery__exam.is-near { color: #ef4444; }
+
+.anki-mastery__bar {
+  display: flex;
+  height: 0.6rem;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+  margin: 0.3rem 0 0.15rem;
+}
+
+.anki-mastery__solid { background: #10b981; transition: width 0.4s; }
+.anki-mastery__seen { background: #f59e0b; transition: width 0.4s; }
+
+.anki-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: calc(100vw - 2rem);
+  text-align: center;
+  animation: anki-pop 0.3s ease-out;
+}
+
+.anki-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+.anki-confetti span {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: anki-fall 2.2s ease-in forwards;
+}
+
+@keyframes anki-fall {
+  to { transform: translate(var(--drift), 105vh) rotate(var(--spin)); opacity: 0.2; }
+}
+
+@keyframes anki-pop {
+  from { transform: translateX(var(--tx, 0)) scale(0.7); opacity: 0; }
+  to { transform: translateX(var(--tx, 0)) scale(1); opacity: 1; }
+}
+
+.anki-toast { --tx: -50%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anki-toast, .anki-combo { animation: none; }
+}
+
 /* Session de révision */
 .anki-session__decks {
   display: flex;

@@ -214,6 +214,17 @@ const ANKI_TRANSLATIONS = {
     moreNewButton: 'Ajouter',
     moreNewDone: '+{count} nouvelle(s) carte(s) ajoutée(s) pour aujourd’hui dans ce paquet.',
     planNav: '🔥 Séance du jour',
+    streakCount: '🔥 Série : {count} jour(s) d’affilée',
+    streakStart: '🔥 Termine la séance du jour pour lancer ta série',
+    streakDone: '🎉 Séance du jour terminée ! Série : {count} jour(s) 🔥',
+    stepReached: '🎉 {seen} cartes ! Plus que {left}.',
+    comboStep: '🔥 Combo ×{count} !',
+    comboBest: 'Meilleur combo du jour : ×{count}',
+    ringLabel: '{seen} / {total} cartes',
+    masteryTitle: '📈 Prêt pour les partiels ?',
+    masteryLine: '{solid} % solide jusqu’au partiel · {seen} % vues · {total} cartes',
+    masteryHelp: 'Vert : cartes que tu retiendras le jour du partiel (selon l’algorithme). Orange : vues, encore à consolider. Gris : pas encore vues.',
+    examToday: 'Aujourd’hui !',
     planTitle: '📅 Programme : {title}',
     planEmpty: '📅 Programme de révision : importe le fichier de ton programme pour avoir ta séance du jour et les créneaux dans l’agenda.',
     planImport: '📥 Importer un programme',
@@ -474,6 +485,17 @@ const ANKI_TRANSLATIONS = {
     moreNewInfo: 'Daily limit reached: {left} new card(s) waiting in this deck.',
     moreNewLabel: 'Study more today',
     planNav: '🔥 Today’s session',
+    streakCount: '🔥 Streak: {count} day(s) in a row',
+    streakStart: '🔥 Finish today’s session to start your streak',
+    streakDone: '🎉 Today’s session done! Streak: {count} day(s) 🔥',
+    stepReached: '🎉 {seen} cards! {left} to go.',
+    comboStep: '🔥 Combo ×{count}!',
+    comboBest: 'Best combo today: ×{count}',
+    ringLabel: '{seen} / {total} cards',
+    masteryTitle: '📈 Ready for the exams?',
+    masteryLine: '{solid} % solid until the exam · {seen} % seen · {total} cards',
+    masteryHelp: 'Green: cards you will remember on exam day (per the algorithm). Orange: seen, still to consolidate. Grey: not seen yet.',
+    examToday: 'Today!',
     planTitle: '📅 Plan: {title}',
     planEmpty: '📅 Study plan: import your plan file to get today’s session and the slots in your calendar.',
     planImport: '📥 Import a plan',
@@ -1639,7 +1661,9 @@ function renderAnkiNav() {
   nav.innerHTML = '';
   // Programme de révision : la séance du jour en un clic.
   if (ankiPlanDay()) {
-    const daily = ankiButton(`anki-nav__btn anki-nav__btn--today${ankiSession && ankiSession.daily && ['review', 'done'].includes(ankiView) ? ' active' : ''}`, t('anki.planNav'), ankiStartDaily);
+    const streak = ankiStreakCount();
+    const label = streak ? `${t('anki.planNav')} · ${streak} j` : t('anki.planNav');
+    const daily = ankiButton(`anki-nav__btn anki-nav__btn--today${ankiSession && ankiSession.daily && ['review', 'done'].includes(ankiView) ? ' active' : ''}`, label, ankiStartDaily);
     nav.appendChild(daily);
   }
   const items = [
@@ -1729,6 +1753,8 @@ function renderAnkiDecks(main) {
   });
   card.appendChild(table);
   main.prepend(ankiRenderPlan());
+  const mastery = ankiRenderMastery();
+  if (mastery) main.insertBefore(mastery, main.children[1] || null);
   main.appendChild(card);
 }
 
@@ -1807,6 +1833,191 @@ function ankiStartDaily() {
   else ankiGo('done');
 }
 
+/* ── Motivation : série, progression du jour, paliers, combo, maîtrise ── */
+
+const ANKI_STEP = 50; // un palier fêté toutes les 50 cartes de la séance du jour
+const ANKI_COMBO_STEPS = [10, 25, 50, 100];
+let ankiCombo = { day: 0, count: 0, best: 0 };
+
+function ankiDateKey(ms) {
+  return toISODateString(new Date(ms));
+}
+
+// Cartes déjà travaillées aujourd'hui (au moins une réponse).
+function ankiSeenToday() {
+  const start = ankiDayStart();
+  const ids = new Set();
+  ankiData().revlog.forEach((log) => {
+    if (log.t >= start) ids.add(log.c);
+  });
+  return ids;
+}
+
+// Séance du jour : cartes faites / total, et si tout est fini (apprentissage compris).
+// Sans programme ce jour-là, l'objectif est de vider les révisions de tous les paquets.
+function ankiDailyProgress() {
+  const session = ankiPlanSession();
+  const queue = session ? ankiQueue(null, session) : ankiQueue(null);
+  const seen = ankiSeenToday();
+  const learningLeft = [...queue.learningNow, ...queue.learningLater].filter((card) => !seen.has(card.id)).length;
+  const left = queue.counts.new + queue.counts.review + learningLeft;
+  return { planned: Boolean(session), seen: seen.size, left, total: seen.size + left, finished: !ankiPickNext(queue, true) };
+}
+
+function ankiStreakDays() {
+  const data = ankiData();
+  if (!ankiIsObject(data.streak)) data.streak = {};
+  return data.streak;
+}
+
+// Jours consécutifs avec la séance du jour terminée (aujourd'hui pas encore
+// fait : la série court toujours depuis hier).
+function ankiStreakCount() {
+  const days = ankiStreakDays();
+  let day = ankiDayStart();
+  if (!days[ankiDateKey(day)]) day = ankiAddDays(day, -1);
+  let count = 0;
+  while (days[ankiDateKey(day)]) {
+    count += 1;
+    day = ankiAddDays(day, -1);
+  }
+  return count;
+}
+
+// Enregistre la journée si la séance est terminée ; true la première fois.
+function ankiCheckDailyDone(progress = ankiDailyProgress()) {
+  if (!progress.finished || (!progress.planned && !progress.seen)) return false;
+  const days = ankiStreakDays();
+  const key = ankiPlanToday();
+  if (days[key]) return false;
+  days[key] = true;
+  saveData();
+  return true;
+}
+
+// Petite pluie de confettis (rien si l'utilisateur limite les animations).
+function ankiConfetti(amount = 60) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = ankiEl('div', 'anki-confetti');
+  const colors = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+  for (let i = 0; i < amount; i += 1) {
+    const bit = ankiEl('span');
+    bit.style.left = `${Math.random() * 100}%`;
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = `${Math.random() * 0.4}s`;
+    bit.style.setProperty('--drift', `${(Math.random() - 0.5) * 160}px`);
+    bit.style.setProperty('--spin', `${Math.round(Math.random() * 720)}deg`);
+    layer.appendChild(bit);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 2600);
+}
+
+// Après chaque réponse : combo, paliers de 50 cartes, séance terminée.
+function ankiAfterAnswer(rating, firstTimeToday) {
+  const today = ankiDayStart();
+  if (ankiCombo.day !== today) ankiCombo = { day: today, count: 0, best: 0 };
+  ankiCombo.count = rating === 1 ? 0 : ankiCombo.count + 1;
+  ankiCombo.best = Math.max(ankiCombo.best, ankiCombo.count);
+  let message = ANKI_COMBO_STEPS.includes(ankiCombo.count) ? t('anki.comboStep', { count: ankiCombo.count }) : '';
+  if (ankiSession && ankiSession.daily) {
+    const progress = ankiDailyProgress();
+    if (ankiCheckDailyDone(progress)) {
+      ankiConfetti(140);
+      message = t('anki.streakDone', { count: ankiStreakCount() });
+    } else if (firstTimeToday && progress.seen % ANKI_STEP === 0 && progress.left > 0) {
+      ankiConfetti();
+      message = t('anki.stepReached', { seen: progress.seen, left: progress.left });
+    }
+  }
+  if (message) ankiToast(message);
+}
+
+// Bulle de félicitations, visible même au milieu d'une révision.
+function ankiToast(text) {
+  document.querySelectorAll('.anki-toast').forEach((old) => old.remove());
+  const toast = ankiEl('div', 'anki-toast', text);
+  toast.setAttribute('role', 'status');
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2800);
+}
+
+// Anneau de progression de la séance du jour.
+function ankiProgressRing(progress) {
+  const ratio = progress.total ? progress.seen / progress.total : 1;
+  const ring = ankiEl('div', `anki-ring${progress.finished ? ' is-done' : ''}`);
+  ring.style.setProperty('--p', `${Math.round(ratio * 360)}deg`);
+  const inner = ankiEl('div', 'anki-ring__inner');
+  inner.append(
+    ankiEl('strong', 'anki-ring__value', progress.finished ? '✓' : `${Math.round(ratio * 100)} %`),
+    ankiEl('span', 'anki-ring__label', t('anki.ringLabel', { seen: progress.seen, total: progress.total }))
+  );
+  ring.appendChild(inner);
+  return ring;
+}
+
+// Partiel d'une matière (programme : exams [{ deck, date, label }]) → jours restants.
+function ankiExamFor(deck) {
+  const plan = ankiPlan();
+  const exams = plan && Array.isArray(plan.exams) ? plan.exams : [];
+  const exam = exams.find((item) => ankiNormalize(item.deck) === ankiNormalize(deck.name));
+  if (!exam) return null;
+  const [y, m, d] = exam.date.split('-').map(Number);
+  const days = Math.round((new Date(y, m - 1, d).getTime() - new Date(ankiDayStart()).setHours(0, 0, 0, 0)) / 86400000);
+  return { ...exam, days };
+}
+
+// Maîtrise d'une matière : « solide » = carte en révision dont la stabilité
+// tient jusqu'au partiel (ou 21 jours sans date de partiel).
+function ankiMastery(deck) {
+  const family = ankiDeckFamily(deck.id);
+  const notes = ankiNoteMap();
+  const exam = ankiExamFor(deck);
+  const target = exam && exam.days > 0 ? exam.days : ANKI_MATURE_DAYS;
+  const stats = { total: 0, seen: 0, solid: 0, exam };
+  ankiData().cards.forEach((card) => {
+    const note = notes.get(card.noteId);
+    if (card.suspended || !note || !family.has(note.deckId)) return;
+    stats.total += 1;
+    if (card.state === ANKI_STATE.NEW) return;
+    stats.seen += 1;
+    if (card.state === ANKI_STATE.REVIEW && (card.stability || 0) >= target) stats.solid += 1;
+  });
+  return stats;
+}
+
+function ankiRenderMastery() {
+  const decks = ankiSortedDecks().filter((deck) => ankiDeckDepth(deck) === 0);
+  const rows = decks.map((deck) => ({ deck, stats: ankiMastery(deck) })).filter(({ stats }) => stats.total);
+  if (!rows.length) return null;
+  const card = ankiEl('div', 'anki-card anki-mastery');
+  card.appendChild(ankiEl('h2', 'anki-title', t('anki.masteryTitle')));
+  rows
+    .sort((a, b) => (a.stats.exam ? a.stats.exam.date : '9').localeCompare(b.stats.exam ? b.stats.exam.date : '9'))
+    .forEach(({ deck, stats }) => {
+      const row = ankiEl('div', 'anki-mastery__row');
+      const head = ankiEl('div', 'anki-mastery__head');
+      head.appendChild(ankiEl('strong', '', deck.name));
+      if (stats.exam && stats.exam.days >= 0) {
+        head.appendChild(ankiEl('span', `anki-mastery__exam${stats.exam.days <= 3 ? ' is-near' : ''}`, stats.exam.days === 0 ? t('anki.examToday') : `J-${stats.exam.days}`));
+      }
+      row.appendChild(head);
+      const bar = ankiEl('div', 'anki-mastery__bar');
+      const solid = ankiEl('span', 'anki-mastery__solid');
+      solid.style.width = `${(stats.solid / stats.total) * 100}%`;
+      const seen = ankiEl('span', 'anki-mastery__seen');
+      seen.style.width = `${((stats.seen - stats.solid) / stats.total) * 100}%`;
+      bar.append(solid, seen);
+      row.appendChild(bar);
+      row.appendChild(
+        ankiEl('span', 'anki-hint', t('anki.masteryLine', { solid: Math.round((stats.solid / stats.total) * 100), seen: Math.round((stats.seen / stats.total) * 100), total: stats.total }))
+      );
+      card.appendChild(row);
+    });
+  card.appendChild(ankiEl('p', 'anki-hint', t('anki.masteryHelp')));
+  return card;
+}
+
 function ankiPlanDateLabel(date) {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(typeof getCurrentLocale === 'function' ? getCurrentLocale() : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -1842,7 +2053,16 @@ function ankiRenderPlan() {
     if (day.course) card.appendChild(ankiEl('p', 'anki-muted', t('anki.planCourse', { course: day.course })));
     const missing = new Set();
     const queue = ankiQueue(null, ankiPlanSession(missing));
-    renderAnkiCounts(card, queue.counts);
+    const progress = ankiDailyProgress();
+    ankiCheckDailyDone(progress);
+    const streak = ankiStreakCount();
+    const goal = ankiEl('div', 'anki-plan__goal');
+    goal.appendChild(ankiProgressRing(progress));
+    const side = ankiEl('div', 'anki-plan__side');
+    side.appendChild(ankiEl('p', 'anki-streak', streak ? t('anki.streakCount', { count: streak }) : t('anki.streakStart')));
+    renderAnkiCounts(side, queue.counts);
+    goal.appendChild(side);
+    card.appendChild(goal);
     if (missing.size) card.appendChild(ankiEl('p', 'anki-status anki-status--error', t('anki.planMissing', { decks: Array.from(missing).join(', ') })));
     const start = ankiButton('anki-btn anki-btn--big', t('anki.planStart'), ankiStartDaily);
     start.disabled = !ankiPickNext(queue, true);
@@ -1905,7 +2125,11 @@ function ankiImportPlan(text) {
         course: String(day.course || ''),
         news: cleanSpecs(day.news),
         ahead: cleanSpecs(day.ahead)
-      }))
+      })),
+    // Partiels par matière : compte à rebours de la maîtrise.
+    exams: (Array.isArray(data.exams) ? data.exams : [])
+      .filter((exam) => ankiIsObject(exam) && exam.deck && isDate(exam.date))
+      .map((exam) => ({ deck: String(exam.deck), date: exam.date, label: String(exam.label || '') }))
   };
   const previous = ankiPlan();
   if (previous) ankiRemovePlanEvents(previous.id);
@@ -2356,6 +2580,18 @@ function renderAnkiReview(main) {
   });
   top.appendChild(counts);
   wrap.appendChild(top);
+  // Séance du jour : barre de progression et combo en cours.
+  if (ankiSession && ankiSession.daily) {
+    const progress = ankiDailyProgress();
+    const line = ankiEl('div', 'anki-review__progress');
+    const track = ankiEl('div', 'anki-review__track');
+    const fill = ankiEl('span', 'anki-review__fill');
+    fill.style.width = `${progress.total ? (progress.seen / progress.total) * 100 : 100}%`;
+    track.appendChild(fill);
+    line.append(track, ankiEl('span', 'anki-review__ratio', `${progress.seen} / ${progress.total}`));
+    if (ankiCombo.day === ankiDayStart() && ankiCombo.count >= 3) line.appendChild(ankiEl('span', 'anki-combo', `🔥 ×${ankiCombo.count}`));
+    wrap.appendChild(line);
+  }
 
   const sides = ankiCardSides(card, note);
   const deckOfNote = ankiGetDeck(note.deckId);
@@ -2423,6 +2659,8 @@ function ankiAnswer(rating) {
     ms: Math.min(ANKI_MAX_ANSWER_MS, Math.max(0, now - ankiCurrent.shownAt))
   };
   const before = ankiCapture({ cards: [card.id], revlog: [log.id] });
+  const dayStart = ankiDayStart(now);
+  const firstTimeToday = !ankiData().revlog.some((item) => item.c === card.id && item.t >= dayStart);
   const result = ankiScheduler().next(ankiToFsrs(card), new Date(now), rating);
   log.iv = result.card.scheduled_days;
   ankiData().revlog.push(log);
@@ -2430,6 +2668,7 @@ function ankiAnswer(rating) {
   ankiPushUndo('review', before, { cardId: card.id, deckId: ankiDeckId });
   saveData();
   ankiNextCard();
+  ankiAfterAnswer(rating, firstTimeToday);
 }
 
 function renderAnkiDone(main) {
@@ -2443,6 +2682,10 @@ function renderAnkiDone(main) {
   if (ankiSession && ankiSession.daily) {
     const day = ankiPlanDay();
     card.appendChild(ankiEl('h2', 'anki-title', t('anki.planDoneTitle')));
+    ankiCheckDailyDone();
+    const streak = ankiStreakCount();
+    if (streak) card.appendChild(ankiEl('p', 'anki-streak anki-streak--big', t('anki.streakCount', { count: streak })));
+    if (ankiCombo.day === ankiDayStart() && ankiCombo.best >= 3) card.appendChild(ankiEl('p', 'anki-muted', t('anki.comboBest', { count: ankiCombo.best })));
     ankiAppendLearningInfo(card, queue);
     if (day && day.course) card.appendChild(ankiEl('p', 'anki-big', t('anki.planCourse', { course: day.course })));
     card.appendChild(ankiButton('anki-btn', t('anki.backToDecks'), () => ankiGo('decks')));
