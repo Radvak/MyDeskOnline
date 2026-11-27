@@ -223,7 +223,7 @@ const ANKI_TRANSLATIONS = {
     ringLabel: '{seen} / {total} cartes',
     masteryTitle: '📈 Prêt pour les partiels ?',
     masteryLine: '{solid} % solide jusqu’au partiel · {seen} % vues · {total} cartes',
-    masteryHelp: 'Vert : cartes que tu retiendras le jour du partiel (selon l’algorithme). Orange : vues, encore à consolider. Gris : pas encore vues.',
+    masteryHelp: 'Vert : cartes que tu retiendras le jour du partiel (selon l’algorithme). Orange : vues, encore à consolider. Gris : pas encore vues. Les cartes bonus ne comptent pas.',
     examToday: 'Aujourd’hui !',
     planTitle: '📅 Programme : {title}',
     planEmpty: '📅 Programme de révision : importe le fichier de ton programme pour avoir ta séance du jour et les créneaux dans l’agenda.',
@@ -233,6 +233,9 @@ const ANKI_TRANSLATIONS = {
     planRemoveConfirm: 'Retirer le programme de révision et ses créneaux dans l’agenda ? Tes cartes ne bougent pas.',
     planCourse: 'Cours restant du jour : {course}',
     planStart: '▶ Lancer la séance du jour',
+    bonusStart: '🎁 Bonus : cartes en plus',
+    bonusLater: '🎁 Des cartes bonus t’attendent quand tout le programme sera vu et la séance du jour finie.',
+    bonusDoneTitle: 'Bonus terminé pour aujourd’hui 🎁',
     planNothing: 'Rien à faire dans cette séance pour l’instant : tout est à jour 🎉',
     planNext: 'Pas de séance prévue aujourd’hui. Prochaine : {date}.',
     planOver: 'Programme terminé.',
@@ -494,7 +497,7 @@ const ANKI_TRANSLATIONS = {
     ringLabel: '{seen} / {total} cards',
     masteryTitle: '📈 Ready for the exams?',
     masteryLine: '{solid} % solid until the exam · {seen} % seen · {total} cards',
-    masteryHelp: 'Green: cards you will remember on exam day (per the algorithm). Orange: seen, still to consolidate. Grey: not seen yet.',
+    masteryHelp: 'Green: cards you will remember on exam day (per the algorithm). Orange: seen, still to consolidate. Grey: not seen yet. Bonus cards do not count.',
     examToday: 'Today!',
     planTitle: '📅 Plan: {title}',
     planEmpty: '📅 Study plan: import your plan file to get today’s session and the slots in your calendar.',
@@ -504,6 +507,9 @@ const ANKI_TRANSLATIONS = {
     planRemoveConfirm: 'Remove the study plan and its calendar slots? Your cards stay as they are.',
     planCourse: 'Remaining lesson today: {course}',
     planStart: '▶ Start today’s session',
+    bonusStart: '🎁 Bonus: extra cards',
+    bonusLater: '🎁 Bonus cards unlock once the whole plan is seen and today’s session is done.',
+    bonusDoneTitle: 'Bonus done for today 🎁',
     planNothing: 'Nothing to do in this session right now: all caught up 🎉',
     planNext: 'No session planned today. Next one: {date}.',
     planOver: 'Plan finished.',
@@ -904,6 +910,7 @@ function ankiIsUnsureTag(tag) {
 const ANKI_PART_PATTERNS = [
   [/^(?:intro|introduction)$/, (m, long) => (long ? 'Introduction' : 'Intro')],
   [/^conclusion$/, () => 'Conclusion'],
+  [/^bonus$/, () => 'Bonus'],
   [/^(?:titre|t)[\s_-]*(\d+)$/, (m) => `T${m[1]}`],
   [/^(?:partie|part|p)[\s_-]*(\d+)$/, (m) => `Partie ${m[1]}`],
   [/^(?:chapitre|chap|ch|c)[\s_-]*(\d+)$/, (m, long) => `${long ? 'Chapitre' : 'Chap'} ${m[1]}`],
@@ -960,7 +967,7 @@ function ankiCleanTagName(text) {
 }
 
 function ankiCompareTagNames(a, b) {
-  const rank = (name) => (!name ? 3 : /^intro/i.test(name) ? 0 : /^conclusion/i.test(name) ? 2 : 1);
+  const rank = (name) => (!name ? 4 : /^intro/i.test(name) ? 0 : /^conclusion/i.test(name) ? 2 : /^bonus/i.test(name) ? 3 : 1);
   return rank(a) - rank(b) || a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
@@ -1615,6 +1622,7 @@ function ankiRestoreUi() {
     if (ankiIsObject(value.newSel)) session.newSel = selOk(value.newSel);
     if (ankiIsObject(value.aheadSel)) session.aheadSel = selOk(value.aheadSel);
     if (value.daily) session.daily = true;
+    if (value.bonus) session.bonus = true;
     return session;
   };
   ankiSessionDraft = sessionOk(ui.sessionDraft) || { sel: {}, ahead: false };
@@ -1677,7 +1685,7 @@ function renderAnkiNav() {
     ['import', 'anki.navImport'],
     ['export', 'anki.navExport']
   ];
-  const reviewing = ankiSession && !ankiSession.daily ? 'session' : ankiSession ? '' : 'decks';
+  const reviewing = ankiSession && !ankiSession.daily && !ankiSession.bonus ? 'session' : ankiSession ? '' : 'decks';
   const activeNav = { overview: 'decks', review: reviewing, done: reviewing, edit: 'browse', restore: 'settings' }[ankiView] || ankiView;
   items.forEach(([view, key]) => {
     const button = ankiButton(`anki-nav__btn${activeNav === view ? ' active' : ''}`, t(key), () => {
@@ -1833,6 +1841,55 @@ function ankiStartDaily() {
   else ankiGo('done');
 }
 
+// Bonus du programme (plan.bonus, mêmes specs que news) : à voir en tout
+// dernier, seulement quand toutes les nouvelles cartes du programme sont
+// vues et la séance du jour terminée.
+function ankiPlanBonusSel() {
+  const plan = ankiPlan();
+  return plan && Array.isArray(plan.bonus) && plan.bonus.length ? ankiPlanSel(plan.bonus) : null;
+}
+
+function ankiPlanBonusSession() {
+  const sel = ankiPlanBonusSel();
+  return sel && Object.keys(sel).length ? { sel, newSel: sel, ahead: false, bonus: true } : null;
+}
+
+function ankiBonusReady() {
+  const session = ankiPlanBonusSession();
+  if (!session || !ankiPickNext(ankiQueue(null, session), true)) return false;
+  const plan = ankiPlan();
+  const inPlan = ankiSelMatcher(ankiPlanSel(plan.days.flatMap((d) => (Array.isArray(d.news) ? d.news : []))));
+  const inBonus = ankiSelMatcher(session.sel);
+  const notes = ankiNoteMap();
+  const planNewLeft = ankiData().cards.some((card) => {
+    const note = notes.get(card.noteId);
+    return !card.suspended && card.state === ANKI_STATE.NEW && note && inPlan(note) && !inBonus(note);
+  });
+  return !planNewLeft && ankiDailyProgress().finished;
+}
+
+function ankiStartBonus() {
+  const session = ankiPlanBonusSession();
+  if (!session) return;
+  ankiSession = session;
+  const first = ankiPickNext(ankiActiveQueue(), true);
+  if (first) ankiShowCard(first);
+  else ankiGo('done');
+}
+
+// Bouton « bonus » si prêt, sinon une ligne qui dit quand il viendra.
+function ankiAppendBonus(card) {
+  const sel = ankiPlanBonusSel();
+  if (!sel || !Object.keys(sel).length) return;
+  if (ankiBonusReady()) {
+    const actions = ankiEl('div', 'anki-actions');
+    actions.appendChild(ankiButton('anki-btn anki-btn--bonus', t('anki.bonusStart'), ankiStartBonus));
+    card.appendChild(actions);
+  } else {
+    card.appendChild(ankiEl('p', 'anki-hint', t('anki.bonusLater')));
+  }
+}
+
 /* ── Motivation : série, progression du jour, paliers, combo, maîtrise ── */
 
 const ANKI_STEP = 50; // un palier fêté toutes les 50 cartes de la séance du jour
@@ -1975,9 +2032,12 @@ function ankiMastery(deck) {
   const exam = ankiExamFor(deck);
   const target = exam && exam.days > 0 ? exam.days : ANKI_MATURE_DAYS;
   const stats = { total: 0, seen: 0, solid: 0, exam };
+  // Le bonus du programme ne compte pas : la maîtrise porte sur l'essentiel.
+  const bonusSel = ankiPlanBonusSel();
+  const inBonus = bonusSel ? ankiSelMatcher(bonusSel) : () => false;
   ankiData().cards.forEach((card) => {
     const note = notes.get(card.noteId);
-    if (card.suspended || !note || !family.has(note.deckId)) return;
+    if (card.suspended || !note || !family.has(note.deckId) || inBonus(note)) return;
     stats.total += 1;
     if (card.state === ANKI_STATE.NEW) return;
     stats.seen += 1;
@@ -2070,6 +2130,7 @@ function ankiRenderPlan() {
     actions.appendChild(start);
     card.appendChild(actions);
     if (start.disabled) card.appendChild(ankiEl('p', 'anki-muted', t('anki.planNothing')));
+    ankiAppendBonus(card);
   } else {
     const next = plan.days.map((d) => d.date).sort().find((date) => date > today);
     card.appendChild(ankiEl('p', 'anki-muted', next ? t('anki.planNext', { date: ankiPlanDateLabel(next) }) : t('anki.planOver')));
@@ -2126,6 +2187,8 @@ function ankiImportPlan(text) {
         news: cleanSpecs(day.news),
         ahead: cleanSpecs(day.ahead)
       })),
+    // Cartes bonus : proposées une fois tout le programme vu.
+    bonus: cleanSpecs(data.bonus),
     // Partiels par matière : compte à rebours de la maîtrise.
     exams: (Array.isArray(data.exams) ? data.exams : [])
       .filter((exam) => ankiIsObject(exam) && exam.deck && isDate(exam.date))
@@ -2565,7 +2628,7 @@ function renderAnkiReview(main) {
   const wrap = ankiEl('div', 'anki-review');
   const top = ankiEl('div', 'anki-review__top');
   top.appendChild(
-    ankiSession && !ankiSession.daily
+    ankiSession && !ankiSession.daily && !ankiSession.bonus
       ? ankiButton('anki-link', t('anki.sessionBack'), () => ankiGo('session'))
       : ankiButton('anki-link', t('anki.backToDecks'), () => ankiGo(ankiSession ? 'decks' : 'overview'))
   );
@@ -2688,6 +2751,14 @@ function renderAnkiDone(main) {
     if (ankiCombo.day === ankiDayStart() && ankiCombo.best >= 3) card.appendChild(ankiEl('p', 'anki-muted', t('anki.comboBest', { count: ankiCombo.best })));
     ankiAppendLearningInfo(card, queue);
     if (day && day.course) card.appendChild(ankiEl('p', 'anki-big', t('anki.planCourse', { course: day.course })));
+    ankiAppendBonus(card);
+    card.appendChild(ankiButton('anki-btn', t('anki.backToDecks'), () => ankiGo('decks')));
+    main.appendChild(card);
+    return;
+  }
+  if (ankiSession && ankiSession.bonus) {
+    card.appendChild(ankiEl('h2', 'anki-title', t('anki.bonusDoneTitle')));
+    ankiAppendLearningInfo(card, queue);
     card.appendChild(ankiButton('anki-btn', t('anki.backToDecks'), () => ankiGo('decks')));
     main.appendChild(card);
     return;

@@ -4645,6 +4645,13 @@ main {
   font-weight: 600;
 }
 
+.anki-btn.anki-btn--bonus {
+  background: linear-gradient(135deg, #f59e0b, #ec4899);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
 .anki-link {
   background: none;
   border: none;

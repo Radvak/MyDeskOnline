@@ -12,6 +12,13 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 // area : app | sync | calendar | anki | sport | news | todo | menu | snake
 const PATCH_NOTES = [
   {
+    date: '2026-11-27',
+    title: 'Cartes bonus',
+    items: [
+      { area: 'anki', text: 'Révisions : un programme peut garder des cartes « bonus » pour la fin — le bouton 🎁 Bonus apparaît une fois toutes les nouvelles cartes du programme vues et la séance du jour terminée ; ces cartes ne comptent pas dans « Prêt pour les partiels ? ».' }
+    ]
+  },
+  {
     date: '2026-11-24',
     title: 'Réviser avec plaisir',
     items: [
