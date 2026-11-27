@@ -1814,6 +1814,11 @@ function ankiPlanSel(specs, missing) {
   return sel;
 }
 
+// plan.skip : noms des paquets retirés de la séance du jour (ni nouvelles ni révisions).
+function ankiPlanSkip(plan) {
+  return new Set((Array.isArray(plan && plan.skip) ? plan.skip : []).map((name) => ankiNormalize(String(name))));
+}
+
 // Séance du jour : révisions dues de tous les paquets, nouvelles cartes de
 // tous les jours prévus jusqu'à aujourd'hui (le retard se rattrape tout
 // seul), révision en avance des tags prévus aujourd'hui.
@@ -1823,8 +1828,9 @@ function ankiPlanSession(missing) {
   const day = ankiPlanDay(today);
   if (!plan || !day) return null;
   const sel = {};
+  const skip = ankiPlanSkip(plan);
   ankiData().decks.forEach((deck) => {
-    if (ankiDeckDepth(deck) === 0) sel[deck.id] = [];
+    if (ankiDeckDepth(deck) === 0 && !skip.has(ankiNormalize(deck.name))) sel[deck.id] = [];
   });
   const newSpecs = plan.days.filter((d) => d.date <= today).flatMap((d) => (Array.isArray(d.news) ? d.news : []));
   const session = { sel, ahead: false, daily: true, newSel: ankiPlanSel(newSpecs, missing) };
@@ -1858,7 +1864,9 @@ function ankiBonusReady() {
   const session = ankiPlanBonusSession();
   if (!session || !ankiPickNext(ankiQueue(null, session), true)) return false;
   const plan = ankiPlan();
-  const inPlan = ankiSelMatcher(ankiPlanSel(plan.days.flatMap((d) => (Array.isArray(d.news) ? d.news : []))));
+  const skip = ankiPlanSkip(plan);
+  const specs = plan.days.flatMap((d) => (Array.isArray(d.news) ? d.news : [])).filter((spec) => !skip.has(ankiNormalize(String(spec.deck))));
+  const inPlan = ankiSelMatcher(ankiPlanSel(specs));
   const inBonus = ankiSelMatcher(session.sel);
   const notes = ankiNoteMap();
   const planNewLeft = ankiData().cards.some((card) => {
@@ -2189,6 +2197,7 @@ function ankiImportPlan(text) {
       })),
     // Cartes bonus : proposées une fois tout le programme vu.
     bonus: cleanSpecs(data.bonus),
+    skip: (Array.isArray(data.skip) ? data.skip : []).map(String),
     // Partiels par matière : compte à rebours de la maîtrise.
     exams: (Array.isArray(data.exams) ? data.exams : [])
       .filter((exam) => ankiIsObject(exam) && exam.deck && isDate(exam.date))

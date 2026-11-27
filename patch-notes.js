@@ -13,9 +13,10 @@ const PATCH_NOTES_SEEN_KEY = 'mydesk-patchnotes-seen';
 const PATCH_NOTES = [
   {
     date: '2026-11-27',
-    title: 'Cartes bonus',
+    title: 'Cartes bonus et séance sur mesure',
     items: [
-      { area: 'anki', text: 'Révisions : un programme peut garder des cartes « bonus » pour la fin — le bouton 🎁 Bonus apparaît une fois toutes les nouvelles cartes du programme vues et la séance du jour terminée ; ces cartes ne comptent pas dans « Prêt pour les partiels ? ».' }
+      { area: 'anki', text: 'Révisions : un programme peut garder des cartes « bonus » pour la fin — le bouton 🎁 Bonus apparaît une fois toutes les nouvelles cartes du programme vues et la séance du jour terminée ; ces cartes ne comptent pas dans « Prêt pour les partiels ? ».' },
+      { area: 'anki', text: 'Révisions : un programme peut retirer des paquets de la séance du jour (ni nouvelles cartes ni révisions) ; ils restent accessibles depuis le paquet ou une session sur mesure.' }
     ]
   },
   {
